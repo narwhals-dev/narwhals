@@ -194,8 +194,7 @@ def test_nested_structures(
         reason = "Cannot create an empty struct type for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
-    # TODO(FBruzzesi): Check cudf
-    if any(x in str(constructor) for x in ("cudf", "dask")):
+    if "dask" in str(constructor):
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 

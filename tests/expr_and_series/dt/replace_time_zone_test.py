@@ -30,7 +30,7 @@ def test_replace_time_zone(
     ):
         pytest.skip()
 
-    if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -73,9 +73,7 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_replace_time_zone_series(constructor_eager: ConstructorEager) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
         or (
@@ -87,8 +85,6 @@ def test_replace_time_zone_series(
         )
     ):
         pytest.skip()
-    if any(x in str(constructor_eager) for x in ("cudf",)):
-        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),

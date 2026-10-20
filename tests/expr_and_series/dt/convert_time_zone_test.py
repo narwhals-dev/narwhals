@@ -31,7 +31,7 @@ def test_convert_time_zone(
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -50,9 +50,7 @@ def test_convert_time_zone(
     assert_equal_data(result_str, expected)
 
 
-def test_convert_time_zone_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_convert_time_zone_series(constructor_eager: ConstructorEager) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
         or ("pyarrow_table" in str(constructor_eager) and is_windows())
@@ -66,8 +64,6 @@ def test_convert_time_zone_series(
         )
     ):
         pytest.skip()
-    if any(x in str(constructor_eager) for x in ("cudf",)):
-        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -95,7 +91,7 @@ def test_convert_time_zone_from_none(
         or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
     ):
         pytest.skip()
-    if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         # polars used to disallow this

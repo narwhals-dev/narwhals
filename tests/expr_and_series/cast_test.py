@@ -269,7 +269,6 @@ def test_cast_datetime_tz_aware(
     if (
         "dask" in str(constructor)
         or "duckdb" in str(constructor)
-        or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or "pyspark" in str(constructor)
         or "ibis" in str(constructor)
     ):

@@ -249,7 +249,10 @@ def test_str_replace_value_edge_series_scalar(
         and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip(reason="single-character pattern treated as literal")
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
+    # cuDF matches polars on the backslash literal, but not on group expansion.
+    if any(x in str(constructor_eager) for x in ("pandas", "modin", "pyarrow")) or (
+        "cudf" in str(constructor_eager) and "group_expansion" in request.node.callspec.id
+    ):
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor_eager({"a": ["aab"]}), eager_only=True)
     result_series = df["a"].str.replace(pattern=pattern, value=value, n=1, literal=False)
@@ -282,7 +285,10 @@ def test_str_replace_value_edge_expr_scalar(
         and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip(reason="single-character pattern treated as literal")
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+    # cuDF matches polars on the backslash literal, but not on group expansion.
+    if any(x in str(constructor) for x in ("pandas", "modin", "pyarrow", "dask")) or (
+        "cudf" in str(constructor) and "group_expansion" in request.node.callspec.id
+    ):
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": ["aab"]}))
     result_df = df.select(

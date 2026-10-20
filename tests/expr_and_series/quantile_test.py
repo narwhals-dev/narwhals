@@ -99,7 +99,7 @@ def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) 
 def test_quantile_inf(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(
         x in str(constructor)
-        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask", "cudf")
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask")
     ):
         request.applymarker(pytest.mark.xfail(reason="inf handling"))
     df = nw.from_native(constructor({"a": [1.0, float("inf"), 2.0]}))

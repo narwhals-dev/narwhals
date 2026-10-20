@@ -28,10 +28,7 @@ data = {"a": ["2020-01-01T12:34:56"]}
 
 
 def test_to_datetime(constructor: Constructor) -> None:
-    if "cudf" in str(constructor):
-        expected = "2020-01-01T12:34:56.000000000"
-    else:
-        expected = "2020-01-01 12:34:56"
+    expected = "2020-01-01 12:34:56"
 
     result = (
         nw.from_native(constructor(data))
@@ -46,10 +43,7 @@ def test_to_datetime(constructor: Constructor) -> None:
 
 
 def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
-    if "cudf" in str(constructor_eager):
-        expected = "2020-01-01T12:34:56.000000000"
-    else:
-        expected = "2020-01-01 12:34:56"
+    expected = "2020-01-01 12:34:56"
 
     result = (
         nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_datetime(
@@ -60,26 +54,15 @@ def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.parametrize(
-    ("data", "expected", "expected_cudf", "expected_pyspark"),
+    ("data", "expected", "expected_pyspark"),
     [
         (
             {"a": ["2020-01-01T12:34:56"]},
             "2020-01-01 12:34:56",
-            "2020-01-01T12:34:56.000000000",
             "2020-01-01 12:34:56+00:00",
         ),
-        (
-            {"a": ["2020-01-01T12:34"]},
-            "2020-01-01 12:34:00",
-            "2020-01-01T12:34:00.000000000",
-            "2020-01-01 12:34:00+00:00",
-        ),
-        (
-            {"a": ["20240101123456"]},
-            "2024-01-01 12:34:56",
-            "2024-01-01T12:34:56.000000000",
-            "2024-01-01 12:34:56+00:00",
-        ),
+        ({"a": ["2020-01-01T12:34"]}, "2020-01-01 12:34:00", "2020-01-01 12:34:00+00:00"),
+        ({"a": ["20240101123456"]}, "2024-01-01 12:34:56", "2024-01-01 12:34:56+00:00"),
     ],
 )
 def test_to_datetime_infer_fmt(
@@ -87,7 +70,6 @@ def test_to_datetime_infer_fmt(
     constructor: Constructor,
     data: dict[str, list[str]],
     expected: str,
-    expected_cudf: str,
     expected_pyspark: str,
 ) -> None:
     if (
@@ -98,9 +80,7 @@ def test_to_datetime_infer_fmt(
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "cudf" in str(constructor):
-        expected = expected_cudf
-    elif "pyspark" in str(constructor):
+    if "pyspark" in str(constructor):
         expected = expected_pyspark
 
     result = (
@@ -114,23 +94,11 @@ def test_to_datetime_infer_fmt(
 
 
 @pytest.mark.parametrize(
-    ("data", "expected", "expected_cudf"),
+    ("data", "expected"),
     [
-        (
-            {"a": ["2020-01-01T12:34:56"]},
-            "2020-01-01 12:34:56",
-            "2020-01-01T12:34:56.000000000",
-        ),
-        (
-            {"a": ["2020-01-01T12:34"]},
-            "2020-01-01 12:34:00",
-            "2020-01-01T12:34:00.000000000",
-        ),
-        (
-            {"a": ["20240101123456"]},
-            "2024-01-01 12:34:56",
-            "2024-01-01T12:34:56.000000000",
-        ),
+        ({"a": ["2020-01-01T12:34:56"]}, "2020-01-01 12:34:56"),
+        ({"a": ["2020-01-01T12:34"]}, "2020-01-01 12:34:00"),
+        ({"a": ["20240101123456"]}, "2024-01-01 12:34:56"),
     ],
 )
 def test_to_datetime_series_infer_fmt(
@@ -138,12 +106,9 @@ def test_to_datetime_series_infer_fmt(
     constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: str,
-    expected_cudf: str,
 ) -> None:
     if "polars" in str(constructor_eager) and data["a"][0].isdigit():
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
-        expected = expected_cudf
 
     result = (
         nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_datetime()
