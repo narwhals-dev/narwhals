@@ -558,6 +558,21 @@ def narwhals_to_native_arrow_dtype(
         from narwhals._arrow.utils import narwhals_to_native_dtype as _to_arrow_dtype
 
         return pd.ArrowDtype(_to_arrow_dtype(dtype, version))
+    if implementation is Implementation.CUDF:
+        # cuDF has native decimal and nested dtypes, each buildable from an Arrow type.
+        ns = implementation.to_native_namespace()
+        dtypes = version.dtypes
+        for nw_cls, cudf_cls in (
+            (dtypes.Decimal, ns.Decimal128Dtype),
+            (dtypes.List, ns.ListDtype),
+            (dtypes.Struct, ns.StructDtype),
+        ):
+            if isinstance_or_issubclass(dtype, nw_cls):
+                from narwhals._arrow.utils import (
+                    narwhals_to_native_dtype as _to_arrow_dtype,
+                )
+
+                return cudf_cls.from_arrow(_to_arrow_dtype(dtype, version))
     msg = (  # pragma: no cover
         f"Converting to {dtype} dtype is not supported for implementation "
         f"{implementation} and version {version}."

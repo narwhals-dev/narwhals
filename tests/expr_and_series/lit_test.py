@@ -135,6 +135,9 @@ def test_null_list_lit(constructor: Constructor, request: pytest.FixtureRequest)
         # https://github.com/dask/dask/issues/11637
         reason = "Dask scalars drop the dtype"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+    elif "cudf" in str(constructor):
+        reason = "cuDF can't cast an all-null object column"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
     elif any(x in str(constructor) for x in ("pandas", "modin")):
         if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip(reason="casting to `List` needs pandas>=2.2")
