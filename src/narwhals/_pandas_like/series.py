@@ -562,19 +562,11 @@ class PandasLikeSeries(EagerSeries[Any]):
             raise InvalidOperationError(msg)
         return self.native.median()
 
-    def _var_or_std(self, func: Callable[..., Any], *, ddof: int) -> float:
-        # When N <= ddof, nullable dtypes give `inf` (ddof > 1) or an untyped `pd.NA`
-        # (ddof <= 1), which `_from_scalar` would turn into a String column.
-        if ddof > 1 and self.native.count() <= ddof:
-            return float("nan")
-        result = func(ddof=ddof)
-        return float("nan") if self.__native_namespace__().isna(result) else result
-
     def std(self, *, ddof: int) -> float:
-        return self._var_or_std(self.native.std, ddof=ddof)
+        return self.native.std(ddof=ddof)
 
     def var(self, *, ddof: int) -> float:
-        return self._var_or_std(self.native.var, ddof=ddof)
+        return self.native.var(ddof=ddof)
 
     def skew(self) -> float | None:
         ser_not_null = self.native.dropna()

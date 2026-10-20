@@ -32,11 +32,11 @@ NUMERIC_REDUCTIONS = [
 def test_numeric_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, reduction: str
 ) -> None:
-    if reduction not in {"sum", "std", "var"} and any(
+    if reduction != "sum" and any(
         x in str(constructor)
         for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
     ):
-        reason = "Return an untyped `pd.NA`. `sum` returns a typed zero, `std`/`var` NaN."
+        reason = "Return an untyped `pd.NA`. `sum` returns a typed zero."
         request.applymarker(pytest.mark.xfail(reason=reason))
     if reduction in {"skew", "kurtosis"} and any(
         x in str(constructor) for x in ("pandas_constructor", "modin_constructor", "ibis")

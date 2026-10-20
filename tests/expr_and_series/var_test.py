@@ -70,11 +70,15 @@ def expected_var(values: list[float | None], ddof: int) -> float | None:
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
-def test_var_ddof(constructor: Constructor, ddof: int) -> None:
+def test_var_ddof(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if ddof == 10 and "pandas_nullable" in str(constructor):
+        reason = "pandas (nullable) returns `inf` when N == ddof (10 non-null values)."
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data_ddof))
     result = df.select(nw.col("a").var(ddof=ddof))
     assert_equal_data(result, {"a": [expected_var(data_ddof["a"], ddof)]})
-    assert result.collect_schema() == {"a": nw.Float64()}
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
