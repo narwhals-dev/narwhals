@@ -451,6 +451,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         raise ValueError(msg)
     dtypes = version.dtypes
     base_type = dtype.base_type()
+    if implementation is Implementation.CUDF and issubclass(base_type, dtypes.Float16):
+        msg = "Converting to Float16 dtype is not supported for cuDF."
+        raise NotImplementedError(msg)
     if pd_type := NW_TO_PD_DTYPES_INVARIANT.get(base_type):
         return pd_type
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
