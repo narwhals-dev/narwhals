@@ -12,6 +12,7 @@ from tests.utils import (
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
+    is_polars_gpu,
     is_windows,
     pyspark_session,
 )
@@ -23,6 +24,12 @@ if TYPE_CHECKING:
 def test_replace_time_zone(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if is_polars_gpu(constructor):
+        reason = (
+            "cudf-polars `dt.to_string` ignores the time zone: "
+            "https://github.com/NVIDIA/cudf/issues/23935"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))

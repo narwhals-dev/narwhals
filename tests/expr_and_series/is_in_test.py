@@ -13,7 +13,13 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_polars_gpu,
+)
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -116,7 +122,12 @@ def test_expr_is_in_with_null_in_other(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
+def test_expr_is_in_with_only_null_in_other(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if is_polars_gpu(constructor):
+        reason = "cudf-polars raises `Invalid type_id` for a null-only list"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}
     df = nw.from_native(constructor(data_with_null))

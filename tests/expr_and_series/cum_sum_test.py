@@ -11,6 +11,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_polars_gpu,
     is_windows,
 )
 
@@ -229,7 +230,12 @@ def test_cum_sum_does_not_overflow(
     ):
         reason = "Spark has no unsigned integer types"
         pytest.skip(reason=reason)
-    if "polars" in str(constructor) and dtype in {nw.Int32, nw.UInt32}:
+    # The GPU engine widens to Int64 inside `over(order_by=...)`, so it doesn't wrap.
+    if (
+        "polars" in str(constructor)
+        and not is_polars_gpu(constructor)
+        and dtype in {nw.Int32, nw.UInt32}
+    ):
         reason = (
             "Polars keeps 32-bit integers as they are and wraps on overflow: "
             "https://github.com/pola-rs/polars/issues/17340"

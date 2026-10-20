@@ -13,6 +13,7 @@ from tests.utils import (
     POLARS_VERSION,
     Constructor,
     assert_equal_data,
+    is_polars_gpu,
     is_windows,
     pyspark_session,
 )
@@ -24,6 +25,12 @@ if TYPE_CHECKING:
 def test_convert_time_zone(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if is_polars_gpu(constructor):
+        reason = (
+            "cudf-polars `dt.to_string` ignores the time zone: "
+            "https://github.com/NVIDIA/cudf/issues/23935"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
@@ -84,6 +91,12 @@ def test_convert_time_zone_series(constructor_eager: ConstructorEager) -> None:
 def test_convert_time_zone_from_none(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if is_polars_gpu(constructor):
+        reason = (
+            "cudf-polars `dt.to_string` ignores the time zone: "
+            "https://github.com/NVIDIA/cudf/issues/23935"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
