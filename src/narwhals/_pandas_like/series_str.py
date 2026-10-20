@@ -65,6 +65,9 @@ class PandasLikeSeriesStringNamespace(
         return self.replace(value, pattern, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
+        if characters == "":
+            # cuDF (and `cudf.pandas`) strip whitespace for `""`; polars strips nothing.
+            return self.compliant
         return self.with_native(self.native.str.strip(characters))
 
     def strip_chars_start(self, characters: str) -> PandasLikeSeries:
