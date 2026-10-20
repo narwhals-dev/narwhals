@@ -1091,6 +1091,10 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def is_finite(self) -> Self:
         native = self.native
+        if self._implementation.is_cudf():
+            # CuPy rejects masked arrays; comparisons keep nulls and are False for NaN.
+            inf = float("inf")
+            return self._with_native((native > -inf) & (native < inf))
         if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
