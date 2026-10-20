@@ -1198,7 +1198,7 @@ class PandasLikeDataFrame(
 
         import pyarrow as pa  # ignore-banned-import()
 
-        return pa.Table.from_pandas(self.native)
+        return pa.Table.from_pandas(self.native, preserve_index=False)
 
     def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         return self._with_native(
