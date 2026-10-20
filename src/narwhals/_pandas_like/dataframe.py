@@ -397,6 +397,14 @@ class PandasLikeDataFrame(
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        if self._implementation is Implementation.PANDAS and (
+            not named or len(self.native.columns) > 0
+        ):
+            return cast(
+                "list[tuple[Any, ...]] | list[dict[str, Any]]",
+                list(self.iter_rows(named=named, buffer_size=512)),
+            )
+
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
             if self._implementation is Implementation.CUDF:
@@ -416,9 +424,28 @@ class PandasLikeDataFrame(
     def iter_rows(
         self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        # The param ``buffer_size`` is only here for compatibility with the Polars API
-        # and has no effect on the output.
-        if not named:
+        if self._implementation is Implementation.PANDAS:
+            # Convert each batch column-wise to preserve Python-native values
+            # without materializing the entire DataFrame in memory.
+            names = self.native.columns
+            batch_size = max(buffer_size, 1)
+            for start in range(0, len(self.native), batch_size):
+                batch = self.native.iloc[start : start + batch_size]
+                columns = [
+                    series.to_numpy(dtype=object, na_value=None).tolist()
+                    for _, series in batch.items()  # noqa: PERF102
+                ]
+                rows = (
+                    zip(*columns, strict=True)
+                    if columns
+                    else (() for _ in range(len(batch)))
+                )
+                if named:
+                    for row in rows:
+                        yield dict(zip(names, row, strict=False))
+                else:
+                    yield from rows
+        elif not named:
             yield from self.native.itertuples(index=False, name=None)
         else:
             col_names = self.native.columns
