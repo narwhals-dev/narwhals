@@ -532,8 +532,11 @@ class PandasLikeNamespace(
                 "list[NativeSeriesT]",
                 [df._extract_comparand(a_series), df._extract_comparand(b_series)],
             )
-            _df = self._concat_by_index(aligned)
-            corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
+            _df = cast("pd.DataFrame", self._concat_by_index(aligned))
+            if self._implementation.is_cudf():
+                # cuDF can't skip nulls; pandas drops incomplete pairs, which matches.
+                _df = _df.dropna()
+            corr = _df.corr(method=method).iloc[0, [1]]
             return [
                 PandasLikeSeries(
                     corr, implementation=self._implementation, version=self._version
@@ -556,6 +559,9 @@ class PandasLikeNamespace(
                 [df._extract_comparand(a_series), df._extract_comparand(b_series)],
             )
             _df = cast("pd.DataFrame", self._concat_by_index(aligned))
+            if self._implementation.is_cudf():
+                # cuDF can't skip nulls; pandas drops incomplete pairs, which matches.
+                _df = _df.dropna()
             n = _df.count(axis=1).eq(2).sum()
             if ddof == 0 and n == 1:
                 value = 0.0
