@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import TypeAlias
 
+    import pyarrow as pa
+
     from narwhals._utils import Implementation, Version
     from narwhals.typing import (
         CorrelationMethod,
@@ -430,10 +432,26 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def _series_from_arrow(
+        self, array: pa.Array[Any] | pa.ChunkedArray[Any], name: str, index: Any
+    ) -> PandasLikeSeries:
+        ns = self._implementation.to_native_namespace()
+        if self._implementation.is_cudf():
+            # Build a device column: cuDF refuses implicit host Arrow conversion.
+            native = ns.Series.from_arrow(array)
+            native.index = index
+            native.name = name
+        else:
+            native = ns.Series(
+                pd.arrays.ArrowExtensionArray(array), name=name, index=index
+            )
+        return self._series(
+            native, implementation=self._implementation, version=self._version
+        )
+
     def struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
-                import pandas as pd  # ignore-banned-import
                 import pyarrow as pa  # ignore-banned-import
                 import pyarrow.compute as pc  # ignore-banned-import
             except ImportError as exc:  # pragma: no cover
@@ -448,21 +466,10 @@ class PandasLikeNamespace(
             check_column_names_are_unique([s.name for s in series])
             name = series[0].name
             struct_array = pc.make_struct(
-                *(pa.array(s.native, from_pandas=True) for s in series),
-                field_names=[s.name for s in series],
+                *(s.to_arrow() for s in series), field_names=[s.name for s in series]
             )
             result = pa.chunked_array([struct_array])
-
-            version = self._version
-            impl = self._implementation
-            ns = impl.to_native_namespace()
-
-            result_native = ns.Series(
-                pd.arrays.ArrowExtensionArray(result),
-                name=name,
-                index=series[0].native.index,
-            )
-            return [self._series(result_native, implementation=impl, version=version)]
+            return [self._series_from_arrow(result, name, series[0].native.index)]
 
         return self._expr._from_callable(
             func=func,
@@ -474,7 +481,7 @@ class PandasLikeNamespace(
     def list(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
-                import pyarrow as pa  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import  # noqa: F401
             except ImportError as exc:  # pragma: no cover
                 msg = (
                     "list requires pyarrow to be installed for pandas backend. "
@@ -490,20 +497,13 @@ class PandasLikeNamespace(
                 (
                     s.native.array._pa_array.combine_chunks()
                     if is_dtype_pyarrow(s.native.dtype)
-                    else pa.array(s.native, from_pandas=True)
+                    else s.to_arrow()
                 )
                 for s in series
             ]
             result = build_list_array(arrays)
-
-            impl = self._implementation
-            result_native = impl.to_native_namespace().Series(
-                pd.arrays.ArrowExtensionArray(result),
-                name=series[0].name,
-                index=series[0].native.index,
-            )
             return [
-                self._series(result_native, implementation=impl, version=self._version)
+                self._series_from_arrow(result, series[0].name, series[0].native.index)
             ]
 
         return self._expr._from_callable(
