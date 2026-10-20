@@ -268,9 +268,12 @@ def test_list_like(
     context: AbstractContextManager[Any],
     dtype: nw.dtypes.DType,
 ) -> None:
-    if "cudf" in str(constructor_eager):
-        reason = "NotImplementedError"
-        request.applymarker(pytest.mark.xfail(reason=reason))
+    if "cudf" in str(constructor_eager) and dtype == nw.Array:
+        reason = "cuDF has no fixed-size list dtype"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+    elif "cudf" in str(constructor_eager) and dtype == nw.List(nw.Float32()):
+        reason = "cuDF can't cast list columns"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover

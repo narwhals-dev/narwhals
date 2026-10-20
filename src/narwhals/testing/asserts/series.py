@@ -243,7 +243,10 @@ def _check_list_like(
     # `check_order` value at the top level.
     impl = left_vals.implementation
     try:
-        for left_val, right_val in zip(left_vals, right_vals, strict=True):
+        # `to_list`, as cuDF series can't be iterated over.
+        for left_val, right_val in zip(
+            left_vals.to_list(), right_vals.to_list(), strict=True
+        ):
             check_fn(
                 new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),
                 new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),
