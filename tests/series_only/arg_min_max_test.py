@@ -40,7 +40,12 @@ def test_arg_min_max_series(
     assert_equal_data({col: [series.arg_max()]}, {col: [expected_max]})
 
 
-def test_arg_min_max_series_no_valid_values(constructor_eager: ConstructorEager) -> None:
+def test_arg_min_max_series_no_valid_values(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # cuDF series have neither `argmin` nor `idxmin`.
+        request.applymarker(pytest.mark.xfail(reason="not implemented"))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     series = df["signed_between_nulls"]
     all_null = series.filter(series.is_null())

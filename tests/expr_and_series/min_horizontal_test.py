@@ -25,6 +25,8 @@ def test_minh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+# cuDF warns on all-null rows; the result is still null.
+@pytest.mark.filterwarnings("ignore:All-NaN slice encountered:RuntimeWarning")
 def test_minh_duplicate_output_names(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3934
     df = nw.from_native(constructor(data))

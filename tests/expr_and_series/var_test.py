@@ -100,7 +100,12 @@ def test_var_ddof_group_by(
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
-def test_var_ddof_over(constructor: Constructor, ddof: int) -> None:
+def test_var_ddof_over(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        # https://github.com/rapidsai/cudf/issues/18159
+        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="`over` requires DuckDB 1.3.0")
     df = nw.from_native(constructor(data_ddof))

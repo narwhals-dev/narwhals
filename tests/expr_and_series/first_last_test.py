@@ -319,7 +319,7 @@ def test_first_last_different_orders(
 
     context = (
         pytest.raises(NotImplementedError, match="Only one `order_by` can")
-        if "pandas" in str(constructor) or "pyarrow" in str(constructor)
+        if any(x in str(constructor) for x in ("pandas", "pyarrow", "cudf"))
         else does_not_raise()
     )
     frame = nw.from_native(

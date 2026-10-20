@@ -230,7 +230,12 @@ def test_to_datetime_date_only_format(constructor: Constructor) -> None:
     assert_equal_data(result, {"b": [datetime(2020, 1, 1), None]})
 
 
-def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
+def test_to_datetime_all_null_offset_format(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        # cuDF does not yet support timezone-aware datetimes
+        request.applymarker(pytest.mark.xfail)
     # Filter instead of building from `[None, None]`: Ibis and PySpark cannot type that.
     df = nw.from_native(constructor({"a": ["2020-01-01T00:00:00+0000", None]}))
     result = df.filter(nw.col("a").is_null()).select(
@@ -324,6 +329,8 @@ def test_to_datetime_invalid_raises(
         and PYSPARK_VERSION < PkgVersion("4")
     ):
         request.applymarker(pytest.mark.xfail(reason="Spark<4 (ANSI off) returns null"))
+    if "trailing" in case and "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="cuDF ignores trailing input"))
     df = nw.from_native(constructor(data))
     # Broad `Exception`: error types differ per backend.
     with pytest.raises(Exception):  # noqa: B017, PT011
