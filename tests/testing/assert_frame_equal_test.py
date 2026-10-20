@@ -239,6 +239,9 @@ def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     ):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
+    if "cudf" in str(constructor):
+        # cuDF has no date or binary dtype.
+        cols_to_drop = (*cols_to_drop, "date", "binary")
 
     _data = {k: v for k, v in testing_data.items() if k not in cols_to_drop}
     df = nw.from_native(constructor(_data))

@@ -200,6 +200,7 @@ def test_str_replace_expr_scalar(
 )
 def test_str_replace_edge_series_scalar(
     constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -208,6 +209,8 @@ def test_str_replace_edge_series_scalar(
     literal: bool,
     expected: dict[str, list[str]],
 ) -> None:
+    if "cudf" in str(constructor_eager) and pattern == "" and literal:
+        request.applymarker(pytest.mark.xfail(reason="cuDF rejects an empty pattern"))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
@@ -358,6 +361,8 @@ def test_str_replace_edge_expr_scalar(
                 raises=NotImplementedError,
             )
         )
+    if "cudf" in str(constructor) and pattern == "" and literal:
+        request.applymarker(pytest.mark.xfail(reason="cuDF rejects an empty pattern"))
     df = nw.from_native(constructor(data))
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
