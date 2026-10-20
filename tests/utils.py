@@ -60,6 +60,14 @@ ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
+POLARS_GPU = bool(os.environ.get("NARWHALS_POLARS_GPU"))
+"""Whether lazy Polars frames are collected on the GPU engine (cudf-polars)."""
+
+
+def is_polars_gpu(constructor: Constructor | ConstructorEager) -> bool:
+    return POLARS_GPU and "polars_lazy" in str(constructor)
+
+
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
 """`DType`s which **cannot** be used as bare types."""
 

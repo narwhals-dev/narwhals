@@ -16,6 +16,7 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
+    is_polars_gpu,
 )
 
 if TYPE_CHECKING:
@@ -131,6 +132,9 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_null_list_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if is_polars_gpu(constructor):
+        reason = "cudf-polars raises `Invalid type_id` for a null list"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11637
         reason = "Dask scalars drop the dtype"
@@ -197,6 +201,9 @@ def test_nested_structures(
     if "dask" in str(constructor):
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+    if is_polars_gpu(constructor) and isinstance(value, (list, tuple)):
+        reason = "cudf-polars does not broadcast list literals"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     if any(x in str(constructor) for x in ("pandas", "modin")) and (
         PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2")
