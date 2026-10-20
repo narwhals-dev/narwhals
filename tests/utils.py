@@ -162,7 +162,11 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
     for key, expected_value in expected.items():
         result_value = result[key]
-        for i, (lhs, rhs) in enumerate(zip(result_value, expected_value, strict=True)):
+        # cuDF series can't be iterated over, so convert expected series too.
+        comparable_expected = _to_comparable_list(expected_value)
+        for i, (lhs, rhs) in enumerate(
+            zip(result_value, comparable_expected, strict=True)
+        ):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = rhs is not None and math.isclose(
                     lhs, rhs, rel_tol=0, abs_tol=1e-6
