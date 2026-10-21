@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("numpy")
 import numpy as np
@@ -18,10 +19,8 @@ from tests.utils import (
 def test_array_dunder(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        16,
-        0,
-        0,
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "16.0.0"
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
@@ -33,10 +32,8 @@ def test_array_dunder(
 def test_array_dunder_with_dtype(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        16,
-        0,
-        0,
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "16.0.0"
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
@@ -48,23 +45,21 @@ def test_array_dunder_with_dtype(
 def test_array_dunder_with_copy(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        16,
-        0,
-        0,
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "16.0.0"
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (
-        0,
-        20,
-        28,
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion(
+        "0.20.28"
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     result = df.__array__(copy=True)
     np.testing.assert_array_equal(result, np.array([[1], [2], [3]], dtype="int64"))
-    if "pandas_constructor" in str(constructor_eager) and PANDAS_VERSION < (3,):
+    if "pandas_constructor" in str(constructor_eager) and PANDAS_VERSION < PkgVersion(
+        "3"
+    ):
         # If it's pandas, we know that `copy=False` definitely took effect.
         # So, let's check it!
         result = df.__array__(copy=False)

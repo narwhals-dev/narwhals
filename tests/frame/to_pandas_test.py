@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pandas-pyarrow")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="too old for pandas-pyarrow")
 def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("pyarrow")
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}

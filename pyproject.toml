@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.26.0"
+version = "2.27.1"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -76,6 +76,7 @@ tests = [
   "pytest-randomly",
   "pytest-xdist",
   "hypothesis>=6.0.0",
+  "packaging>=21.3",
 ]
 # NOTE: `plugins` is deliberately NOT included within `tests`.
 # `test-plugin` is a workspace member, so pulling it into `tests` makes the group unresolvable
@@ -322,6 +323,7 @@ extend-ignore-names = [
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
   "PLR0917", # too-many-positional-arguments
+  "SIM300",  # yoda-conditions (flips `PANDAS_VERSION < PkgVersion("2.2")`)
 ]
 
 "tpch/tests/*" = ["S101"]
@@ -458,7 +460,8 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',  # src: tuple comparisons
+  'PANDAS_VERSION < PkgVersion\(',  # tests: packaging.version.Version comparisons
 ]
 
 [tool.mypy]

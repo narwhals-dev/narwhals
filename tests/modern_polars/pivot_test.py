@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
@@ -13,7 +14,7 @@ def test_pivot(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip()
 
     data = {

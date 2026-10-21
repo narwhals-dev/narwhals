@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from narwhals._pandas_like.series import PandasLikeSeries
+    from narwhals.typing import NonNestedLiteral
 
 
 class PandasLikeSeriesListNamespace(
@@ -35,8 +36,22 @@ class PandasLikeSeriesListNamespace(
         )
         return self.with_native(result.astype(dtype)).alias(self.native.name)
 
+    def contains(self, item: NonNestedLiteral) -> PandasLikeSeries:
+        self._raise_if_not_pyarrow_backend()
+
+        from narwhals._arrow.utils import list_contains
+
+        result_native = self.compliant._apply_pyarrow_compute_func(
+            self.native, partial(list_contains, item=item)
+        )
+        return self.with_native(result_native)
+
     def get(self, index: int) -> PandasLikeSeries:
         result = self.native.list[index]
+        implementation, backend_version = self.implementation, self.backend_version
+        if implementation.is_pandas() and backend_version < (3, 0):  # pragma: no cover
+            # `result` is a new object so it's safe to do this inplace.
+            result.index = self.native.index
         result.name = self.native.name
         return self.with_native(result)
 
@@ -86,4 +101,3 @@ class PandasLikeSeriesListNamespace(
         return self.with_native(result_native)
 
     unique = not_implemented()
-    contains = not_implemented()

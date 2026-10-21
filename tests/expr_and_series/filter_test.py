@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -47,7 +48,7 @@ def test_filter_constraints(constructor: Constructor) -> None:
 
 
 def test_filter_windows(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.filter(nw.col("i") == nw.col("i").min())
@@ -64,7 +65,7 @@ def test_filter_windows_over(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail())
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.filter(nw.col("i") == nw.col("i").min().over("b")).sort("i")

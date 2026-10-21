@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, assert_equal_data
@@ -15,10 +16,10 @@ expected = [2.75, -1, None, None, None]
 
 
 def test_mean_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     result = nw.from_native(constructor(data)).select(
@@ -33,7 +34,7 @@ def test_mean_series(
     if any(backend in str(constructor_eager) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)

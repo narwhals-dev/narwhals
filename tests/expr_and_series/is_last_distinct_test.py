@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -26,7 +27,7 @@ def test_is_last_distinct_expr(constructor_eager: ConstructorEager) -> None:
 
 def test_is_last_distinct_expr_all(constructor_eager: ConstructorEager) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/2268
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 9):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.9"):
         pytest.skip(reason="too old version")
     data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [0, 1, 2, 3, 4]}
     df = nw.from_native(constructor_eager(data))
@@ -40,9 +41,9 @@ def test_is_last_distinct_expr_all(constructor_eager: ConstructorEager) -> None:
 
 
 def test_is_last_distinct_expr_lazy(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     data = {"a": [None, None, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [None, 1, 2, 3, 4]}
@@ -65,9 +66,9 @@ def test_is_last_distinct_expr_lazy_grouped(
     if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask", "cudf", "modin")):
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [0, 1, 2, 3, 4]}
@@ -87,9 +88,9 @@ def test_is_last_distinct_expr_lazy_grouped_nulls(
     if any(x in str(constructor) for x in ("pandas", "pyarrow", "dask", "cudf", "modin")):
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [None, 1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
