@@ -208,7 +208,8 @@ class PandasLikeSeries(EagerSeries[Any]):
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         implementation = context._implementation
         arr = data if is_numpy_array_1d(data) else [data]
-        native = implementation.to_native_namespace().Series(arr, name="")
+        kwds: dict[str, Any] = {"copy": False} if implementation.is_pandas() else {}
+        native = implementation.to_native_namespace().Series(arr, name="", **kwds)
         return cls.from_native(native, context=context)
 
     @classmethod
