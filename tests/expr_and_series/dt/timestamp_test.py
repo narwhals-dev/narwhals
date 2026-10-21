@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -59,9 +60,8 @@ def test_timestamp_datetimes(
     if original_time_unit == "s" and "polars" in str(constructor):
         pytest.skip("Second precision not supported in Polars")
 
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
-        2,
-        2,
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion(
+        "2.2"
     ):  # pragma: no cover
         pytest.skip("Requires pandas >= 2.2 for reliable pyarrow-backed timestamps")
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
@@ -107,15 +107,15 @@ def test_timestamp_datetimes_tz_aware(
             "Timezone database is not installed on Windows",
         ),
         (
-            "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,),
+            "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"),
             "Requires pandas >= 2.0 for pyarrow support",
         ),
         (
-            "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 2),
+            "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.2"),
             "Requires pandas >= 2.2 for reliable timestamps",
         ),
         (
-            "dask" in str(constructor) and PANDAS_VERSION < (2, 1),
+            "dask" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"),
             "Requires pandas >= 2.1 for dask support",
         ),
     ]
@@ -233,8 +233,8 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
     # We keep 'ms' out for now due to an upstream bug: https://github.com/pola-rs/polars/issues/19309
     starting_time_unit=st.sampled_from(["us", "ns"]),
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="bug in old pandas")
-@pytest.mark.skipif(POLARS_VERSION < (0, 20, 7), reason="bug in old Polars")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2.2"), reason="bug in old pandas")
+@pytest.mark.skipif(POLARS_VERSION < PkgVersion("0.20.7"), reason="bug in old Polars")
 @pytest.mark.slow
 def test_timestamp_hypothesis(
     inputs: datetime,

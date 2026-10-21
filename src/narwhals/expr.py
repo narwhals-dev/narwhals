@@ -3,11 +3,12 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
     NO_DEFAULT,
+    Version,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
@@ -50,6 +51,8 @@ if TYPE_CHECKING:
 
 
 class Expr:
+    _version: ClassVar[Version] = Version.MAIN
+
     def __init__(self, *nodes: ExprNode) -> None:
         self._nodes = nodes
 
@@ -277,7 +280,7 @@ class Expr:
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
-        If there are no non-null elements, the result is `False`.
+        Null values are ignored. If there are no non-null elements, the result is `False`.
 
         Examples:
             >>> import pandas as pd
@@ -297,7 +300,7 @@ class Expr:
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
 
-        If there are no non-null elements, the result is `True`.
+        Null values are ignored. If there are no non-null elements, the result is `True`.
 
         Examples:
             >>> import pandas as pd
@@ -363,7 +366,7 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
+            >>> from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
             >>>
             >>> data = {"a": [1, 2, 3]}
             >>> df_pd = pd.DataFrame(data)
@@ -371,7 +374,9 @@ class Expr:
 
             We define a library agnostic function:
 
-            >>> def agnostic_ewm_mean(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_ewm_mean(
+            ...     df_native: IntoDataFrameT | IntoLazyFrameT,
+            ... ) -> IntoDataFrameT | IntoLazyFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(
             ...         nw.col("a").ewm_mean(com=1, ignore_nulls=False)
@@ -414,6 +419,8 @@ class Expr:
     def mean(self) -> Self:
         """Get mean value.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -431,6 +438,8 @@ class Expr:
 
     def median(self) -> Self:
         """Get median value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -453,9 +462,12 @@ class Expr:
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                where N represents the number of elements. By default ddof is 1.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -475,9 +487,12 @@ class Expr:
     def var(self, *, ddof: int = 1) -> Self:
         """Get variance.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements. By default ddof is 1.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -554,6 +569,8 @@ class Expr:
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -571,6 +588,8 @@ class Expr:
 
     def kurtosis(self) -> Self:
         """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
@@ -593,7 +612,7 @@ class Expr:
     def sum(self) -> Self:
         """Return the sum value.
 
-        If there are no non-null elements, the result is zero.
+        Null values are ignored. If there are no non-null elements, the result is zero.
 
         Examples:
             >>> import duckdb
@@ -617,6 +636,8 @@ class Expr:
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -634,6 +655,8 @@ class Expr:
 
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -670,6 +693,8 @@ class Expr:
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import pandas as pd
@@ -1134,6 +1159,9 @@ class Expr:
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
+            - `fill_null(strategy='forward')` corresponds to Polars `forward_fill` and pandas
+              `ffill`; likewise, `fill_null(strategy='backward')` corresponds to Polars
+              `backward_fill` and pandas `bfill`.
 
         Examples:
             >>> import polars as pl
@@ -1484,6 +1512,8 @@ class Expr:
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
         r"""Get quantile value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Arguments:
             quantile: Quantile between 0.0 and 1.0.
@@ -2528,10 +2558,10 @@ class Expr:
             |------------------|
             |  pyarrow.Table   |
             |  a: int64        |
-            |  b: null         |
+            |  b: string       |
             |  ----            |
             |  a: [[1]]        |
-            |  b: [1 nulls]    |
+            |  b: [[null]]     |
             └──────────────────┘
 
             >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))

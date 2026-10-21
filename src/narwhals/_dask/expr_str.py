@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import dask.dataframe as dd
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._utils import not_implemented
+from narwhals._utils import not_implemented, str_slice_stop
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -16,11 +16,15 @@ if TYPE_CHECKING:
 
 class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["DaskExpr"]):
     def len_chars(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.len())
+        return self.compliant._with_callable(
+            lambda expr: cast("dx.Series", dd.to_numeric(expr.str.len()))
+        )
 
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int
     ) -> DaskExpr:
+        if n == 0:
+            return self.compliant
         if not value._metadata.is_literal:
             msg = "dask backed `Expr.str.replace` only supports str replacement values"
             raise TypeError(msg)
@@ -87,10 +91,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
+        stop = str_slice_stop(offset, length)
         return self.compliant._with_callable(
-            lambda expr: expr.str.slice(
-                start=offset, stop=offset + length if length is not None else None
-            )
+            lambda expr: expr.str.slice(start=offset, stop=stop)
         )
 
     def split(self, by: str) -> DaskExpr:

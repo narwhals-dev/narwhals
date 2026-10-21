@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DASK_VERSION, PANDAS_VERSION, assert_equal_data
@@ -20,9 +21,9 @@ PATH = Path(__file__).parent / "data/lineitem.csv"
 @pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow", "dask"])
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 def test_q1(library: str) -> None:
-    if library == "dask" and DASK_VERSION < (2024, 10):
+    if library == "dask" and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip()
-    if library == "pandas" and PANDAS_VERSION < (1, 5):
+    if library == "pandas" and PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip()
     elif library == "pandas":
         import pandas as pd
@@ -105,7 +106,7 @@ def test_q1(library: str) -> None:
     "ignore:.*Complex.*:UserWarning",
 )
 def test_q1_w_generic_funcs(library: str) -> None:
-    if library == "pandas" and PANDAS_VERSION < (1, 5):
+    if library == "pandas" and PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip()
     elif library == "pandas":
         import pandas as pd

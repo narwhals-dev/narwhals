@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation
@@ -155,6 +156,22 @@ def test_concat_diagonal_bigger(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_concat_diagonal_duckdb_own_connection() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3997
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    con.execute("create table t as select * from (values (1, 'a'), (2, 'b')) v(a, b)")
+    df_1 = nw.from_native(con.table("t").select("a, b"))
+    df_2 = nw.from_native(con.table("t").select("a"))
+    result = nw.concat([df_1, df_1], how="vertical").sort("a", "b")
+    assert_equal_data(result, {"a": [1, 1, 2, 2], "b": ["a", "a", "b", "b"]})
+
+    result = nw.concat([df_1, df_2], how="diagonal").sort("a", "b", nulls_last=True)
+    assert_equal_data(result, {"a": [1, 1, 2, 2], "b": ["a", None, "b", None]})
+
+
 def test_concat_diagonal_invalid(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
@@ -174,7 +191,7 @@ def test_concat_diagonal_invalid(
         )
     )
     context: Any
-    if impl.is_polars() and POLARS_VERSION < (1, 18):  # pragma: no cover
+    if impl.is_polars() and POLARS_VERSION < PkgVersion("1.18"):  # pragma: no cover
         context = pytest.raises(
             NarwhalsError,
             match=re.compile(r"(int.+datetime)|(datetime.+int)", re.IGNORECASE),

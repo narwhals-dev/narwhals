@@ -15,6 +15,7 @@ from narwhals._utils import (
     Version,
     extend_bool,
     is_pyspark_pre_4,
+    length_changing_hint,
     not_implemented,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -374,12 +375,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __rpow__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: other**expr, other).alias("literal")
 
-    def __mod__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
-
-    def __rmod__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other % expr, other).alias("literal")
-
     def __ge__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__ge__(other), other)
 
@@ -464,45 +459,49 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_callable(lambda expr: self._function("mean", expr))
 
     def std(self, *, ddof: int) -> Self:
-        def func(expr: NativeExprT) -> NativeExprT:
-            if ddof == 0:
-                return self._function("stddev_pop", expr)
-            if ddof == 1:
-                return self._function("stddev_samp", expr)
-            n_samples = self._function("count", expr)
-            return self._function(
-                "multiply",
-                self._function("stddev_samp", expr),
-                self._function(
-                    "sqrt",
-                    self._function(
-                        "divide",
-                        self._function("subtract", n_samples, self._lit(1)),
-                        self._function("subtract", n_samples, self._lit(ddof)),
-                    ),
-                ),
-            )
-
-        return self._with_callable(func)
+        return self._var_or_std("stddev", ddof=ddof)
 
     def var(self, *, ddof: int) -> Self:
-        def func(expr: NativeExprT) -> NativeExprT:
-            if ddof == 0:
-                return self._function("var_pop", expr)
-            if ddof == 1:
-                return self._function("var_samp", expr)
-            n_samples = self._function("count", expr)
-            return self._function(
-                "multiply",
-                self._function("var_samp", expr),
-                self._function(
-                    "divide",
-                    self._function("subtract", n_samples, self._lit(1)),
-                    self._function("subtract", n_samples, self._lit(ddof)),
-                ),
-            )
+        return self._var_or_std("var", ddof=ddof)
 
-        return self._with_callable(func)
+    def _var_or_std(self, kind: Literal["var", "stddev"], *, ddof: int) -> Self:
+        F = self._function
+
+        def aggregate(
+            expr: NativeExprT, wrap: Callable[[NativeExprT], NativeExprT]
+        ) -> NativeExprT:
+            # `wrap` adds the window frame to each aggregate in a window context and
+            # is the identity otherwise. A compound expression can't be wrapped as a
+            # single window function, so each aggregate is wrapped individually.
+            if ddof == 0:
+                return wrap(F(f"{kind}_pop", expr))
+            sample = wrap(F(f"{kind}_samp", expr))
+            if ddof == 1:
+                return sample
+            n_samples = wrap(F("count", expr))
+            factor = F(
+                "divide",
+                F("subtract", n_samples, self._lit(1)),
+                F("subtract", n_samples, self._lit(ddof)),
+            )
+            if kind == "stddev":
+                factor = F("sqrt", factor)
+            return self._when(n_samples > self._lit(ddof), F("multiply", sample, factor))
+
+        def func(expr: NativeExprT) -> NativeExprT:
+            return aggregate(expr, lambda agg: agg)
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            assert not inputs.order_by  # noqa: S101
+
+            def wrap(agg: NativeExprT) -> NativeExprT:
+                return self._window_expression(agg, inputs.partition_by)
+
+            return [aggregate(expr, wrap) for expr in self(df)]
+
+        return self._with_callable(func, window_f)
 
     def median(self) -> Self:
         return self._with_callable(lambda expr: self._function("median", expr))
@@ -576,9 +575,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def _clip(
             expr: NativeExprT, lower_bound: NativeExprT, upper_bound: NativeExprT
         ) -> NativeExprT:
-            return self._function(
+            clipped = self._function(
                 "greatest", self._function("least", expr, upper_bound), lower_bound
             )
+            return self._when(self._function("isnull", expr), self._lit(None), clipped)
 
         return self._with_elementwise(
             _clip,
@@ -587,13 +587,15 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def clip_lower(self, lower_bound: Self) -> Self:
         def _clip(expr: NativeExprT, lower_bound: NativeExprT) -> NativeExprT:
-            return self._function("greatest", expr, lower_bound)
+            clipped = self._function("greatest", expr, lower_bound)
+            return self._when(self._function("isnull", expr), self._lit(None), clipped)
 
         return self._with_elementwise(_clip, expression_args={"lower_bound": lower_bound})
 
     def clip_upper(self, upper_bound: Self) -> Self:
         def _clip(expr: NativeExprT, upper_bound: NativeExprT) -> NativeExprT:
-            return self._function("least", expr, upper_bound)
+            clipped = self._function("least", expr, upper_bound)
+            return self._when(self._function("isnull", expr), self._lit(None), clipped)
 
         return self._with_elementwise(_clip, expression_args={"upper_bound": upper_bound})
 
@@ -953,6 +955,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     @property
     def dt(self) -> SQLExprDateTimeNamesSpace[Self]: ...
 
-    drop_nulls = not_implemented()  # type: ignore[misc]
-    filter = not_implemented()  # type: ignore[misc]
-    unique = not_implemented()  # type: ignore[misc]
+    # Length-changing expressions can't be expressed in SQL, but the equivalent
+    # frame-level methods can, so point users at those.
+    drop_nulls = not_implemented(  # type: ignore[misc]
+        hint=length_changing_hint(
+            instead_of="lf.select(nw.col('a').drop_nulls())",
+            use="lf.drop_nulls(subset=['a'])",
+        )
+    )
+    filter = not_implemented(  # type: ignore[misc]
+        hint=length_changing_hint(
+            instead_of="lf.select(nw.col('a').filter(nw.col('b') > 0))",
+            use="lf.filter(nw.col('b') > 0).select('a')",
+        )
+    )
+    unique = not_implemented(  # type: ignore[misc]
+        hint=length_changing_hint(
+            instead_of="lf.select(nw.col('a').unique())", use="lf.select('a').unique()"
+        )
+    )

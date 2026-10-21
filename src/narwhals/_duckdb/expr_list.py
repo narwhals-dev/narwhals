@@ -36,6 +36,12 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(func)
 
     def contains(self, item: NonNestedLiteral) -> DuckDBExpr:
+        if item is None:
+            # Unlike `array_position(expr, NULL)`, this is cheap for nested inner types
+            # too, and works on every DuckDB version.
+            return self.compliant._with_elementwise(
+                lambda expr: F("len", expr) > F("list_count", expr)
+            )
         return self.compliant._with_elementwise(
             lambda expr: F("list_contains", expr, lit(item))
         )

@@ -9,7 +9,7 @@ from narwhals.dtypes import Array, Categorical, List, String, Struct
 from narwhals.testing.asserts.utils import raise_series_assertion_error
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
     from typing import TypeAlias
 
     from narwhals.series import Series
@@ -18,16 +18,10 @@ if TYPE_CHECKING:
     CheckFn: TypeAlias = Callable[[Series[Any], Series[Any]], None]
 
 
-def _sibling_series(reference: SeriesT, values: Any, dtype: IntoDType | None) -> SeriesT:
-    """Build a Series from `values` using `reference`'s own backend.
-
-    The assert helpers need to materialize intermediate Series (e.g. the inner
-    values of a nested column). Routing through
-    `narwhals.new_series(backend=reference.implementation)` breaks for plugin
-    backends whose implementation is `Implementation.UNKNOWN`, which cannot be
-    resolved back to a namespace. Constructing straight from the reference's
-    own compliant series class works for every backend, built-in or plugin.
-    """
+def _series_like(
+    reference: SeriesT, values: Iterable[Any], dtype: IntoDType | None
+) -> SeriesT:
+    """Build a Series from `values` using `reference`'s own backend."""
     source = reference._compliant_series
     compliant = type(source).from_iterable(values, name="", context=source, dtype=dtype)
     return reference._with_compliant(compliant)
@@ -252,10 +246,10 @@ def _check_list_like(
     # Notice that order within the array/list must be the same, regardless of
     # `check_order` value at the top level.
     try:
-        for left_val, right_val in zip(left_vals, right_vals, strict=True):
+        for lv, rv in zip(left_vals, right_vals, strict=True):
             check_fn(
-                _sibling_series(left_vals, left_val, left_dtype.inner),
-                _sibling_series(right_vals, right_val, right_dtype.inner),
+                _series_like(reference=left_vals, values=lv, dtype=left_dtype.inner),
+                _series_like(reference=right_vals, values=rv, dtype=right_dtype.inner),
             )
     except AssertionError:
         raise_series_assertion_error("nested value mismatch", left_vals, right_vals)
