@@ -6,6 +6,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, cast, get_args
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
@@ -244,7 +245,9 @@ def test_read_plugin(
             nw.from_arrow,
             _arrow_table,
             {},
-            marks=pytest.mark.skipif(PYARROW_VERSION < (14,), reason="too old"),
+            marks=pytest.mark.skipif(
+                PYARROW_VERSION < PkgVersion("14"), reason="too old"
+            ),
         ),
         (nw.DataFrame.from_dict, DATA, {}),
         (nw.DataFrame.from_dicts, ROWS, {}),
@@ -253,7 +256,9 @@ def test_read_plugin(
             nw.DataFrame.from_arrow,
             _arrow_table,
             {},
-            marks=pytest.mark.skipif(PYARROW_VERSION < (14,), reason="too old"),
+            marks=pytest.mark.skipif(
+                PYARROW_VERSION < PkgVersion("14"), reason="too old"
+            ),
         ),
     ],
 )
