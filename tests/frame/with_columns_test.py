@@ -4,8 +4,9 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from narwhals.exceptions import ColumnNotFoundError, ShapeError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError, ShapeError
 from tests.utils import (
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -113,3 +114,104 @@ def test_with_columns_missing_column(
 
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.with_columns(d=nw.col("c") + 1))
+
+
+@pytest.mark.parametrize("from_dict", [False, True])
+def test_with_columns_empty_series(
+    constructor_eager: ConstructorEager, *, from_dict: bool
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    empty = nw.from_dict({}, backend=df.implementation) if from_dict else df.select()
+    assert empty.shape == (0, 0)
+    with pytest.raises(ShapeError):
+        empty.with_columns(x=df["a"])
+
+
+def test_with_columns_empty_selector_and_scalar(
+    constructor_eager: ConstructorEager,
+) -> None:
+    # A selector that matches no columns adds nothing, so only the literal counts.
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    result = df.select().with_columns(nw.all(), nw.lit(1).alias("b"))
+    assert result.shape == (0, 1)
+    assert_equal_data(result, {"b": []})
+
+
+def test_with_columns_empty_short_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    s = df["a"].head(1)
+    # Polars 2 reports a length-1 Series on an empty frame as an invalid operation.
+    with pytest.raises((ShapeError, InvalidOperationError)):
+        df.select().with_columns(s)
+
+
+@pytest.mark.parametrize(
+    ("exprs", "columns"),
+    [
+        ([nw.lit(1)], ["literal"]),
+        ([nw.lit(1), nw.lit(2).alias("second")], ["literal", "second"]),
+    ],
+)
+def test_with_columns_empty_scalars(
+    constructor_eager: ConstructorEager, exprs: list[nw.Expr], columns: list[str]
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True).select()
+    assert df.shape == (0, 0)
+    result = df.with_columns(*exprs)
+    assert result.shape == (0, len(columns))
+    assert result.columns == columns
+    assert_equal_data(result, {column: [] for column in columns})
+
+
+def test_with_columns_empty_scalar_and_series(
+    constructor_eager: ConstructorEager,
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    empty = df.select()
+    assert empty.shape == (0, 0)
+    with pytest.raises(ShapeError):
+        empty.with_columns(nw.lit(1), x=df["a"])
+
+
+def test_with_columns_zero_width_preserves_height(
+    constructor_eager: ConstructorEager,
+) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("2"):
+        # Polars before 2 cannot preserve height after dropping the last column.
+        pytest.skip("Zero-width frames with positive height require Polars 2 or later")
+    backend = nw.from_native(constructor_eager({"a": [0, 1, 2]})).implementation
+    df = nw.from_dict({"a": [0, 1, 2]}, backend=backend)
+    empty = df.drop("a")
+    assert empty.shape == (3, 0)
+
+    scalar_result = empty.with_columns(nw.lit(1))
+    assert scalar_result.shape == (3, 1)
+    assert_equal_data(scalar_result, {"literal": [1, 1, 1]})
+
+    series_result = empty.with_columns(x=df["a"])
+    assert series_result.shape == (3, 1)
+    assert_equal_data(series_result, {"x": [0, 1, 2]})
+
+
+@pytest.mark.parametrize("empty_on_left", [True, False])
+def test_with_columns_empty_cross_join(
+    constructor_eager: ConstructorEager, *, empty_on_left: bool
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    empty = df.select()
+    result = empty.join(df, how="cross") if empty_on_left else df.join(empty, how="cross")
+    assert result.shape == (0, 1)
+    assert result.columns == ["a"]
+    assert_equal_data(result, {"a": []})
+
+
+def test_with_columns_zero_height(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    empty = df.head(0)
+    assert empty.shape == (0, 1)
+    with pytest.raises(ShapeError):
+        empty.with_columns(x=df["a"])
+
+    result = empty.with_columns(nw.lit(1))
+    assert result.shape == (0, 2)
+    assert_equal_data(result, {"a": [], "literal": []})
