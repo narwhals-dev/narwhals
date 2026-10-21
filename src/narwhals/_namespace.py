@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
@@ -34,7 +35,7 @@ from narwhals._native import (
     is_native_spark_like,
     is_native_sqlframe,
 )
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, is_plugin_backend
 
 if TYPE_CHECKING:
     from typing import TypeAlias
@@ -57,13 +58,58 @@ if TYPE_CHECKING:
         Ibis,
         IntoBackend,
         PandasLike,
+        PluginName,
         Polars,
         SparkLike,
     )
 
+    EagerNamespaceKnown: TypeAlias = (
+        PandasLikeNamespace | ArrowNamespace | PolarsNamespace
+    )
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
 
 __all__ = ["Namespace"]
+
+
+# NOTE: Unbounded is safe, there are at most `len(Implementation) * len(Version)` keys.
+@cache
+def _builtin_namespace(
+    impl: Implementation, version: Version, /
+) -> CompliantNamespaceAny:
+    impl._backend_version()  # Raises if the backend is missing or too old.
+    ns: CompliantNamespaceAny
+    if impl.is_pandas_like():
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        ns = PandasLikeNamespace(implementation=impl, version=version)
+    elif impl.is_polars():
+        from narwhals._polars.namespace import PolarsNamespace
+
+        ns = PolarsNamespace(version=version)
+    elif impl.is_pyarrow():
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        ns = ArrowNamespace(version=version)
+    elif impl.is_spark_like():
+        from narwhals._spark_like.namespace import SparkLikeNamespace
+
+        ns = SparkLikeNamespace(implementation=impl, version=version)
+    elif impl.is_duckdb():
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        ns = DuckDBNamespace(version=version)
+    elif impl.is_dask():
+        from narwhals._dask.namespace import DaskNamespace
+
+        ns = DaskNamespace(version=version)
+    elif impl.is_ibis():
+        from narwhals._ibis.namespace import IbisNamespace
+
+        ns = IbisNamespace(version=version)
+    else:  # pragma: no cover - `UNKNOWN` is resolved as a plugin before this
+        msg = "Not supported Implementation"
+        raise AssertionError(msg)
+    return ns
 
 
 class Namespace(Generic[CompliantNamespaceT_co]):
@@ -132,12 +178,12 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_backend(
-        cls, backend: IntoBackend[Backend], /
+        cls, backend: IntoBackend[Backend | PluginName], /
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_backend(
-        cls: type[Namespace[Any]], backend: IntoBackend[Backend], /
+        cls: type[Namespace[Any]], backend: IntoBackend[Backend | PluginName], /
     ) -> Namespace[Any]:
         """Instantiate from native namespace module, string, or Implementation.
 
@@ -149,42 +195,11 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             Namespace[PolarsNamespace]
         """
         impl = Implementation.from_backend(backend)
-        backend_version = impl._backend_version()  # noqa: F841
-        version = cls._version
-        ns: CompliantNamespaceAny
-        if impl.is_pandas_like():
-            from narwhals._pandas_like.namespace import PandasLikeNamespace
+        if is_plugin_backend(backend, impl):
+            from narwhals.plugins import _plugin_namespace, _resolve_plugin
 
-            ns = PandasLikeNamespace(implementation=impl, version=version)
-
-        elif impl.is_polars():
-            from narwhals._polars.namespace import PolarsNamespace
-
-            ns = PolarsNamespace(version=version)
-        elif impl.is_pyarrow():
-            from narwhals._arrow.namespace import ArrowNamespace
-
-            ns = ArrowNamespace(version=version)
-        elif impl.is_spark_like():
-            from narwhals._spark_like.namespace import SparkLikeNamespace
-
-            ns = SparkLikeNamespace(implementation=impl, version=version)
-        elif impl.is_duckdb():
-            from narwhals._duckdb.namespace import DuckDBNamespace
-
-            ns = DuckDBNamespace(version=version)
-        elif impl.is_dask():
-            from narwhals._dask.namespace import DaskNamespace
-
-            ns = DaskNamespace(version=version)
-        elif impl.is_ibis():
-            from narwhals._ibis.namespace import IbisNamespace
-
-            ns = IbisNamespace(version=version)
-        else:
-            msg = "Not supported Implementation"  # pragma: no cover
-            raise AssertionError(msg)
-        return cls(ns)
+            return cls(_plugin_namespace(_resolve_plugin(backend), version=cls._version))
+        return cls(_builtin_namespace(impl, cls._version))
 
     @overload
     @classmethod

@@ -57,13 +57,67 @@ handle plugins. For this integration to work, any plugin architecture must conta
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
     which wraps the native dataframe.
 
+    Narwhals caches the namespace returned by `__narwhals_namespace__`, one per plugin and
+    version, and shares it across every call, both `backend=...` and `nw.from_native`.
+    It must therefore be safe to reuse, like Narwhals' own namespaces, which hold nothing
+    but their implementation and version. The hook itself may still be called more than
+    once, e.g. on concurrent first use.
+
     Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the signatures.
 
-## IO functions: the namespace contract
+  3. an `_implementation = narwhals.Implementation.UNKNOWN` attribute on every compliant
+    class the plugin exposes (namespace, dataframe, lazyframe, series). This is how Narwhals
+    tells plugin objects apart from those of its built-in backends.
+
+## Supporting `backend=...` in Narwhals functions
+
+Functions and constructors which accept a `backend` argument can also dispatch to a
+plugin. Users can pass:
+
+- the plugin's entry point name (e.g. `backend="narwhals-grizzlies"`),
+- the plugin's module name (e.g. `backend="narwhals_grizzlies"`),
+- or the plugin's module itself (e.g. `backend=narwhals_grizzlies`).
+
+All three spellings resolve to the same [cached namespace](#creating-a-plugin), and
+dispatch goes through it:
+
+1. **IO functions** (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`): these
+   call same-named methods on the compliant namespace, following the
+   [namespace contract](#io-functions-the-namespace-contract) below. If the plugin's
+   namespace does not implement the required method, an informative
+   [`PluginError`](api-reference/exceptions.md) is raised.
+
+2. **Eager constructors** (`from_dict`, `from_dicts`, `from_numpy`, `from_arrow`,
+   `new_series`, and the `DataFrame.from_*` and `Series.from_*` classmethods) are
+   eager-only. They work with no extra plugin code when the plugin's compliant
+   namespace implements the `EagerNamespace` protocol from `narwhals.compliant`: the
+   `_dataframe` and `_series` properties, whose classes provide the `from_dict`,
+   `from_dicts`, `from_numpy`, `from_arrow` and `from_iterable` constructors (see
+   `EagerDataFrame` and `EagerSeries`). Lazy-only plugins get an informative
+   [`PluginError`](api-reference/exceptions.md) instead.
+
+Methods which internally construct Series (`Series.scatter`, `DataFrame.filter` with a
+list of booleans, or a NumPy array passed to `with_columns`) use the compliant namespace
+of the object they are called on, so they also work for eager plugins.
+
+A method counts as missing when the namespace does not define it, marks it with
+`narwhals._utils.not_implemented()`, or inherits the protocol's empty stub.
+
+!!! tip "Type checking"
+
+    The `backend` parameters of these functions are typed with
+    [`PluginName`](api-reference/plugins.md), a `str`
+    [`NewType`](https://docs.python.org/3/library/typing.html#newtype): plugin names
+    are only known at runtime, so an opaque string does not type check, but an
+    explicitly wrapped one does, e.g.
+    `nw.from_dict(data, backend=PluginName("narwhals-grizzlies"))`.
+    Passing the plain string works at runtime all the same.
+
+### IO functions: the namespace contract
 
 The Narwhals IO functions (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
 dispatch to same-named methods on the compliant namespace. This is a single mechanism,
-shared by built-in backends and extensions alike: to support these functions, a
+shared by built-in backends and plugins alike: to support these functions, a
 compliant namespace implements (a subset of):
 
 ```py
