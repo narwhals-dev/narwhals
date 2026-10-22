@@ -19,7 +19,7 @@ from narwhals._utils import (
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.series import DictSeries
-from narwhals_dict.utils import is_native_frame
+from narwhals_dict.utils import is_native_frame, nan_last_column
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
@@ -358,7 +358,7 @@ class DictDataFrame(
         self, by: Sequence[str], *, descending: bool | Sequence[bool], nulls_last: bool
     ) -> list[int]:
         """Row indices ordered by `by`, ascending unless `descending` says otherwise."""
-        columns = [self.native[name] for name in by]
+        columns = [nan_last_column(self.native[name]) for name in by]
         if len(columns) == 1:
             # Single key (the common case): sort the non-null positions directly
             # on the column values and add nulls onto the requested end.

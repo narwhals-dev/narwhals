@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import decimal
 import enum
+import math
 import re
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, time, timedelta, timezone
@@ -553,8 +554,32 @@ def sort_with_nulls(
     values = list(values)
     rest = non_null(values)
     nulls = [None] * (len(values) - len(rest))
-    rest.sort(reverse=descending)
+    rest.sort(key=nan_last_key(rest), reverse=descending)
     return rest + nulls if nulls_last else nulls + rest
+
+
+def _is_nan(value: Any) -> bool:
+    return isinstance(value, float) and math.isnan(value)
+
+
+def nan_last(value: Any) -> tuple[bool, Any]:
+    """Sort key placing NaN after every other value, as Polars does.
+
+    Python's sort order is undefined with NaN, as every comparison with it is False.
+    """
+    return (_is_nan(value), value)
+
+
+def nan_last_key(values: Iterable[Any]) -> Callable[[Any], Any] | None:
+    """`nan_last` if `values` hold a NaN, else no key at all (a faster, plain sort)."""
+    return nan_last if any(map(_is_nan, values)) else None
+
+
+def nan_last_column(values: Sequence[Any]) -> Sequence[Any]:
+    """A column's sort keys: `values` mapped through `nan_last` if they hold a NaN."""
+    if nan_last_key(values) is None:
+        return values
+    return [None if value is None else nan_last(value) for value in values]
 
 
 def _first_non_null(values: Iterable[Any]) -> Any:

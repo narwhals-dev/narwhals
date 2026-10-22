@@ -19,6 +19,8 @@ from narwhals_dict.utils import (
     is_native_column,
     kleene_and,
     kleene_or,
+    nan_last_column,
+    nan_last_key,
     sort_with_nulls,
 )
 
@@ -484,7 +486,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
-        if not (values := sorted(self._non_null())):
+        values = self._non_null()
+        if not (values := sorted(values, key=nan_last_key(values))):
             return None  # type: ignore[return-value]
         position = (len(values) - 1) * quantile
         lower = values[math.floor(position)]
@@ -670,12 +673,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native([statistics.mode(self.native)] if self.native else [])
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
+        keys = nan_last_column(self.native)
         ordered = sorted(
-            (
-                (value, index)
-                for index, value in enumerate(self.native)
-                if value is not None
-            ),
+            ((value, index) for index, value in enumerate(keys) if value is not None),
             key=operator.itemgetter(0),
             reverse=descending,
         )
