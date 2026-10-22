@@ -560,14 +560,18 @@ def non_null(values: Iterable[Any]) -> list[Any]:
 
 
 def sort_with_nulls(
-    values: Iterable[Any], *, descending: bool, nulls_last: bool
+    values: Sequence[Any], *, descending: bool, nulls_last: bool
 ) -> list[Any]:
     """Sort the non-null values, keeping the nulls together at one end."""
-    values = list(values)
-    rest = non_null(values)
-    nulls = [None] * (len(values) - len(rest))
-    rest.sort(key=nan_last_key(rest), reverse=descending)
-    return rest + nulls if nulls_last else nulls + rest
+    result = non_null(values)
+    result.sort(key=nan_last_key(result), reverse=descending)
+    if n_nulls := len(values) - len(result):
+        nulls = [None] * n_nulls
+        if not nulls_last:
+            nulls += result
+            return nulls
+        result += nulls
+    return result
 
 
 def _is_nan(value: Any) -> bool:
