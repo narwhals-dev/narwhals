@@ -5,7 +5,7 @@ import operator
 import random
 import statistics
 from collections import Counter
-from itertools import accumulate, compress, count, pairwise, repeat
+from itertools import accumulate, compress, count, islice, pairwise, repeat
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerSeries
@@ -787,19 +787,23 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(result)
 
     def _cum_agg(self, op: Callable[[Any, Any], Any], *, reverse: bool) -> Self:
-        values = self.native[::-1] if reverse else self.native
+        native = self.native
         # Accumulate skipping nulls, then restore nulls at their original positions.
         accumulated: Iterator[Any] = accumulate(
-            values,
+            reversed(native) if reverse else native,
             lambda acc, value: (
                 acc if value is None else value if acc is None else op(acc, value)
             ),
         )
         result = [
             None if value is None else acc
-            for value, acc in zip(values, accumulated, strict=True)
+            for value, acc in zip(
+                reversed(native) if reverse else native, accumulated, strict=True
+            )
         ]
-        return self._with_native(result[::-1] if reverse else result)
+        if reverse:
+            result.reverse()
+        return self._with_native(result)
 
     def cum_sum(self, *, reverse: bool) -> Self:
         return self._cum_agg(operator.add, reverse=reverse)
@@ -814,10 +818,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._cum_agg(min, reverse=reverse)
 
     def cum_count(self, *, reverse: bool) -> Self:
-        values = self.native[::-1] if reverse else self.native
-        counts = accumulate(values, lambda n, value: n + (value is not None), initial=0)
-        result = list(counts)[1:]
-        return self._with_native(result[::-1] if reverse else result)
+        values = reversed(self.native) if reverse else self.native
+        is_valid = map(operator.is_not, values, repeat(None))
+        result = list(islice(accumulate(is_valid, initial=0), 1, None))
+        if reverse:
+            result.reverse()
+        return self._with_native(result)
 
     # Rolling and exponentially-weighted windows
     def _rolling_agg(
