@@ -694,6 +694,12 @@ def test_datetime_w_tz_duckdb() -> None:
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
 
+    con = duckdb.connect()
+    con.sql("""set timezone = 'Asia/Kolkata'""")
+    rel = con.sql("""select timestamptz '2020-01-01' as a where false""")
+    result = nw.from_native(rel).collect_schema()
+    assert result["a"] == nw.Datetime("us", "Asia/Kolkata")
+
 
 @pytest.mark.slow
 def test_datetime_w_tz_pyspark() -> None:  # pragma: no cover
