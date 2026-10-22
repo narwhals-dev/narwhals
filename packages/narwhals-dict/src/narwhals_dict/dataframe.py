@@ -163,9 +163,11 @@ class DictDataFrame(
         return DictNamespace(version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
-        import builtins
+        # The plugin module, not `builtins`: Narwhals resolves it back as a
+        # backend, e.g. `nw.from_numpy(arr, backend=nw.get_native_namespace(df))`.
+        import narwhals_dict
 
-        return builtins
+        return narwhals_dict
 
     def __narwhals_dataframe__(self) -> Self:
         return self

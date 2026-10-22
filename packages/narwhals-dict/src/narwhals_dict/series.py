@@ -83,9 +83,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return infer_dtype(self.native, self._version)
 
     def __native_namespace__(self) -> ModuleType:
-        import builtins
+        # See `DictDataFrame.__native_namespace__`.
+        import narwhals_dict
 
-        return builtins
+        return narwhals_dict
 
     def __narwhals_namespace__(self) -> DictNamespace:
         from narwhals_dict.namespace import DictNamespace
