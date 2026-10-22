@@ -15,6 +15,7 @@ from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.utils import (
     binary_op,
     cast_values,
+    first_non_null,
     infer_dtype,
     is_native_column,
     kleene_and,
@@ -553,10 +554,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self.native[-1] if self.native else None
 
     def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
-        if ignore_nulls:
-            values = self._non_null()
-            return values[0] if values else None
-        return self.first()
+        return first_non_null(self.native) if ignore_nulls else self.first()
 
     def item(self, index: int | None) -> Any:
         if index is None:

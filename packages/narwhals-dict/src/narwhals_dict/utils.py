@@ -30,6 +30,7 @@ __all__ = [
     "binary_op",
     "cast_values",
     "csv_to_native",
+    "first_non_null",
     "infer_dtype",
     "is_native_column",
     "is_native_frame",
@@ -598,7 +599,7 @@ def nan_last_column(values: Sequence[Any]) -> Sequence[Any]:
     return [None if value is None else nan_last(value) for value in values]
 
 
-def _first_non_null(values: Iterable[Any]) -> Any:
+def first_non_null(values: Iterable[Any]) -> Any:
     return next((value for value in values if value is not None), None)
 
 
@@ -623,8 +624,8 @@ def _promote_decimal_mix(
     off its first non-null value, and the conversion happens once per column
     up front, keeping the elementwise loop in `binary_op` promotion-free.
     """
-    left_sample = _first_non_null(left)
-    right_sample = right if is_scalar else _first_non_null(right)
+    left_sample = first_non_null(left)
+    right_sample = right if is_scalar else first_non_null(right)
     if isinstance(left_sample, decimal.Decimal) and isinstance(right_sample, float):
         left = _to_float_column(left)
     elif isinstance(right_sample, decimal.Decimal) and isinstance(left_sample, float):
