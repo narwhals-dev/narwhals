@@ -121,8 +121,8 @@ def test_with_columns_numpy_array(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     arr = np.array([4, 5, 6])
-    impl = df.implementation
-    if impl.is_pandas_like() or impl.is_polars() or impl.is_pyarrow():
+    # Eager backends (plugins included) build a Series from the array.
+    if df.implementation.is_polars() or isinstance(df, nw.DataFrame):
         assert_equal_data(df.with_columns(b=arr), {"a": [1, 2, 3], "b": [4, 5, 6]})
     else:
         with pytest.raises(ValueError, match="lazy-only, but `new_series`"):
