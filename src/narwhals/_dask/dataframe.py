@@ -244,6 +244,7 @@ class DaskLazyFrame(
         return self.with_columns(const_expr).select(row_index_expr, plx.col(*columns))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
+        check_column_names_are_unique([mapping.get(c, c) for c in self.columns])
         return self._with_native(self.native.rename(columns=mapping))
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
