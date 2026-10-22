@@ -1137,8 +1137,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             return DictDataFrame(data, version=self._version)
         values = [
             value
-            for value in self._non_null()
-            if not (isinstance(value, float) and math.isnan(value))
+            for value in self.native
+            if value is not None and not (isinstance(value, float) and math.isnan(value))
         ]
         if not values:
             # Match Polars: an all-null series gets `bin_count` bins spanning [0, 1].
