@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from itertools import chain
+from itertools import chain, repeat
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerNamespace
@@ -251,7 +251,7 @@ class DictNamespace(
         return {
             name: list(
                 chain.from_iterable(
-                    df.get(name, [None] * length)
+                    df[name] if name in df else repeat(None, length)
                     for df, length in zip(dfs, lengths, strict=True)
                 )
             )
