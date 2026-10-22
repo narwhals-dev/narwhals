@@ -23,6 +23,7 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_column_names_are_unique,
     extend_bool,
     generate_temporary_column_name,
     parse_columns_to_drop,
@@ -280,6 +281,7 @@ class DuckDBLazyFrame(
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         df = self.native
+        check_column_names_are_unique([mapping.get(name, name) for name in df.columns])
         selection = (
             col(name).alias(mapping[name]) if name in mapping else col(name)
             for name in df.columns
