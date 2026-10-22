@@ -51,7 +51,10 @@ FAILED_PATTERN = re.compile(
 
 def read_known_failures(*, required: bool) -> list[str]:
     if KNOWN_FAILURES.exists():
-        return KNOWN_FAILURES.read_text(encoding="utf-8").split()
+        # One node id per line: ids may contain spaces (e.g. `[dict-dtype mismatch]`),
+        # and a blank line would be an empty `--deselect` prefix, matching every test.
+        lines = KNOWN_FAILURES.read_text(encoding="utf-8").splitlines()
+        return [line for line in lines if line]
     if required:
         msg = (
             f"{KNOWN_FAILURES} is missing; run with --update to generate it, "
