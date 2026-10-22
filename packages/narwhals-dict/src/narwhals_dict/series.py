@@ -623,6 +623,11 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         fill, is_scalar = self._extract_comparand(value)
         if is_scalar:
             result = [fill if current is None else current for current in self.native]
+        elif self._broadcast:
+            # e.g. `lit(None).fill_null(col("a"))`: broadcast the scalar receiver.
+            receiver = self.native[0]
+            result = list(fill) if receiver is None else [receiver] * len(fill)
+            return self._with_native(result, preserve_broadcast=False)
         else:
             result = [
                 new if current is None else current
