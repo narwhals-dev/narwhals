@@ -249,9 +249,7 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
     def __iter__(self) -> Iterator[tuple[tuple[Any, ...], DictDataFrame]]:
         frame = self.compliant
         single_key = len(self._keys) == 1
+        selected = frame.simple_select(*self._df.columns)
         for key, indices in self._group_indices(frame).items():
             # Keys are always yielded as tuples, so wrap the single-key raw value.
-            yield (
-                (key,) if single_key else key,
-                frame._gather_positions(indices).simple_select(*self._df.columns),
-            )
+            yield ((key,) if single_key else key), selected._gather_positions(indices)
