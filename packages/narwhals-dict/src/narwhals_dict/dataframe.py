@@ -145,7 +145,6 @@ class DictDataFrame(
             return cls.from_dict(native, context=context, schema=schema)
         return cls(native, version=context._version)
 
-    # NOTE: Requires https://github.com/narwhals-dev/narwhals/pull/3753
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
         from narwhals._utils import _into_arrow_table
