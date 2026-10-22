@@ -273,22 +273,41 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     @staticmethod
     def _truediv(numerator: float, denominator: float) -> float:
-        # Division by zero: match Polars/IEEE-754 (`±inf`, `0/0 -> NaN`)
+        # Division by zero: match Polars/IEEE-754 (`±inf`, `0/0` and `NaN/0 -> NaN`)
         # instead of Python's `ZeroDivisionError`.
         try:
             return numerator / denominator
         except ZeroDivisionError:
-            if numerator:
-                return math.copysign(float("inf"), numerator)
-            return float("nan")
+            if not numerator or math.isnan(numerator):
+                return float("nan")
+            return math.copysign(math.inf, numerator) * math.copysign(1.0, denominator)
 
     @staticmethod
-    def _floordiv(numerator: float, denominator: float) -> float | None:
-        # Floor division by zero: Polars returns null.
+    def _floordiv(numerator: int, denominator: int) -> int | None:
+        # Integer floor division by zero: Polars returns null.
         try:
             return numerator // denominator
         except ZeroDivisionError:
             return None
+
+    @classmethod
+    def _float_floordiv(cls, numerator: float, denominator: float) -> float:
+        # Polars floors the IEEE-754 quotient: `1.0 // 0.1 == 10.0` (Python gives
+        # 9.0), and dividing by zero gives `±inf`/NaN as in true division.
+        quotient = cls._truediv(numerator, denominator)
+        return float(math.floor(quotient)) if math.isfinite(quotient) else quotient
+
+    def _floordiv_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        """Pick the float or the integer kernel once, from both operands' dtypes."""
+        rhs, rhs_is_scalar = self._extract_comparand(other)
+        rhs_is_float = (
+            isinstance(rhs, float)
+            if rhs_is_scalar
+            else infer_dtype(rhs, self._version).is_float()
+        )
+        if rhs_is_float or self.dtype.is_float():
+            return self._float_floordiv
+        return self._floordiv
 
     def __truediv__(self, other: Self) -> Self:
         return self._with_binary(self._truediv, other)
@@ -297,10 +316,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_binary_right(self._truediv, other)
 
     def __floordiv__(self, other: Self) -> Self:
-        return self._with_binary(self._floordiv, other)
+        return self._with_binary(self._floordiv_kernel(other), other)
 
     def __rfloordiv__(self, other: Self) -> Self:
-        return self._with_binary_right(self._floordiv, other)
+        return self._with_binary_right(self._floordiv_kernel(other), other)
 
     @staticmethod
     def _pow(base: float, exponent: float) -> float:
