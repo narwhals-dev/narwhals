@@ -1074,7 +1074,11 @@ class DictDataFrame(
         value_name: str,
     ) -> Self:
         index = [] if index is None else list(index)
-        on = [c for c in self.columns if c not in index] if on is None else list(on)
+        if on is None:
+            excluded = set(index)
+            on = [name for name in self.columns if name not in excluded]
+        else:
+            on = list(on)
         if error := self._check_columns_exist([*index, *on]):
             raise error
         n = len(self)
