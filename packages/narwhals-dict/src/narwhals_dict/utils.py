@@ -39,6 +39,7 @@ __all__ = [
     "non_null",
     "parse_datetime_format",
     "parse_time_format",
+    "promote_decimal_mix",
     "sort_with_nulls",
     "to_str",
     "trunc_div",
@@ -607,7 +608,7 @@ def _to_float_column(values: Iterable[Any]) -> list[Any]:
     return [None if value is None else float(value) for value in values]
 
 
-def _promote_decimal_mix(
+def promote_decimal_mix(
     left: NativeSeries, right: Any, *, is_scalar: bool
 ) -> tuple[NativeSeries, Any]:
     """Promote the `Decimal` side of a `Decimal`/`float` operand mix to float.
@@ -669,14 +670,14 @@ def binary_op(
     if is_scalar:
         if right is None and propagate_null:
             return [None] * len(left)
-        left, right = _promote_decimal_mix(left, right, is_scalar=True)
+        left, right = promote_decimal_mix(left, right, is_scalar=True)
         if not propagate_null:
             return [op(lhs, right) for lhs in left]
         return [None if lhs is None else op(lhs, right) for lhs in left]
     if len(left) != len(right):
         msg = f"Expected object of length {len(left)}, got: {len(right)}."
         raise ShapeError(msg)
-    left, right = _promote_decimal_mix(left, right, is_scalar=False)
+    left, right = promote_decimal_mix(left, right, is_scalar=False)
     if not propagate_null:
         return [op(lhs, rhs) for lhs, rhs in zip(left, right, strict=True)]
     return [

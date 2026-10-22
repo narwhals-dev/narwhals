@@ -22,6 +22,7 @@ from narwhals_dict.utils import (
     kleene_or,
     nan_last_column,
     nan_last_key,
+    promote_decimal_mix,
     sort_with_nulls,
 )
 
@@ -395,7 +396,18 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         )
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        return self.clip_lower(lower_bound).clip_upper(upper_bound)
+        lower, lower_is_scalar = self._extract_comparand(lower_bound)
+        upper, upper_is_scalar = self._extract_comparand(upper_bound)
+        if self._broadcast or not (lower_is_scalar and upper_is_scalar):
+            # Column bounds or a scalar receiver need `_with_binary`'s alignment.
+            return self.clip_lower(lower_bound).clip_upper(upper_bound)
+        if lower is None or upper is None:
+            return self._with_native([None] * len(self.native))
+        values, lower = promote_decimal_mix(self.native, lower, is_scalar=True)
+        values, upper = promote_decimal_mix(values, upper, is_scalar=True)
+        return self._with_native(
+            [None if value is None else min(max(value, lower), upper) for value in values]
+        )
 
     def clip_lower(self, lower_bound: Any) -> Self:
         return self._with_binary(max, lower_bound)
