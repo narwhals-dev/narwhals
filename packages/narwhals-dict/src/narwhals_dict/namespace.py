@@ -14,13 +14,18 @@ from narwhals_dict.dataframe import DictDataFrame
 from narwhals_dict.expr import DictExpr
 from narwhals_dict.selectors import DictSelectorNamespace
 from narwhals_dict.series import DictSeries
-from narwhals_dict.utils import to_str
+from narwhals_dict.utils import csv_to_native, to_str
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from narwhals._utils import Version
-    from narwhals.typing import CorrelationMethod, IntoDType, NonNestedLiteral
+    from narwhals.typing import (
+        CorrelationMethod,
+        IntoDType,
+        NonNestedLiteral,
+        NormalizedSource,
+    )
     from narwhals_dict.typing import DictFrame, NativeSeries
 
 
@@ -47,6 +52,30 @@ class DictNamespace(
     @property
     def selectors(self) -> DictSelectorNamespace:
         return DictSelectorNamespace.from_namespace(self)
+
+    # NOTE: `scan_csv` falls back to `read_csv` via `EagerNamespace`.
+    def read_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DictDataFrame:
+        """Read with the stdlib `csv` module, `kwds` are `csv.reader` format parameters."""
+        import csv
+        from io import StringIO
+        from pathlib import Path
+
+        if kwds.setdefault("delimiter", separator) != separator:
+            msg = (
+                "`separator` and `delimiter` do not match: "
+                f"`separator`={separator} and `delimiter`={kwds['delimiter']}."
+            )
+            raise TypeError(msg)
+        if isinstance(source, str):
+            with Path(source).open(newline="", encoding="utf-8") as stream:
+                native = csv_to_native(csv.reader(stream, **kwds))
+        else:
+            content = source.read()
+            text = content.decode("utf-8") if isinstance(content, bytes) else content
+            native = csv_to_native(csv.reader(StringIO(text, newline=""), **kwds))
+        return self._dataframe.from_native(native, context=self)
 
     def len(self) -> DictExpr:
         return self._expr(

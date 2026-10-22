@@ -11,20 +11,25 @@ from itertools import islice
 from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._datetime_formats import DATE_FORMATS, FULL_RE, TIME_FORMATS
-from narwhals._utils import Version, isinstance_or_issubclass
+from narwhals._utils import (
+    Version,
+    check_column_names_are_unique,
+    isinstance_or_issubclass,
+)
 from narwhals.dependencies import get_numpy
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Iterator
 
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
-    from narwhals_dict.typing import NativeSeries
+    from narwhals_dict.typing import DictFrame, NativeSeries
 
 __all__ = [
     "binary_op",
     "cast_values",
+    "csv_to_native",
     "infer_dtype",
     "is_native_column",
     "is_native_frame",
@@ -725,3 +730,58 @@ def parse_time_format(values: Iterable[Any]) -> str:
         if sample and all(pattern.match(value) for value in sample):
             return time_format
     return ""
+
+
+# Polars' CSV type-inference patterns, so `read_csv` infers the same dtypes.
+_CSV_INT = re.compile(r"-?[0-9]+")
+_CSV_FLOAT = re.compile(
+    r"[-+]?(?:[0-9]*\.[0-9]+(?:[eE][-+]?[0-9]+)?|[0-9]+[eE][-+]?[0-9]+|[0-9]+\.|inf|NaN)"
+)
+_CSV_BOOL = re.compile(r"true|false", re.IGNORECASE)
+
+
+def csv_to_native(rows: Iterator[list[str]], /) -> DictFrame:
+    """Build a native frame from `csv.reader` rows, the first one being the header.
+
+    Ragged rows follow Polars: a short (or blank) row is padded with nulls, a long one
+    raises, as it can't be aligned with the header.
+    """
+    if (header := next(rows, None)) is None:
+        msg = "empty CSV: no header row found."
+        raise ComputeError(msg)
+    check_column_names_are_unique(header)
+    width = len(header)
+    fitted = [row if len(row) == width else _fit_csv_row(row, width) for row in rows]
+    columns = zip(*fitted, strict=True) if fitted else ([] for _ in header)
+    return {
+        name: _parse_csv_column(cells)
+        for name, cells in zip(header, columns, strict=True)
+    }
+
+
+def _fit_csv_row(row: list[str], width: int) -> list[str]:
+    if len(row) > width:
+        msg = f"found a CSV row with {len(row)} fields, but the header defines {width}."
+        raise ShapeError(msg)
+    return row + [""] * (width - len(row))
+
+
+def _parse_csv_column(cells: Iterable[str]) -> list[Any]:
+    """Parse a column of raw CSV fields, inferring its type like Polars does.
+
+    An empty field is a null. The column becomes `int` if every value is an integer,
+    `float` if every value is a number, `bool` if every value is true/false (any case),
+    and stays `str` otherwise.
+    """
+    # shortcut: a quoted empty field (`""`) is also a null, while Polars keeps it as an
+    # empty string. Use `quoting=csv.QUOTE_NOTNULL` once Python>=3.13 is the floor
+    # (earlier `csv.reader`s cannot tell the two apart).
+    values = [cell or None for cell in cells]
+    present = [value for value in values if value is not None]
+    if all(map(_CSV_INT.fullmatch, present)):
+        return [None if value is None else int(value) for value in values]
+    if all(_CSV_INT.fullmatch(v) or _CSV_FLOAT.fullmatch(v) for v in present):
+        return [None if value is None else float(value) for value in values]
+    if all(map(_CSV_BOOL.fullmatch, present)):
+        return [None if value is None else value.lower() == "true" for value in values]
+    return values
