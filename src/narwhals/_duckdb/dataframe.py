@@ -261,7 +261,7 @@ class DuckDBLazyFrame(
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
-        return self.native.df()
+        return self.native.df()  # type: ignore[no-any-return, unused-ignore]
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
@@ -404,6 +404,7 @@ class DuckDBLazyFrame(
             ON {condition}
             """  # noqa: S608
         joined = duckdb.sql(query)
+        assert joined is not None  # noqa: S101
 
         select = [col(name) for name in lhs.columns]
         select.extend(
@@ -484,7 +485,9 @@ class DuckDBLazyFrame(
             FROM _rel
             QUALIFY {condition}
         """  # noqa: S608
-        return self._with_native(duckdb.sql(query))
+        rel = duckdb.sql(query)
+        assert rel is not None  # noqa: S101
+        return self._with_native(rel)
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns
@@ -561,9 +564,9 @@ class DuckDBLazyFrame(
                 name {col(variable_name)}
                 value {col(value_name)}
             """
-        return self._with_native(
-            duckdb.sql(query).select(*[*index_, variable_name, value_name])
-        )
+        rel = duckdb.sql(query)
+        assert rel is not None  # noqa: S101
+        return self._with_native(rel.select(*[*index_, variable_name, value_name]))
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
