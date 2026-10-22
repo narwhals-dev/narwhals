@@ -430,10 +430,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return len(self.native)
 
     def count(self) -> int:
-        return len(self._non_null())
+        return len(self.native) - self.native.count(None)
 
     def null_count(self) -> int:
-        return len(self.native) - len(self._non_null())
+        return self.native.count(None)
 
     def n_unique(self) -> int:
         return len(set(self.native))
