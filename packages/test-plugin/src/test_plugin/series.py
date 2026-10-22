@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
     from typing_extensions import Self
 
@@ -67,6 +67,10 @@ class DictSeries:
 
     def is_empty(self) -> bool:
         return not self._values
+
+    def __getitem__(self, positions: Sequence[int]) -> Self:
+        values = [self._values[position] for position in positions]
+        return self.__class__(values, name=self._name, version=self._version)
 
     def scatter(self, indices: Self, values: Self) -> Self:
         data = list(self._values)

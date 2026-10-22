@@ -316,6 +316,14 @@ def test_series_scatter_plugin() -> None:
 
 
 @requires_plugin
+def test_series_getitem_list_plugin() -> None:
+    # The native series is a `list`, so a list index is also of the native series type.
+    s = nw.Series.from_iterable("a", [1, 2, 3], backend=BACKEND)
+    assert s[[2, 0]].to_native() == [3, 1]
+    assert s[[]].to_native() == []
+
+
+@requires_plugin
 def test_dataframe_filter_mask_plugin() -> None:
     # Reaching `all_horizontal` means the mask was built by the plugin's namespace.
     df = nw.from_dict(DATA, backend=BACKEND)
