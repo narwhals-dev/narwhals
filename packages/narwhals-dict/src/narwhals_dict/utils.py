@@ -34,6 +34,7 @@ __all__ = [
     "parse_datetime_format",
     "parse_time_format",
     "sort_with_nulls",
+    "to_str",
     "trunc_div",
 ]
 
@@ -265,7 +266,7 @@ def _to_int(value: Any) -> int:
     return int(value)
 
 
-def _to_str(value: Any) -> str:
+def to_str(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, bytes):
@@ -501,8 +502,8 @@ def _simple_casters(version: Version) -> Mapping[type[DType], Callable[[Any], An
     # NOTE: Categorical is represented as plain strings; the dtype itself
     # cannot round-trip since inference is value-based.
     return {
-        dtypes.String: _to_str,
-        dtypes.Categorical: _to_str,
+        dtypes.String: to_str,
+        dtypes.Categorical: to_str,
         dtypes.Boolean: bool,
         dtypes.Date: _to_date,
         dtypes.Time: _to_time,

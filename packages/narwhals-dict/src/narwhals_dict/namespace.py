@@ -14,6 +14,7 @@ from narwhals_dict.dataframe import DictDataFrame
 from narwhals_dict.expr import DictExpr
 from narwhals_dict.selectors import DictSelectorNamespace
 from narwhals_dict.series import DictSeries
+from narwhals_dict.utils import to_str
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -167,7 +168,7 @@ class DictNamespace(
                 return None
             else:
                 values = list(row)
-            return separator.join(str(value) for value in values)
+            return separator.join(map(to_str, values))
 
         return self._horizontal(exprs, reducer)
 
