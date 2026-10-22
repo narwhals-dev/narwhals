@@ -166,10 +166,6 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _from_scalar(self, value: Any, *, dtype: IntoDType | None = None) -> Self:
         if dtype is None:
             return super()._from_scalar(value)
-        # Materialise with the input's own dtype backend, so that a null stays a
-        # null on the nullable and PyArrow-backed dtypes instead of turning into a
-        # NaN. Classic (NumPy) dtypes cannot tell the two apart; see
-        # docs/concepts/null_handling.md.
         backend = get_dtype_backend(self.native.dtype, self._implementation)
         native_dtype = narwhals_to_native_dtype(
             dtype, backend, self._implementation, self._version

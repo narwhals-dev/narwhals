@@ -82,6 +82,52 @@ def test_skew_kurtosis_without_values_stay_null_aware(
     assert_equal_data(result, {"a": [bool(expected)]})
 
 
+@pytest.mark.parametrize("reduction", ["skew", "kurtosis"])
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning")
+def test_group_by_skew_kurtosis_all_null_group(
+    constructor: Constructor, request: pytest.FixtureRequest, reduction: str
+) -> None:
+    """A group with nothing to reduce must not change the dtype of the whole column.
+
+    pandas cannot express either reduction as a native group-by aggregation, so this
+    goes through the apply path, which rebuilds the column one group at a time.
+    """
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/11176
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    df = nw.from_native(constructor({"g": [1, 1, 2, 2], "a": [1.5, 2.5, None, None]}))
+    expr = getattr(nw.col("a"), reduction)()
+    result = df.lazy().group_by("g").agg(expr).sort("g").collect()
+    assert result.schema["a"] == df.lazy().select(expr).collect().schema["a"]
+    missing = df.lazy().select(nw.col("a").is_nan().is_null()).collect()["a"][2]
+    assert_equal_data(
+        result.select(nw.col("a").is_nan().is_null()), {"a": [False, bool(missing)]}
+    )
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_group_by_keeps_values_when_group_dtypes_differ(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    """Groups that reduce to different dtypes must not have one cast onto the other.
+
+    `mean` still returns an untyped `pd.NA` on the nullable dtypes, so a group with
+    nothing to reduce disagrees with a group that has values. Casting either way
+    would swap a missing value for a NaN or the other way around, so the column is
+    left as the backend built it.
+    """
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    df = nw.from_native(constructor({"g": [1, 1, 2, 2], "a": [1.5, 2.5, None, None]}))
+    result = df.lazy().group_by("g").agg((nw.col("a") * 2).mean()).sort("g").collect()
+    assert_equal_data(result, {"g": [1, 2], "a": [4.0, None]})
+
+
 def test_string_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:

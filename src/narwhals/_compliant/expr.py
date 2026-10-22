@@ -338,9 +338,8 @@ class EagerExpr(
             method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
-            scalar_dtype: dtype to materialise that 1-row Series with. Needed when the
-                Series version may return a bare `None`, which carries no type of its
-                own and would otherwise be inferred as a string column.
+            scalar_dtype: dtype to materialise that 1-row Series with, for the
+                reductions whose Series version may return a bare `None`.
             kwargs: keyword arguments to pass to function.
         """
         func = partial(
@@ -563,8 +562,6 @@ class EagerExpr(
         return self._reuse_series("var", returns_scalar=True, ddof=ddof)
 
     def skew(self) -> Self:
-        # `skew` returns a bare `None` when there is no value to compute from, so the
-        # result dtype has to be stated rather than inferred. See #4044.
         return self._reuse_series(
             "skew", returns_scalar=True, scalar_dtype=self._version.dtypes.Float64()
         )
