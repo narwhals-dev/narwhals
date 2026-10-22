@@ -86,6 +86,13 @@ df.assign(d=lambda df: df["b"] + df["c"]).groupby("a").agg({"d": "sum"})
 Because we're using pandas' own API, as opposed to `apply` and a custom `lambda` function,
 then this is going to be much more efficient! That's why it's preferred.
 
+## Counting nulls within groups
+
+`df.group_by("a").agg(nw.col("b").null_count())` uses native grouped
+aggregations on pandas-like and PyArrow backends. On pandas-like backends,
+it subtracts the non-null count from the group size, avoiding the `apply`
+fallback and its warning. On PyArrow, it uses a grouped count of null values.
+
 ## Tips for Avoiding the `UserWarning`
 
 1. Decompose complex operations: break down complex transformations into simpler steps.
