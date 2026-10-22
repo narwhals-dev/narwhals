@@ -19,7 +19,7 @@ from narwhals._utils import (
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.series import DictSeries
-from narwhals_dict.utils import is_native_frame, nan_last_column
+from narwhals_dict.utils import infer_dtype, is_native_frame, nan_last_column
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
@@ -198,7 +198,10 @@ class DictDataFrame(
 
     @property
     def schema(self) -> dict[str, DType]:
-        return {name: self.get_column(name).dtype for name in self.native}
+        version = self._version
+        return {
+            name: infer_dtype(column, version) for name, column in self.native.items()
+        }
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
@@ -212,7 +215,8 @@ class DictDataFrame(
 
     # Selection and projection
     def get_column(self, name: str) -> DictSeries:
-        if error := self._check_columns_exist([name]):
+        # Membership first: the full existence check is O(columns), for the error only.
+        if name not in self.native and (error := self._check_columns_exist([name])):
             raise error
         return DictSeries(self.native[name], name=name, version=self._version)
 
