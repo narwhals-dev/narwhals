@@ -1092,7 +1092,11 @@ class DictDataFrame(
         n = len(self)
         native = self.native
 
-        result: DictFrame = {name: list(native[name]) * len(on) for name in index}
+        result: DictFrame = {
+            # `list` only for other sequences: a `tuple` repeats as a tuple, a `range` not at all.
+            name: (col if isinstance(col := native[name], list) else list(col)) * len(on)
+            for name in index
+        }
         result[variable_name] = list(chain.from_iterable(repeat(name, n) for name in on))
         result[value_name] = list(chain.from_iterable(native[name] for name in on))
         return self._with_native(result)
