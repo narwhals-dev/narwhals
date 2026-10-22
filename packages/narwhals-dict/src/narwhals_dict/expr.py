@@ -109,6 +109,27 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
     def _is_close_float_promote(self) -> Self:
         return self.cast(self._version.dtypes.Float64())
 
+    def _pruned(self, df: DictDataFrame, *extra: str) -> DictDataFrame:
+        """`df` narrowed to the columns this expression reads, plus `extra`.
+
+        A `col`-rooted chain with no expressifiable arguments reads only its root
+        columns and those its nodes name in `partition_by`/`order_by` (`over`,
+        `first`, `last`). Any node carrying `exprs` (e.g.
+        `fill_null(nw.col("b").mean())`) may reference other columns, so it keeps
+        the whole frame, as does any other root (`all`, `nth`, selectors, ...).
+        """
+        op_nodes = list(self._metadata.op_nodes_reversed())
+        if op_nodes[-1].name != "col" or any(node.exprs for node in op_nodes):
+            return df
+        named = (
+            name
+            for node in op_nodes
+            for key in ("partition_by", "order_by")
+            for name in node.kwargs.get(key, ())
+        )
+        names = (*self._evaluate_output_names(df), *named, *extra)
+        return df.simple_select(*dict.fromkeys(names))
+
     def _over_without_partition_by(self, order_by: Sequence[str]) -> Self:
         # e.g. `nw.col('a').cum_sum().over(order_by=key)`: no grouping needed.
         assert order_by  # noqa: S101
@@ -193,16 +214,8 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
             # Empty frame: evaluate once so output names and dtypes are right.
             return self(df)
 
-        # Column pruning: a `col`-rooted chain with no expressifiable arguments
-        # reads only its root columns, so gather just those into each sub-frame
-        # instead of every column. Any node carrying `exprs` (e.g.
-        # `fill_null(nw.col("b").mean())`) may reference other columns, so keep
-        # the whole frame in that case.
-        op_nodes = list(self._metadata.op_nodes_reversed())
-        if op_nodes[-1].name == "col" and not any(node.exprs for node in op_nodes):
-            source = df.simple_select(*self._evaluate_output_names(df))
-        else:
-            source = df
+        # Gather only the columns the expression reads into each sub-frame.
+        source = self._pruned(df)
 
         num_rows = len(df)
         outputs: list[list[Any]] = []
