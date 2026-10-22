@@ -312,6 +312,8 @@ class DictNamespace(
             series = list(chain.from_iterable(expr(df) for expr in exprs))
             aligned = self._series._align_full_broadcast(*series)
             field_names = [s.name for s in aligned]
+            # A `dict` row would silently keep only the last of duplicate fields.
+            check_column_names_are_unique(field_names)
             columns = [s.native for s in aligned]
             result = [
                 dict(zip(field_names, row, strict=True))
