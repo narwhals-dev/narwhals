@@ -435,12 +435,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return sum(values) / len(values) if values else None  # type: ignore[return-value]
 
     def median(self) -> float:
-        if not (values := self._non_null()):
+        if not self._non_null():
             return None  # type: ignore[return-value]
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
-        return statistics.median(values)
+        return self.quantile(0.5, "linear")
 
     def std(self, *, ddof: int) -> float:
         variance = self.var(ddof=ddof)
@@ -493,16 +493,19 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         lower = values[math.floor(position)]
         higher = values[math.ceil(position)]
         if interpolation == "lower":
-            return lower
-        if interpolation == "higher":
-            return higher
-        if interpolation == "midpoint":
-            return (lower + higher) / 2
-        if interpolation == "linear":
-            return lower + (higher - lower) * (position - math.floor(position))
-        if interpolation == "nearest":
-            return values[round(position)]
-        assert_never(interpolation)
+            result = lower
+        elif interpolation == "higher":
+            result = higher
+        elif interpolation == "midpoint":
+            result = (lower + higher) / 2
+        elif interpolation == "linear":
+            result = lower + (higher - lower) * (position - math.floor(position))
+        elif interpolation == "nearest":
+            # Polars rounds a tie up, where `round` would round it to even.
+            result = values[math.floor(position + 0.5)]
+        else:
+            assert_never(interpolation)
+        return float(result)
 
     def any(self) -> bool:
         return any(self._non_null())
