@@ -63,6 +63,12 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+def qualified_col(table: str, name: str) -> Expression:
+    """Column `name` of the relation aliased as `table`."""
+    # DuckDB>=2.0 no longer splits `'table."name"'`; the multi-part form needs DuckDB>=1.2.
+    return col(f'{table}."{name}"') if BACKEND_VERSION < (1, 2) else col(table, name)
+
+
 def lambda_expr(
     params: str | Expression | tuple[Expression, ...], expr: Expression, /
 ) -> Expression:

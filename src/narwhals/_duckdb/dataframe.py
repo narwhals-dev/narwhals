@@ -16,6 +16,7 @@ from narwhals._duckdb.utils import (
     join_column_names,
     lit,
     native_to_narwhals_dtype,
+    qualified_col,
     window_expression,
 )
 from narwhals._sql.dataframe import SQLLazyFrame
@@ -309,7 +310,7 @@ class DuckDBLazyFrame(
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
             it = (
-                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                qualified_col("lhs", left) == qualified_col("rhs", right)
                 for left, right in zip(left_on, right_on, strict=True)
             )
             condition: Expression = reduce(and_, it)
@@ -321,15 +322,15 @@ class DuckDBLazyFrame(
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
-            select = [col(f'lhs."{x}"') for x in self.columns]
+            select = [qualified_col("lhs", x) for x in self.columns]
             for name in other.columns:
                 col_in_lhs: bool = name in self.columns
                 if native_how == "outer" and not col_in_lhs:
-                    select.append(col(f'rhs."{name}"'))
+                    select.append(qualified_col("rhs", name))
                 elif (native_how == "outer") or (
                     col_in_lhs and (right_on is None or name not in right_on)
                 ):
-                    select.append(col(f'rhs."{name}"').alias(f"{name}{suffix}"))
+                    select.append(qualified_col("rhs", name).alias(f"{name}{suffix}"))
                 elif right_on is None or name not in right_on:
                     select.append(col(name))
             res = rel.select(*select).set_alias(self.native.alias)
@@ -354,15 +355,19 @@ class DuckDBLazyFrame(
         conditions: list[Expression] = []
         if by_left is not None and by_right is not None:
             conditions.extend(
-                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                qualified_col("lhs", left) == qualified_col("rhs", right)
                 for left, right in zip(by_left, by_right, strict=True)
             )
         else:
             by_left = by_right = []
         if strategy == "backward":
-            conditions.append(col(f'lhs."{left_on}"') >= col(f'rhs."{right_on}"'))
+            conditions.append(
+                qualified_col("lhs", left_on) >= qualified_col("rhs", right_on)
+            )
         elif strategy == "forward":
-            conditions.append(col(f'lhs."{left_on}"') <= col(f'rhs."{right_on}"'))
+            conditions.append(
+                qualified_col("lhs", left_on) <= qualified_col("rhs", right_on)
+            )
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
