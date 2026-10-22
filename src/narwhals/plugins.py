@@ -230,11 +230,16 @@ def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
     )
 
 
-def _iter_from_native(native_object: Any, version: Version) -> Iterator[CompliantAny]:
+def _iter_native_plugins(native_object: Any) -> Iterator[Plugin]:
     for entry_point in _discover_entrypoints():
         plugin: Plugin = entry_point.load()
         if _is_native_plugin(native_object, plugin):
-            yield _plugin_namespace(plugin, version=version).from_native(native_object)
+            yield plugin
+
+
+def _iter_from_native(native_object: Any, version: Version) -> Iterator[CompliantAny]:
+    for plugin in _iter_native_plugins(native_object):
+        yield _plugin_namespace(plugin, version=version).from_native(native_object)
 
 
 def from_native(native_object: Any, version: Version) -> CompliantAny | None:
