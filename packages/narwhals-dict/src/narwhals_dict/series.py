@@ -513,11 +513,13 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def all(self) -> bool:
         return all(self._non_null())
 
-    def arg_min(self) -> int:
-        return self.native.index(min(self.native))
+    def arg_min(self) -> int | None:
+        values = self._non_null()
+        return self.native.index(min(values)) if values else None
 
-    def arg_max(self) -> int:
-        return self.native.index(max(self.native))
+    def arg_max(self) -> int | None:
+        values = self._non_null()
+        return self.native.index(max(values)) if values else None
 
     def first(self) -> PythonLiteral:
         return self.native[0] if self.native else None
