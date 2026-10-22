@@ -1,3 +1,14 @@
+"""A pure-Python eager Narwhals backend whose native frame is a `dict[str, list]`.
+
+Parquet is not supported: `nw.read_parquet` and `nw.scan_parquet` raise. Read the
+file with pyarrow and convert it instead:
+
+    import pyarrow.parquet as pq
+    import narwhals as nw
+
+    df = nw.from_arrow(pq.read_table(path), backend="narwhals-dict")
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

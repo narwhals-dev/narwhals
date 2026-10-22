@@ -9,7 +9,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, check_column_names_are_unique
+from narwhals._utils import Implementation, check_column_names_are_unique, not_implemented
 from narwhals_dict.dataframe import DictDataFrame
 from narwhals_dict.expr import DictExpr
 from narwhals_dict.selectors import DictSelectorNamespace
@@ -76,6 +76,10 @@ class DictNamespace(
             text = content.decode("utf-8") if isinstance(content, bytes) else content
             native = csv_to_native(csv.reader(StringIO(text, newline=""), **kwds))
         return self._dataframe.from_native(native, context=self)
+
+    # NOTE: Both, or the inherited `scan_parquet` would call `read_parquet` and raise a bare error.
+    read_parquet = not_implemented()
+    scan_parquet = not_implemented()
 
     def len(self) -> DictExpr:
         return self._expr(
