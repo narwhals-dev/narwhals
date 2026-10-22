@@ -488,13 +488,17 @@ def _sequence_caster(dtype: DType, version: Version) -> Callable[[Any], list[Any
     inference runs). `Array` additionally validates the declared size on cast,
     matching Polars; `List` accepts any length.
     """
-    inner = dtype.inner  # type: ignore[attr-defined]
+    inner_caster = _caster_for(dtype.inner, version)  # type: ignore[attr-defined]
+
+    def cast_inner(value: Any) -> list[Any]:
+        return [None if element is None else inner_caster(element) for element in value]
+
     if not isinstance(dtype, version.dtypes.Array):
-        return lambda value: cast_values(value, inner, version)
+        return cast_inner
     size = dtype.size
 
     def caster(value: Any) -> list[Any]:
-        result = cast_values(value, inner, version)
+        result = cast_inner(value)
         if len(result) != size:
             msg = f"Cannot cast value of length {len(result)} to {dtype}."
             raise ShapeError(msg)
