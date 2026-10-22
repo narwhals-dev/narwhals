@@ -57,7 +57,9 @@ class _GroupedRows:
         # Row keys are only needed to re-bucket a non-trivial `order_by`, so they are built lazily
         self._row_keys: Sequence[Any] | None = None
         self._columns: dict[tuple[tuple[str, ...], str], list[list[Any]]] = {}
-        self._frames: dict[tuple[str, ...], list[DictDataFrame]] = {}
+        self._frames: dict[
+            tuple[tuple[str, ...], tuple[str, ...]], list[DictDataFrame]
+        ] = {}
 
     @property
     def row_keys(self) -> Sequence[tuple[Any, ...]]:
@@ -95,13 +97,14 @@ class _GroupedRows:
             ]
         return columns
 
-    def frames(self, order_by: tuple[str, ...]) -> list[DictDataFrame]:
-        """One sub-frame per group (all columns), rows in `order_by` order."""
-        if (frames := self._frames.get(order_by)) is None:
-            col_names = self._frame.columns
-            frames = self._frames[order_by] = [
+    def frames(
+        self, order_by: tuple[str, ...], columns: tuple[str, ...]
+    ) -> list[DictDataFrame]:
+        """One sub-frame per group with `columns`, rows in `order_by` order."""
+        if (frames := self._frames.get(cache_key := (order_by, columns))) is None:
+            frames = self._frames[cache_key] = [
                 self._frame._with_native(
-                    {name: self.gather(order_by, name)[position] for name in col_names},
+                    {name: self.gather(order_by, name)[position] for name in columns},
                     validate_column_names=False,
                 )
                 for position in range(len(self.keys))
@@ -240,7 +243,10 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
                     )
                 )
             else:
-                result.update(self._agg_complex(expr, groups.frames(order_by), aliases))
+                columns = tuple(expr._pruned(frame).columns)
+                result.update(
+                    self._agg_complex(expr, groups.frames(order_by, columns), aliases)
+                )
 
         return frame._with_native(result, validate_column_names=False).rename(
             dict(zip(self._keys, self._output_key_names, strict=True))

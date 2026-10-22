@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import Implementation, generate_temporary_column_name
+from narwhals._utils import Implementation
 from narwhals_dict.series import DictSeries
 from narwhals_dict.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
@@ -130,6 +130,27 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         names = (*self._evaluate_output_names(df), *named, *extra)
         return df.simple_select(*dict.fromkeys(names))
 
+    def _sort_then(self, order_by: Sequence[str], method_name: str) -> Self:
+        """`first`/`last` after sorting only the columns this expression reads."""
+
+        def func(df: DictDataFrame) -> Sequence[DictSeries]:
+            source = self._pruned(df, *order_by)
+            sorted_df = source.sort(*order_by, descending=False, nulls_last=False)
+            return getattr(self, method_name)()(sorted_df)
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        return self._sort_then(order_by, "first") if order_by else super().first()
+
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        return self._sort_then(order_by, "last") if order_by else super().last()
+
     def _over_without_partition_by(self, order_by: Sequence[str]) -> Self:
         # e.g. `nw.col('a').cum_sum().over(order_by=key)`: no grouping needed.
         assert order_by  # noqa: S101
@@ -140,27 +161,25 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         meta = self._metadata
 
         def func(df: DictDataFrame) -> Sequence[DictSeries]:
-            version = df._version
-            token = generate_temporary_column_name(8, df.columns)
-            df = df.with_row_index(token, order_by=None).sort(
-                *order_by, descending=False, nulls_last=False
-            )
-            results = self(df.drop([token], strict=True))
+            source = self._pruned(df, *order_by)
+            if error := source._check_columns_exist(order_by):
+                raise error
+            order = source._sorted_indices(order_by, descending=False, nulls_last=False)
+            results = self(source._gather_positions(order))
             if meta.is_scalar_like:
                 # `over` is length-preserving, so broadcast the scalar result back.
                 size = len(df)
                 return [
-                    DictSeries(
-                        [s.native[0] if s.native else None] * size,
-                        name=s.name,
-                        version=version,
-                    )
+                    s._with_native([s.native[0] if s.native else None] * size)
                     for s in results
                 ]
-            # Scatter the sorted results back into the original row order: `token`
-            # holds each sorted row's original index, so `scatter` reverses the sort.
-            token_series = df.get_column(token)
-            return [s.scatter(token_series, s) for s in results]
+            # Un-permute the sorted results: row `i` sits at `position[i]` after sorting.
+            position = [0] * len(order)
+            for sorted_index, original_index in enumerate(order):
+                position[original_index] = sorted_index
+            return [
+                s._with_native(list(map(s.native.__getitem__, position))) for s in results
+            ]
 
         return self._from_callable(
             func,
@@ -338,7 +357,11 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
                 zip(*(df.native[name] for name in partition_by), strict=True)
             )
             grouping = (
-                df.sort(*order_by, descending=False, nulls_last=False) if order_by else df
+                self._pruned(df, *partition_by, *order_by).sort(
+                    *order_by, descending=False, nulls_last=False
+                )
+                if order_by
+                else df
             )
             tmp = grouping.group_by(partition_by, drop_null_keys=False).agg(self)
             tmp_keys = list(
