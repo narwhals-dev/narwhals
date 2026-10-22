@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from tests.dependencies.conftest import AlwaysHasAttr
     from tests.utils import Constructor
 
-EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow")
+EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow", "dict")
 V1_INTO_DATAFRAMES = (*EAGER_CONSTRUCTOR_NAMES, "duckdb", "ibis")
 
 data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}

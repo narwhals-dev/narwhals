@@ -38,6 +38,8 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
     elif "cudf" in str(constructor):
         cudf = get_cudf()
         expected_cls = cudf.DataFrame
+    elif "dict" in str(constructor):
+        expected_cls = dict
     else:  # pyarrow, duckdb, and PySpark
         pytest.importorskip("pyarrow")
         import pyarrow as pa
