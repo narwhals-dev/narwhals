@@ -271,9 +271,11 @@ def is_native_dataframe(native_object: Any) -> bool:
 
 def is_native_lazyframe(native_object: Any) -> bool:
     """Check whether an installed plugin converts `native_object` to a LazyFrame."""
-    from narwhals._utils import Version, is_compliant_lazyframe
+    from narwhals._utils import Version, is_compliant_dataframe, is_compliant_lazyframe
 
-    return is_compliant_lazyframe(from_native(native_object, Version.MAIN))
+    compliant = from_native(native_object, Version.MAIN)
+    # NOTE: Eager compliant frames also define `__narwhals_lazyframe__`.
+    return is_compliant_lazyframe(compliant) and not is_compliant_dataframe(compliant)
 
 
 def is_native_series(native_object: Any) -> bool:

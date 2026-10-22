@@ -54,6 +54,10 @@ class FakeCompliantLazyFrame:
         return self
 
 
+class FakeCompliantEagerDataFrame(FakeCompliantDataFrame, FakeCompliantLazyFrame):
+    """Eager compliant frames define both dunders, like `ArrowDataFrame` does."""
+
+
 class FakeCompliantSeries:
     def __narwhals_series__(self) -> Self:  # pragma: no cover
         return self
@@ -431,6 +435,7 @@ def test_is_into_dataframe() -> None:
     ("compliant_cls", "expected_kind"),
     [
         (FakeCompliantDataFrame, "dataframe"),
+        (FakeCompliantEagerDataFrame, "dataframe"),
         (FakeCompliantLazyFrame, "lazyframe"),
         (FakeCompliantSeries, "series"),
     ],
