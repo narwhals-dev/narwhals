@@ -578,7 +578,11 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_unary(math.isfinite)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_unary(lambda value: value in other)
+        candidates = list(other)
+        try:
+            return self._with_unary(set(candidates).__contains__)
+        except TypeError:  # unhashable elements or values, e.g. a `List` column
+            return self._with_unary(candidates.__contains__)
 
     def is_unique(self) -> Self:
         counts = Counter(self.native)
