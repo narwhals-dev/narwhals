@@ -154,7 +154,8 @@ class DictSeriesStringNamespace(
         return self._unary(lambda value: datetime.strptime(value, fmt))  # noqa: DTZ007
 
     def to_date(self, format: str | None) -> DictSeries:
-        return self.to_datetime(format).dt.date()
+        fmt = parse_datetime_format(self.native) if format is None else format
+        return self._unary(lambda value: datetime.strptime(value, fmt).date())  # noqa: DTZ007
 
     def to_time(self, format: str | None) -> DictSeries:
         fmt = parse_time_format(self.native) if format is None else format
