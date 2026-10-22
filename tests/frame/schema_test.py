@@ -257,6 +257,7 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
     import duckdb
 
     rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
+    assert rel is not None
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
     ):
@@ -305,6 +306,7 @@ def test_nested_dtypes() -> None:
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
     rel = duckdb.sql("select * from df_pa")
+    assert rel is not None
     nwdf = nw.from_native(rel)
     assert nwdf.collect_schema() == {
         "a": nw.List(nw.Int64),
