@@ -6,7 +6,7 @@ import random
 from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping
-from itertools import chain, compress, islice, product, repeat
+from itertools import chain, compress, islice, repeat
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerDataFrame
@@ -1151,17 +1151,18 @@ class DictDataFrame(
             values = [name for name in self.columns if name not in excluded]
         return index, values
 
-    def _pivot_on_uniques(
-        self, on: Sequence[str], *, sort_columns: bool
-    ) -> Iterator[Iterable[Any]]:
-        """Distinct values of each `on` column; the output columns are their product."""
-        for name in on:
-            unique = dict.fromkeys(self.native[name])  # dedup, first-appearance order
-            if not sort_columns:
-                yield unique.keys()
-            else:
-                nulls = (value for value in unique if value is None)
-                yield (*nulls, *sorted(value for value in unique if value is not None))
+    @staticmethod
+    def _pivot_on_combos(
+        on_keys: Iterable[tuple[Any, ...]], *, sort_columns: bool
+    ) -> list[tuple[Any, ...]]:
+        """Distinct `on` combinations present in the data, one per output column.
+
+        In first-appearance order, or sorted with nulls first in each position.
+        """
+        combos = list(dict.fromkeys(on_keys))
+        if sort_columns:
+            combos.sort(key=lambda combo: tuple((v is not None, v) for v in combo))
+        return combos
 
     @staticmethod
     def _pivot_output_name(
@@ -1224,8 +1225,10 @@ class DictDataFrame(
         # Distinct index rows in first-appearance order, recovered from the cell
         # keys (their insertion order already follows row order).
         index_rows = list(dict.fromkeys(index_key for index_key, _ in cells))
-        # Materialized once because it is reused for every `value` column.
-        on_combos = list(product(*self._pivot_on_uniques(on, sort_columns=sort_columns)))
+        # `cells` follows row order, so its `on` keys do too.
+        on_combos = self._pivot_on_combos(
+            (on_key for _, on_key in cells), sort_columns=sort_columns
+        )
         n_on, n_values = len(on), len(values)
         result: DictFrame = {
             name: [row[position] for row in index_rows]
