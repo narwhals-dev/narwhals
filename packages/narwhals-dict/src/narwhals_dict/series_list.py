@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import statistics
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals_dict.utils import non_null, sort_with_nulls
+from narwhals.exceptions import InvalidOperationError
+from narwhals_dict.utils import infer_dtype, non_null, sort_with_nulls
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -30,7 +32,25 @@ class DictSeriesListNamespace(
         return self._unary(lambda values: values[index] if index < len(values) else None)
 
     def contains(self, item: NonNestedLiteral) -> DictSeries:
+        if item is not None:
+            self._ensure_comparable(item)
         return self._unary(lambda values: item in values)
+
+    def _ensure_comparable(self, item: NonNestedLiteral) -> None:
+        # Like Polars, reject an item that can't match the inner dtype (e.g. `True` in
+        # a list of ints, or a tz-aware datetime in a naive one). Without inner values
+        # the dtype is unknown, so nothing can be checked.
+        version = self.compliant._version
+        inner = infer_dtype(chain.from_iterable(filter(None, self.native)), version)
+        item_dtype = infer_dtype([item], version)
+        if (
+            isinstance(inner, version.dtypes.Unknown)
+            or inner == item_dtype
+            or (inner.is_numeric() and item_dtype.is_numeric())
+        ):
+            return
+        msg = f"Unable to compare item of type {type(item)} with list of inner type {inner}."
+        raise InvalidOperationError(msg)
 
     def unique(self, *, maintain_order: bool) -> DictSeries:
         # `dict.fromkeys` keeps first-appearance order, which satisfies both settings.
