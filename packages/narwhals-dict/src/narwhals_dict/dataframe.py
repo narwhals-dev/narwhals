@@ -432,7 +432,8 @@ class DictDataFrame(
         descending = (
             not reverse if isinstance(reverse, bool) else [not r for r in reverse]
         )
-        return self.sort(*by, descending=descending, nulls_last=True).head(k)
+        order = self._sorted_indices(by, descending=descending, nulls_last=True)
+        return self._gather_positions(order[:k])
 
     def unique(
         self,
