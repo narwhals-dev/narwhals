@@ -726,11 +726,13 @@ def test_from_native_sized_lazyframe() -> None:
     nw_rel = nw.from_native(rel)
     nw_v2_rel = nw_v2.from_native(rel)
     nw_dask = nw.from_native(dask_df)
+    nw_v2_dask = nw_v2.from_native(dask_df)
 
     assert_type(nw_rel, nw.LazyFrame[duckdb.DuckDBPyRelation])
     assert_type(nw_v2_rel, nw_v2.LazyFrame[duckdb.DuckDBPyRelation])
     assert_type(nw_dask, nw.LazyFrame[dd.DataFrame])
-    for frame in (nw_rel, nw_v2_rel, nw_dask):
+    assert_type(nw_v2_dask, nw_v2.LazyFrame[dd.DataFrame])
+    for frame in (nw_rel, nw_v2_rel, nw_dask, nw_v2_dask):
         assert isinstance(frame, nw.LazyFrame)
 
 
