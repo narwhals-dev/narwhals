@@ -454,12 +454,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return sum(values) / len(values) if values else None  # type: ignore[return-value]
 
     def median(self) -> float:
-        if not self._non_null():
+        if not (values := self._non_null()):
             return None  # type: ignore[return-value]
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
-        return self.quantile(0.5, "linear")
+        return self._quantile(values, 0.5, "linear")
 
     def std(self, *, ddof: int) -> float:
         variance = self.var(ddof=ddof)
@@ -505,7 +505,13 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
-        values = self._non_null()
+        return self._quantile(self._non_null(), quantile, interpolation)
+
+    @staticmethod
+    def _quantile(
+        values: list[Any], quantile: float, interpolation: RollingInterpolationMethod
+    ) -> float:
+        """`quantile` of the non-null `values`."""
         if not (values := sorted(values, key=nan_last_key(values))):
             return None  # type: ignore[return-value]
         position = (len(values) - 1) * quantile
