@@ -22,7 +22,7 @@ def test_sql() -> None:
         )
     )
     # DuckDB 2.0 renders the relation's own SQL instead of the parsed query.
-    if DUCKDB_VERSION >= PkgVersion("2"):
+    if DUCKDB_VERSION >= PkgVersion("2"):  # pragma: no cover
         expected = (
             'SELECT "date", "price", "symbol", ("price" / (\n'
             'lag("price", 1) over (partition by "symbol" order by "date" asc nulls first )\n'
@@ -36,7 +36,7 @@ def test_sql() -> None:
             '                                         ORDER BY "date" ASC NULLS FIRST))) AS "returns"\n'
             'FROM "assets"'
         )
-    else:
+    else:  # pragma: no cover
         expected = """SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM main.assets"""
         expected_pretty = (
             "SELECT date, price,\n"
