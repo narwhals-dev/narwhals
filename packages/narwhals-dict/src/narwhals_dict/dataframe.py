@@ -466,12 +466,9 @@ class DictDataFrame(
 
             indices = sorted(seen.values())
         elif keep == "none":
-            counts = Counter(zip(*columns, strict=True))
-            indices = [
-                index
-                for index, row in enumerate(zip(*columns, strict=True))
-                if counts[row] == 1
-            ]
+            keys = self._row_keys(columns)
+            counts = map(Counter(keys).__getitem__, keys)
+            indices = [index for index, n in enumerate(counts) if n == 1]
         else:  # pragma: no cover
             msg = f"Unsupported `keep` strategy: {keep}"
             raise ValueError(msg)
@@ -993,12 +990,16 @@ class DictDataFrame(
                 msg = f"Unsupported `backend` value: {backend}"
                 raise ValueError(msg)
 
+    @staticmethod
+    def _row_keys(columns: Sequence[NativeSeries]) -> Sequence[Any]:
+        """One key per row: the column itself for a single column, else value tuples."""
+        return columns[0] if len(columns) == 1 else list(zip(*columns, strict=True))
+
     def is_unique(self) -> DictSeries:
-        counts = Counter(zip(*self.native.values(), strict=True))
+        keys = self._row_keys(list(self.native.values()))
+        counts = Counter(keys)
         return DictSeries(
-            [counts[row] == 1 for row in zip(*self.native.values(), strict=True)],
-            name="",
-            version=self._version,
+            [counts[key] == 1 for key in keys], name="", version=self._version
         )
 
     def to_arrow(self) -> pa.Table:
