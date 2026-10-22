@@ -24,6 +24,7 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_column_names_are_unique,
     extend_bool,
     generate_temporary_column_name,
     parse_columns_to_drop,
@@ -333,7 +334,10 @@ class DuckDBLazyFrame(
                     select.append(qualified_col("rhs", name).alias(f"{name}{suffix}"))
                 elif right_on is None or name not in right_on:
                     select.append(col(name))
-            res = rel.select(*select).set_alias(self.native.alias)
+            res = rel.select(*select)
+            # DuckDB>=2.0 `set_alias` renames duplicate columns instead of keeping them.
+            check_column_names_are_unique(res.columns)
+            res = res.set_alias(self.native.alias)
         else:  # semi, anti
             res = rel.select("lhs.*").set_alias(self.native.alias)
 
