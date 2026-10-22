@@ -141,6 +141,8 @@ class DictDataFrame(
         native = {
             name: column.tolist() for name, column in zip(names, data.T, strict=True)
         }
+        if isinstance(schema, Mapping):
+            return cls.from_dict(native, context=context, schema=schema)
         return cls(native, version=context._version)
 
     # NOTE: Requires https://github.com/narwhals-dev/narwhals/pull/3753
