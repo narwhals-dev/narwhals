@@ -224,8 +224,9 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
             )
             op_nodes = list(expr._metadata.op_nodes_reversed())
             order_by = self._leaf_order_by(op_nodes[0])
-            if len(op_nodes) == 1:
-                # e.g. `agg(nw.len())`: no input column, just count rows per group.
+            if len(op_nodes) == 1 and op_nodes[0].name == "len":
+                # `agg(nw.len())`: no input column, just count rows per group. Other
+                # single-node exprs (e.g. `nw.corr(...)`) go through the fallback.
                 result[aliases[0]] = [len(indices) for indices in groups.indices(())]
             elif self._is_simple(expr) and op_nodes[1].name == "col":
                 # e.g. `col("a").sum()`: the aggregation applies directly to a stored
