@@ -245,6 +245,9 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
+          # Temporary pin, same as pointblank: sqlglot>=30.18.0 breaks ibis's
+          # in-memory `create_table` (ibis-project/ibis#12124).
+          uv pip install "sqlglot<30.18.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -745,7 +748,7 @@ jobs:
           # satisfied, while numpy/pandas/pyarrow/etc still resolve as nightlies.
           sklearn_spec=$(grep -E '^scikit-learn' LightGBM/.ci/pip-envs/requirements-latest.txt)
           uv pip install "$sklearn_spec"
-          uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt
+          uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt -r LightGBM/.ci/pip-envs/requirements-test.txt
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
