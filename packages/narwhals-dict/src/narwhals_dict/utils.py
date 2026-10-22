@@ -91,6 +91,8 @@ def native_to_narwhals_dtype(native_dtype: type[Any], version: Version) -> DType
     dtypes = version.dtypes
     if issubclass(native_dtype, enum.Enum):
         # NOTE: before everything else: e.g. `enum.IntEnum` is a subclass of `int`.
+        if version is Version.V1:
+            return dtypes.Enum()  # type: ignore[call-arg]
         return dtypes.Enum(native_dtype)
     if issubclass(native_dtype, decimal.Decimal):
         # Casting creates a dynamic subclass carrying precision/scale (see
