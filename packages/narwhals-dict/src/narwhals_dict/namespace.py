@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from itertools import chain, repeat
+from itertools import chain, compress, repeat
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerNamespace
@@ -259,13 +259,14 @@ class DictNamespace(
         }
 
     @staticmethod
-    def _pairwise_not_null(a: DictSeries, b: DictSeries) -> tuple[list[Any], list[Any]]:
-        pairs = [
-            (x, y)
-            for x, y in zip(a.native, b.native, strict=True)
-            if x is not None and y is not None
-        ]
-        return [x for x, _ in pairs], [y for _, y in pairs]
+    def _pairwise_not_null(
+        a: DictSeries, b: DictSeries
+    ) -> tuple[Sequence[Any], Sequence[Any]]:
+        xs, ys = a.native, b.native
+        if None not in xs and None not in ys:
+            return xs, ys
+        mask = [x is not None and y is not None for x, y in zip(xs, ys, strict=True)]
+        return list(compress(xs, mask)), list(compress(ys, mask))
 
     def _binary_scalar_expr(
         self, a: DictExpr, b: DictExpr, func: Callable[[DictSeries, DictSeries], Any]
