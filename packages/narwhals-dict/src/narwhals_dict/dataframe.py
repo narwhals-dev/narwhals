@@ -297,10 +297,16 @@ class DictDataFrame(
         if subset is not None and (error := self._check_columns_exist(subset)):
             raise error
         columns = [self.native[name] for name in (subset or self.columns)]
-        mask = [
-            all(value is not None for value in row) for row in zip(*columns, strict=True)
-        ]
-        return self._mask_rows(mask) if columns else self
+        if not columns:
+            return self
+        if len(columns) == 1:
+            mask = [value is not None for value in columns[0]]
+        else:
+            mask = [
+                all(value is not None for value in row)
+                for row in zip(*columns, strict=True)
+            ]
+        return self._mask_rows(mask)
 
     def _gather(self, rows: SizedMultiIndexSelector[NativeSeries]) -> Self:
         # Public entry point (e.g. `df[indices]`): coerce arbitrary index objects
