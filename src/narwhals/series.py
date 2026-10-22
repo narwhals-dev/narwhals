@@ -306,7 +306,8 @@ class Series(Generic[IntoSeriesT]):
             idx = int(idx) if not isinstance(idx, int) else idx
             return self._compliant_series.item(idx)
 
-        if isinstance(idx, self.to_native().__class__):
+        # NOTE: A plugin's native series may itself be a positional selector, e.g. a `list`.
+        if isinstance(idx, self.to_native().__class__) and not is_index_selector(idx):
             idx = self._with_compliant(self._compliant_series._with_native(idx))
 
         if not is_index_selector(idx):
