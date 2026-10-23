@@ -322,6 +322,7 @@ def test_huge_int() -> None:
         select cast(a as int128) as a
         from df
                      """)
+    assert rel is not None
     with pytest.warns(PerformanceWarning):
         result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
@@ -330,6 +331,7 @@ def test_huge_int() -> None:
         select cast(a as uint128) as a
         from df
                      """)
+    assert rel is not None
     result = from_native_collect_schema(rel)
     assert result["a"] == nw.UInt128
 
@@ -403,6 +405,7 @@ def test_decimal() -> None:
         select *
         from df
                      """)
+    assert rel is not None
     result = nw.from_native(rel).collect_schema()
     assert result["a"] == nw.Decimal
     result = nw.from_native(
@@ -490,6 +493,7 @@ def test_huge_int_to_native() -> None:
         select cast(a as int64) as a
         from df
                      """)
+    assert rel is not None
     result = (
         nw.from_native(rel)
         .with_columns(
@@ -676,23 +680,29 @@ def test_datetime_w_tz_duckdb() -> None:
     import duckdb
 
     duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
-    df = nw.from_native(
-        duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
-    )
+    rel = duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
+    assert rel is not None
+    df = nw.from_native(rel)
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Europe/Amsterdam")
     duckdb.sql("""set timezone = 'Asia/Kathmandu'""")
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
 
-    df = nw.from_native(
-        duckdb.sql(
-            """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
-        )
+    rel = duckdb.sql(
+        """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
     )
+    assert rel is not None
+    df = nw.from_native(rel)
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
+
+    con = duckdb.connect()
+    con.sql("""set timezone = 'Asia/Kolkata'""")
+    rel = con.sql("""select timestamptz '2020-01-01' as a where false""")
+    result = nw.from_native(rel).collect_schema()
+    assert result["a"] == nw.Datetime("us", "Asia/Kolkata")
 
 
 @pytest.mark.slow

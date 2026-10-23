@@ -63,6 +63,12 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+def qualified_col(table: str, name: str) -> Expression:
+    """Column `name` of the relation aliased as `table`."""
+    # DuckDB>=2.0 no longer splits `'table."name"'`; the multi-part form needs DuckDB>=1.2.
+    return col(f'{table}."{name}"') if BACKEND_VERSION < (1, 2) else col(table, name)
+
+
 def lambda_expr(
     params: str | Expression | tuple[Expression, ...], expr: Expression, /
 ) -> Expression:
@@ -200,15 +206,10 @@ def native_to_narwhals_dtype(
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
-    result = (
-        rel.query(
-            "duckdb_settings()",
-            "select value from duckdb_settings() where name = 'TimeZone'",
-        )
-        .limit(1)
-        .fetchall()
-    )
-    return result[0][0]  # type: ignore[no-any-return]
+    # Not `rel.query`: on DuckDB>=2.0 its temporary catalog entry makes every relation
+    # on the connection rebind. `count()` keeps one row when `rel` is empty.
+    time_zone = F("current_setting", lit("TimeZone"))
+    return rel.limit(0).aggregate([time_zone, F("count")]).fetchall()[0][0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
