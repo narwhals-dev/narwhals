@@ -150,6 +150,7 @@ def test_convert_time_zone_to_connection_tz_duckdb() -> None:
 
     duckdb.sql("set timezone = 'Asia/Kolkata'")
     rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    assert rel is not None
     result = nw.from_native(rel).with_columns(
         nw.col("a").dt.convert_time_zone("Asia/Kolkata")
     )
