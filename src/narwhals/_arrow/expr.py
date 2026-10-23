@@ -188,6 +188,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                     left_on=partition_by,
                     right_on=partition_by,
                     suffix="_right",
+                    nulls_equal=False,
                 )
                 return [tmp.get_column(alias) for alias in aliases]
 
@@ -226,6 +227,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 right_on=group_keys,
                 how="inner",
                 suffix="_right",
+                nulls_equal=False,
             )
             return [ret.get_column(alias) for alias in aliases]
 

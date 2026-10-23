@@ -332,6 +332,7 @@ class BaseFrame(Generic[_FrameT]):
         left_on: str | list[str] | None,
         right_on: str | list[str] | None,
         suffix: str,
+        nulls_equal: bool = False,
     ) -> Self:
         _supported_joins = ("inner", "left", "full", "cross", "anti", "semi")
         on = [on] if isinstance(on, str) else on
@@ -348,7 +349,12 @@ class BaseFrame(Generic[_FrameT]):
                 msg = "Can not pass `left_on`, `right_on` or `on` keys for cross join"
                 raise ValueError(msg)
             result = compliant.join(
-                other, how=how, left_on=None, right_on=None, suffix=suffix
+                other,
+                how=how,
+                left_on=None,
+                right_on=None,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         elif on is None:
             if left_on is None or right_on is None:
@@ -358,14 +364,24 @@ class BaseFrame(Generic[_FrameT]):
                 msg = "`left_on` and `right_on` must have the same length."
                 raise ValueError(msg)
             result = compliant.join(
-                other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
+                other,
+                how=how,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         else:
             if left_on is not None or right_on is not None:
                 msg = f"If `on` is specified, `left_on` and `right_on` should be None for {how}."
                 raise ValueError(msg)
             result = compliant.join(
-                other, how=how, left_on=on, right_on=on, suffix=suffix
+                other,
+                how=how,
+                left_on=on,
+                right_on=on,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         return self._with_compliant(result)
 
@@ -1946,6 +1962,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
         suffix: str = "_right",
+        nulls_equal: bool = False,
     ) -> Self:
         r"""Join in SQL-like fashion.
 
@@ -1964,6 +1981,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             left_on: Join column of the left DataFrame.
             right_on: Join column of the right DataFrame.
             suffix: Suffix to append to columns with a duplicate name.
+            nulls_equal: If True, null keys match other null keys. If False (the default),
+                null keys never match, as in polars.
 
         Examples:
             >>> import pandas as pd
@@ -1980,7 +1999,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             └──────────────────┘
         """
         return super().join(
-            other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
+            other,
+            how=how,
+            left_on=left_on,
+            right_on=right_on,
+            on=on,
+            suffix=suffix,
+            nulls_equal=nulls_equal,
         )
 
     def join_asof(
@@ -3221,6 +3246,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         left_on: str | list[str] | None = None,
         right_on: str | list[str] | None = None,
         suffix: str = "_right",
+        nulls_equal: bool = False,
     ) -> Self:
         r"""Add a join operation to the Logical Plan.
 
@@ -3239,6 +3265,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             left_on: Join column of the left DataFrame.
             right_on: Join column of the right DataFrame.
             suffix: Suffix to append to columns with a duplicate name.
+            nulls_equal: If True, null keys match other null keys. If False (the default),
+                null keys never match, as in polars.
 
         Examples:
             >>> import duckdb
@@ -3264,7 +3292,13 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └─────────────────────────────┘
         """
         return super().join(
-            other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
+            other,
+            how=how,
+            left_on=left_on,
+            right_on=right_on,
+            on=on,
+            suffix=suffix,
+            nulls_equal=nulls_equal,
         )
 
     def join_asof(
