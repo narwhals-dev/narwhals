@@ -41,8 +41,6 @@ def _apply_explode_markers(
 def test_explode_single_col(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # `l3` has no null/empty lists, so every row survives regardless of the flags.
-    # The null/empty + flag behaviour is covered by `test_explode_frame_options`.
     _apply_explode_markers(request, constructor)
 
     result = (
@@ -59,8 +57,6 @@ def test_explode_single_col(
 def test_explode_multiple_cols(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # `l3`/`l4` are all non-empty real lists of matching per-row length. The null/empty
-    # + flag behaviour is covered by `test_explode_frame_options`.
     _apply_explode_markers(request, constructor, multi_col=True)
 
     result = (
@@ -98,7 +94,6 @@ def test_explode_multiple_cols_null_and_empty_same_index(
 ) -> None:
     _apply_explode_markers(request, constructor, multi_col=True)
 
-    # Row p: (null, []). Row q: ([], null).
     mixed = {"a": ["p", "q"], "l1": [None, []], "l2": [[], None]}
     result = (
         nw.from_native(constructor(mixed))
@@ -117,9 +112,12 @@ def test_explode_multiple_cols_null_and_empty_same_index(
         # leading real list keeps the column types inferable for every backend.
         # Two real lists of different length.
         ([[0], [1, 2]], [[0], [3]], True, True),
-        # A real list against a null/empty: never compatible, regardless of flags.
+        # A real list against a null/empty: never compatible, regardless of flags,
+        # even when a flag drops the null/empty side.
         ([[0], [1]], [[0], None], True, True),
         ([[0], [1]], [[0], []], True, True),
+        ([[0], None], [[0], [1]], True, False),
+        ([[0], []], [[0], [1]], False, True),
         # null vs empty at the same index: a mismatch under "mixed" flags only, because
         # the two expand to a different number of rows (1 vs 0).
         ([[0], None], [[0], []], True, False),
@@ -141,14 +139,14 @@ def test_explode_multiple_cols_shape_error(
     # backends that don't implement `explode` at all are.
     _apply_explode_markers(request, constructor)
 
-    # The Polars<1.36 emulation decides row-fate from the first column only, so it
-    # cannot raise on the flag-dependent `null`-vs-`[]` mismatch (it would need the
-    # 1.36+ native path). Real-vs-emptyish / length mismatches still raise everywhere.
-    flags_match = empty_as_null == keep_nulls
+    # The Polars<1.36 backport pre-filters rows and then runs the old native explode,
+    # which expands both `null` and `[]` to one row, so it cannot raise on the
+    # flag-dependent `null`-vs-`[]` mismatch.
+    null_vs_empty = l1[1] in (None, []) and l2[1] in (None, [])
     if (
         "polars" in str(constructor)
         and POLARS_VERSION < PkgVersion("1.36")
-        and not flags_match
+        and null_vs_empty
     ):
         request.applymarker(pytest.mark.xfail(reason="needs Polars>=1.36", strict=True))
 

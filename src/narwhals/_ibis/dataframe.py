@@ -383,7 +383,7 @@ class IbisLazyFrame(
         self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
     ) -> Self:
         # `unnest(..., keep_empty=True)` emits a single null row for both empty and null
-        # lists. Drop the rows we don't want kept *before* unnesting so they produce no row.
+        # lists, so drop the rows the flags exclude up front.
         name = self._validate_explode_columns(columns)
         native = self.native
         column = cast("ir.ArrayColumn", native[name])

@@ -311,15 +311,19 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             if self._backend_version < (1, 36):
                 # On old versions the native explode behaves as `empty_as_null=True,
                 # keep_nulls=True`, so backport the flags by dropping the rows we don't
-                # want kept first. The drop is driven by the first column; multiple
-                # columns that disagree on null/empty layout at the same row then raise.
-                anchor = pl.col(columns[0])
-                keep: list[pl.Expr] = []
-                if not empty_as_null:
-                    keep.append((anchor.list.len() != 0) | anchor.is_null())
-                if not keep_nulls:
-                    keep.append(anchor.is_not_null())
-                frame = self.native.filter(*keep) if keep else self.native
+                # want kept first. A row is dropped only when every exploded column
+                # drops it, so a real list next to a dropped null/empty still reaches
+                # the native length check and raises.
+                frame = self.native
+                if not (empty_as_null and keep_nulls):
+                    keep = (
+                        pl.all_horizontal(
+                            (col.list.len() != 0) | col.is_null() | empty_as_null,
+                            col.is_not_null() | keep_nulls,
+                        )
+                        for col in map(pl.col, columns)
+                    )
+                    frame = frame.filter(pl.any_horizontal(keep))
                 result = frame.explode(columns)
             else:
                 result = self.native.explode(

@@ -498,13 +498,17 @@ class DuckDBLazyFrame(
         if not keep_nulls:
             rel = rel.filter(col_to_explode.isnotnull())
 
-        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > zero
+        not_null_condition = col_to_explode.isnotnull() & (
+            F("len", col_to_explode) > zero
+        )
         non_null_rel = rel.filter(not_null_condition).select(
             *(
                 F("unnest", col_to_explode).alias(name) if name in columns else name
                 for name in original_columns
             )
         )
+        if not (empty_as_null or keep_nulls):
+            return self._with_native(non_null_rel)
 
         null_rel = rel.filter(~not_null_condition).select(
             *(

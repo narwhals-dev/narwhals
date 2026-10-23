@@ -71,8 +71,9 @@ class SQLLazyFrame(
                 raise InvalidOperationError(msg)
         if len(columns) != 1:
             msg = (
-                "Exploding on multiple columns is not supported for lazy backends, since "
-                "we cannot guarantee that the exploded columns have matching element counts."
+                f"Exploding on multiple columns is not supported for {self._implementation} "
+                "backend, since we cannot guarantee that the exploded columns have matching "
+                "element counts."
             )
             raise NotImplementedError(msg)
         return columns[0]

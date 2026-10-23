@@ -499,15 +499,18 @@ class SparkLikeLazyFrame(
             def null_condition(col_name: str) -> Column:
                 return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
 
+            exploded = native.select(
+                *[
+                    self._F.col(col_name).alias(col_name)
+                    if col_name != explode_col
+                    else self._F.explode(col_name).alias(col_name)
+                    for col_name in column_names
+                ]
+            )
+            if not (empty_as_null or keep_nulls):
+                return self._with_native(exploded)
             return self._with_native(
-                native.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != explode_col
-                        else self._F.explode(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                ).union(
+                exploded.union(
                     native.filter(null_condition(explode_col)).select(
                         *[
                             self._F.col(col_name).alias(col_name)
