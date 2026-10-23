@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.stable.v2 as nw_v2
@@ -137,7 +138,7 @@ def test_constructors() -> None:
     import numpy as np
     import pandas as pd
 
-    if PANDAS_VERSION < (2, 2):
+    if PANDAS_VERSION < PkgVersion("2.2"):
         pytest.skip()
     assert nw_v2.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
     arr: np.ndarray[tuple[int, int], Any] = np.array([[1, 2], [3, 4]])  # pyright: ignore[reportAssignmentType]
@@ -458,7 +459,7 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
         assert isinstance(supports_arrow_c_stream.to_native(), pa.Table)
     else:
         assert not isinstance(supports_arrow_c_stream.to_native(), pa.Table)
-    if PYARROW_VERSION < (14,):  # pragma: no cover
+    if PYARROW_VERSION < PkgVersion("14"):  # pragma: no cover
         ...
     else:
         result = nw_v2.DataFrame.from_arrow(
@@ -567,7 +568,7 @@ def test_mode_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
     df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
@@ -618,7 +619,9 @@ def test_schema_from_generator() -> None:
 
 
 def test_get_categories_v2(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     data = {"a": ["one", "two", "two", None]}
@@ -634,7 +637,9 @@ def test_get_categories_v2(constructor_eager: ConstructorEager) -> None:
 
 
 def test_get_categories_lazy_v2(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     data = {"a": ["one", "two", "two", None]}

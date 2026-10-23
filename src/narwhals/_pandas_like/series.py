@@ -16,8 +16,10 @@ from narwhals._pandas_like.utils import (
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
+    floordiv_null_on_zero,
     get_dtype_backend,
     import_array_module,
+    is_dtype_pyarrow,
     is_pandas_or_modin,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -404,11 +406,23 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
-    def arg_min(self) -> int:
-        return self.native.argmin()
+    def arg_min(self) -> int | None:
+        return self._arg_extremum(self.native.argmin)
 
-    def arg_max(self) -> int:
-        return self.native.argmax()
+    def arg_max(self) -> int | None:
+        return self._arg_extremum(self.native.argmax)
+
+    def _arg_extremum(self, func: Callable[[], int]) -> int | None:
+        if self._implementation.is_pandas() and self._backend_version >= (3,):
+            # pandas>=3 raises for empty and all-null input on every dtype.
+            try:
+                return func()
+            except ValueError:
+                if self.native.count():
+                    raise
+                return None
+        # NOTE: pandas<3 returns -1 (and warns) for all-NaN float and object input.
+        return func() if self.native.count() else None  # pragma: no cover
 
     # Binary comparisons
 
@@ -506,10 +520,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_binary_right(operator.truediv, other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._with_binary(operator.floordiv, other)
+        return self._with_binary(floordiv_null_on_zero, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.floordiv, other)
+        return self._with_binary_right(floordiv_null_on_zero, other)
 
     def __pow__(self, other: Any) -> Self:
         return self._with_binary(operator.pow, other)
@@ -676,10 +690,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.abs())
 
     def cum_sum(self, *, reverse: bool) -> Self:
+        native = self.native
+        dtype = native.dtype
+        # pyarrow-backed accumulation keeps the input width and raises on overflow.
+        if (
+            is_dtype_pyarrow(dtype)
+            and dtype.kind in "iu"
+            and dtype.pyarrow_dtype.bit_width < 64
+        ):
+            native = native.astype("int64[pyarrow]")
         result = (
-            self.native.cumsum(skipna=True)
+            native.cumsum(skipna=True)
             if not reverse
-            else self.native[::-1].cumsum(skipna=True)[::-1]
+            else native[::-1].cumsum(skipna=True)[::-1]
         )
         return self._with_native(result)
 
@@ -994,7 +1017,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = (
             not_na_series.cumsum()
             if not reverse
-            else len(self) - not_na_series.cumsum() + not_na_series - 1
+            else not_na_series.sum() - not_na_series.cumsum() + not_na_series
         )
         return self._with_native(result)
 

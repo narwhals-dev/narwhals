@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -32,7 +33,7 @@ def _apply_explode_markers(
     if any(backend in str(constructor) for backend in unsupported):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -144,7 +145,11 @@ def test_explode_multiple_cols_shape_error(
     # cannot raise on the flag-dependent `null`-vs-`[]` mismatch (it would need the
     # 1.36+ native path). Real-vs-emptyish / length mismatches still raise everywhere.
     flags_match = empty_as_null == keep_nulls
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 36) and not flags_match:
+    if (
+        "polars" in str(constructor)
+        and POLARS_VERSION < PkgVersion("1.36")
+        and not flags_match
+    ):
         request.applymarker(pytest.mark.xfail(reason="needs Polars>=1.36", strict=True))
 
     df = (
@@ -169,7 +174,7 @@ def test_explode_invalid_operation_error(
     if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
         request.applymarker(pytest.mark.xfail)
 
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.6"):
         pytest.skip()
 
     with pytest.raises(
@@ -186,7 +191,7 @@ def test_explode_invalid_operation_error_eager(
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.6"):
         pytest.skip()
 
     with pytest.raises(

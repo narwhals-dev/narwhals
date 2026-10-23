@@ -4,6 +4,7 @@ from datetime import timedelta
 from typing import Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -31,7 +32,7 @@ def test_duration_attributes(
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor):
         pytest.skip()
     if "pyspark" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -63,7 +64,7 @@ def test_duration_attributes_nano(
     attribute: str,
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor):
         pytest.skip()
     if "pyspark" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -97,7 +98,7 @@ def test_duration_attributes_series(
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -125,7 +126,7 @@ def test_duration_attributes_series_nano(
     attribute: str,
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("numpy")

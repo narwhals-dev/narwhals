@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -12,6 +13,9 @@ data = {
         "to infinity,and BEYOND!",
         "with123numbers",
         "__dunder__score_a1_.2b ?three",
+        "münchen straße, café olé",
+        "αβγ δεζ",
+        "привет мир",
     ]
 }
 
@@ -21,7 +25,7 @@ expected = {"a": [s.title() for s in data["a"]]}
 def test_str_to_titlecase_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 2):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.2"):
         reason = "version too old, duckdb 1.2 required for LambdaExpression."
         pytest.skip(reason=reason)
 

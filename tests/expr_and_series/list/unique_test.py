@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION
@@ -31,7 +32,7 @@ def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     result = (
@@ -79,7 +80,7 @@ def test_unique_maintain_order_expr(
 ) -> None:
     if any(backend in str(constructor) for backend in MAINTAIN_ORDER_UNSUPPORTED):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     result = (
         nw.from_native(constructor(maintain_order_data))

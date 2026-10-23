@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -27,7 +28,7 @@ def test_contains(
     if (
         isinstance(other, float)
         and "polars" in str(constructor_eager)
-        and POLARS_VERSION >= (2,)
+        and POLARS_VERSION >= PkgVersion("2")
     ):  # pragma: no cover
         reason = "Polars>=2.0 rejects operands which can't be coerced losslessly"
         request.applymarker(pytest.mark.xfail(reason=reason))

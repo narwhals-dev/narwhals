@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -8,7 +9,7 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -33,11 +34,12 @@ if TYPE_CHECKING:
     )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
     ChunkedArrayStructArray: TypeAlias = ChunkedArrayAny
+    ListArrayAny: TypeAlias = "pa.ListArray[Any] | pa.LargeListArray[Any]"
 
     def is_timestamp(t: Any) -> TypeIs[pa.TimestampType[Any, Any]]: ...
     def is_duration(t: Any) -> TypeIs[pa.DurationType[Any]]: ...
@@ -560,6 +562,95 @@ def list_agg(
                 base_array, cast("pa.BooleanArray", non_empty_mask.fill_null(False)), agg
             )
         ]
+    )
+
+
+_LIST_BLOCK_VALUES = 1 << 21
+_LIST_MIN_BLOCK_VALUES = _LIST_BLOCK_VALUES >> 4
+
+
+def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArrayAny:
+    """Whether each list holds `item`, or a null element if `item` is None.
+
+    A running count of matches over the flattened values changes within a list iff the
+    list holds a match. That keeps this linear, where a group-by per list would sort.
+    """
+    list_type = cast("pa.ListType[Any] | pa.LargeListType[Any]", array.type)
+    try:
+        # Probe a single null, so that a mismatched `item` raises even without rows.
+        # Not an empty array: pyarrow skips its timezone check on those.
+        _item_matches(pa.nulls(1, list_type.value_type), item)
+    except (pa.ArrowInvalid, pa.ArrowNotImplementedError, pa.ArrowTypeError) as exc:
+        msg = (
+            f"Unable to compare item of type {type(item)} with list of type {list_type}."
+        )
+        raise InvalidOperationError(msg) from exc
+    blocks = [_list_block_contains(block, item) for block in _list_blocks(array)]
+    return pa.chunked_array(blocks, pa.bool_())
+
+
+def _item_matches(values: ArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    if item is None:
+        return pc.is_null(values)
+    if isinstance(item, float) and math.isnan(item):
+        return pc.is_nan(values)  # NaN matches NaN, as in Polars.
+    return pc.equal(values, lit(item))
+
+
+def _list_blocks(array: ChunkedArrayAny) -> Iterator[ListArrayAny]:
+    """Split `array` into runs of whole lists, of up to about `_LIST_BLOCK_VALUES` values.
+
+    That keeps the intermediates in cache. Large chunks are sliced without copying, and
+    chunks under `_LIST_MIN_BLOCK_VALUES` values are combined until a run reaches it, to
+    amortise the ~35us of pyarrow calls per block. Combining every chunk could overflow
+    32-bit list offsets.
+    """
+    run: list[ListArrayAny] = []
+    run_values = 0
+    for chunk in cast("list[ListArrayAny]", array.chunks):
+        if not len(chunk):
+            continue
+        n_values = chunk.offsets[-1].as_py() - chunk.offsets[0].as_py()
+        is_small = n_values < _LIST_MIN_BLOCK_VALUES
+        if run and (not is_small or run_values >= _LIST_MIN_BLOCK_VALUES):
+            yield pa.concat_arrays(run) if len(run) > 1 else run[0]
+            run, run_values = [], 0
+        if is_small:
+            run.append(chunk)
+            run_values += n_values
+        else:
+            step = max(1, len(chunk) * _LIST_BLOCK_VALUES // n_values)
+            yield from (chunk.slice(start, step) for start in range(0, len(chunk), step))
+    if run:
+        yield pa.concat_arrays(run) if len(run) > 1 else run[0]
+
+
+def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    offsets = block.offsets
+    first = offsets[0].as_py()
+    values = block.values.slice(first, offsets[-1].as_py() - first)
+    # A plain `int` would widen int32 offsets to int64, which is slower to `take`.
+    offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
+    ends, starts = offsets.slice(1), offsets.slice(0, len(block))
+
+    matches = _item_matches(values, item)
+
+    # Counting modulo 2^k stays exact within lists shorter than 2^k, so the narrowest
+    # type that fits the longest list is enough.
+    longest = pc.max(pc.subtract(ends, starts)).as_py()
+    count_type = next(
+        t
+        for t in (pa.uint8(), pa.uint16(), pa.uint32(), pa.uint64())
+        if longest < 1 << t.bit_width
+    )
+    # `matches_before[i]` counts the matches before flattened position `i`.
+    matches = pa.concat_arrays([pa.array([False]), matches.fill_null(False)])
+    matches_before = pc.cumulative_sum(matches.cast(count_type))
+    contains = pc.not_equal(matches_before.take(ends), matches_before.take(starts))
+    return (
+        contains
+        if block.null_count == 0
+        else pc.if_else(block.is_valid(), contains, None)
     )
 
 

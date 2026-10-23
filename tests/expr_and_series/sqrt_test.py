@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
     PYARROW_VERSION,
     Constructor,
@@ -35,12 +37,12 @@ def test_sqrt_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result}, {"a": expected})
 
 
-PYARROW_UNAVAILABLE = PYARROW_VERSION == (0, 0, 0)
+PYARROW_UNAVAILABLE = PYARROW_VERSION == NOT_INSTALLED
 reason = "nullable types require pandas2+"
 require_pd_2_1 = pytest.mark.skipif(
-    PANDAS_VERSION < (2, 1, 0) or PYARROW_UNAVAILABLE, reason=reason
+    PANDAS_VERSION < PkgVersion("2.1") or PYARROW_UNAVAILABLE, reason=reason
 )
-require_pd_2_0 = pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason=reason)
+require_pd_2_0 = pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason=reason)
 
 
 @pytest.mark.parametrize(
@@ -71,7 +73,9 @@ def test_sqrt_dtype_pandas(dtype_backend: DTypeBackend) -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.1"), reason="nullable types require pandas2+"
+)
 def test_sqrt_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")

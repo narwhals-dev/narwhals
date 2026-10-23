@@ -5,6 +5,7 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.testing import assert_series_equal
@@ -42,14 +43,13 @@ def test_self_equal(
         # TODO(FBruzzesi): Investigate which conversion is failing aside from nested dtypes
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        15,
-        0,
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0"
     ):  # pragma: no cover
         reason = (
             "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
@@ -155,7 +155,7 @@ def test_check_order(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2) and dtype.is_nested():  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2") and dtype.is_nested():  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -273,14 +273,14 @@ def test_list_like(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
     if (
         "pyarrow_table" in str(constructor_eager)
-        and PYARROW_VERSION < (14, 0)
+        and PYARROW_VERSION < PkgVersion("14")
         and dtype == nw.Array
     ):  # pragma: no cover
         reason = (
@@ -333,7 +333,7 @@ def test_struct(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -380,22 +380,22 @@ def test_categorical_as_str(
     categorical_as_str: bool,
     context: AbstractContextManager[Any],
 ) -> None:
+    name = str(constructor_eager)
     if (
-        "polars" in str(constructor_eager)
-        and POLARS_VERSION >= (1, 32)
+        "polars" in name
+        and POLARS_VERSION >= PkgVersion("1.32")
         and not categorical_as_str
     ):
         # https://github.com/pola-rs/polars/pull/23016 removed StringCache, it still
         # exists but it does nothing in python.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and not categorical_as_str:
+    if "pyarrow_table" in name and not categorical_as_str:
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        15,
-        0,
+    if "pyarrow_table" in name and PYARROW_VERSION < PkgVersion(
+        "15.0"
     ):  # pragma: no cover
         reason = (
             "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
@@ -415,3 +415,23 @@ def test_categorical_as_str(
         assert_series_equal(
             left, right, check_names=False, categorical_as_str=categorical_as_str
         )
+
+
+def test_categorical_as_str_value_mismatch(constructor_eager: ConstructorEager) -> None:
+    name = str(constructor_eager)
+    if "pyarrow_table" in name and PYARROW_VERSION < PkgVersion(
+        "15.0"
+    ):  # pragma: no cover
+        reason = (
+            "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
+            "dictionary using function cast_dictionary"
+        )
+        pytest.skip(reason=reason)
+
+    data = {"a": ["beluga", "orca", "orca", "beluga"]}
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    s = frame["a"].cast(nw.Categorical())
+    left, right = s[:2], s[2:]
+
+    with _assertion_error("exact value mismatch"):
+        assert_series_equal(left, right)
