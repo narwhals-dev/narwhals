@@ -717,22 +717,19 @@ def _is_native_series(obj: object) -> TypeIs[pd.Series[Any]]:
     return is_pandas_like_series(obj)
 
 
-def floordiv_null_on_zero(
-    dividend: pd.Series[Any] | float, divisor: pd.Series[Any] | float
+def _null_on_zero(
+    op: Callable[[Any, Any], Any],
+    dividend: pd.Series[Any] | float,
+    divisor: pd.Series[Any] | float,
 ) -> pd.Series[Any]:
-    """Floor-divide, with null wherever `divisor` is zero.
-
-    Natively, integer division by zero gives `inf` (numpy-backed), `0` (nullable)
-    or raises (pyarrow-backed).
-    """
     if _is_native_series(divisor):
         is_nonzero = divisor != 0
         if is_nonzero.all():
-            return dividend // divisor
+            return op(dividend, divisor)
         # A literal `1` upcasts a numpy bool divisor to object, and a nullable
         # boolean one rejects it.
         safe_divisor = divisor.where(is_nonzero, divisor.dtype.type(1))
-        return (dividend // safe_divisor).where(is_nonzero)
+        return op(dividend, safe_divisor).where(is_nonzero)
     assert _is_native_series(dividend)  # noqa: S101
     try:
         divisor_is_zero = bool(divisor == 0)
@@ -741,8 +738,30 @@ def floordiv_null_on_zero(
     if divisor_is_zero:
         all_false = type(dividend)(False, index=dividend.index)
         # Every value gets masked, so this division only sets the result dtype.
-        return (dividend // type(divisor)(1)).where(all_false)
-    return dividend // divisor
+        return op(dividend, type(divisor)(1)).where(all_false)
+    return op(dividend, divisor)
+
+
+def floordiv_null_on_zero(
+    dividend: pd.Series[Any] | float, divisor: pd.Series[Any] | float
+) -> pd.Series[Any]:
+    """Floor-divide, with null wherever `divisor` is zero.
+
+    Natively, integer division by zero gives `inf` (numpy-backed), `0` (nullable)
+    or raises (pyarrow-backed).
+    """
+    return _null_on_zero(operator.floordiv, dividend, divisor)
+
+
+def mod_null_on_zero(
+    dividend: pd.Series[Any] | float, divisor: pd.Series[Any] | float
+) -> pd.Series[Any]:
+    """Modulo, with null wherever `divisor` is zero.
+
+    Natively, modulo by zero gives `nan` (numpy-backed), `0` (nullable)
+    or raises (pyarrow-backed).
+    """
+    return _null_on_zero(operator.mod, dividend, divisor)
 
 
 def binary_string_sum_fallback(  # pragma: no cover
