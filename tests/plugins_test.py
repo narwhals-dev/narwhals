@@ -40,6 +40,9 @@ DATA: dict[str, Any] = {"a": [1, 1, 2], "b": [4, 5, 6]}
 ROWS = [{"a": 1, "b": 4}, {"a": 1, "b": 5}, {"a": 2, "b": 6}]
 
 
+FAKE_NATIVE_NAMESPACE = types.ModuleType("fake_native_namespace")
+
+
 class FakeNative:
     """Native object of an imaginary plugin-backed library."""
 
@@ -48,10 +51,17 @@ class FakeCompliantDataFrame:
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 
+    def __native_namespace__(self) -> ModuleType:
+        return FAKE_NATIVE_NAMESPACE
+
 
 class FakeCompliantLazyFrame:
     def __narwhals_lazyframe__(self) -> Self:  # pragma: no cover
         return self
+
+
+class FakeCompliantEagerDataFrame(FakeCompliantDataFrame, FakeCompliantLazyFrame):
+    """Eager compliant frames define both dunders, like `ArrowDataFrame` does."""
 
 
 class FakeCompliantSeries:
@@ -306,6 +316,14 @@ def test_series_scatter_plugin() -> None:
 
 
 @requires_plugin
+def test_series_getitem_list_plugin() -> None:
+    # The native series is a `list`, so a list index is also of the native series type.
+    s = nw.Series.from_iterable("a", [1, 2, 3], backend=BACKEND)
+    assert s[[2, 0]].to_native() == [3, 1]
+    assert s[[]].to_native() == []
+
+
+@requires_plugin
 def test_dataframe_filter_mask_plugin() -> None:
     # Reaching `all_horizontal` means the mask was built by the plugin's namespace.
     df = nw.from_dict(DATA, backend=BACKEND)
@@ -431,6 +449,7 @@ def test_is_into_dataframe() -> None:
     ("compliant_cls", "expected_kind"),
     [
         (FakeCompliantDataFrame, "dataframe"),
+        (FakeCompliantEagerDataFrame, "dataframe"),
         (FakeCompliantLazyFrame, "lazyframe"),
         (FakeCompliantSeries, "series"),
     ],
@@ -449,6 +468,16 @@ def test_is_into_mocked_plugin(
         assert dependencies.is_into_dataframe(native) is (expected_kind == "dataframe")
         assert dependencies.is_into_lazyframe(native) is (expected_kind == "lazyframe")
         assert dependencies.is_into_series(native) is (expected_kind == "series")
+
+
+def test_get_native_namespace_mocked_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
+    from narwhals import plugins
+
+    def fake_entrypoints() -> tuple[FakeEntryPoint, ...]:
+        return (FakeEntryPoint(FakePlugin(FakeCompliantDataFrame)),)
+
+    monkeypatch.setattr(plugins, "_discover_entrypoints", fake_entrypoints)
+    assert nw.get_native_namespace(FakeNative()) is FAKE_NATIVE_NAMESPACE  # type: ignore[arg-type]
 
 
 @requires_plugin
