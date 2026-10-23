@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 
 def _validate_dtype(dtype: DType | type[DType]) -> None:
+    if _is_nested_type(dtype):
+        raise TypeError(_nested_type_msg(dtype))
     if not isinstance_or_issubclass(dtype, DType):
         msg = (
             f"Expected Narwhals dtype, got: {type(dtype)}.\n\n"
@@ -43,17 +45,21 @@ def _is_nested_type(obj: Any) -> TypeIs[type[NestedType]]:
     return isinstance(obj, DTypeClass) and issubclass(obj, NestedType)
 
 
+def _nested_type_msg(dtype: type[NestedType]) -> str:
+    name = f"nw.{dtype.__name__}"
+    return (
+        f"{name!r} is not valid in this context.\n\n"
+        f"Hint: instead of:\n\n"
+        f"    {name}\n\n"
+        "use:\n\n"
+        f"    {name}(...)"
+    )
+
+
 def _validate_into_dtype(dtype: Any) -> None:
     if not _is_into_dtype(dtype):
         if _is_nested_type(dtype):
-            name = f"nw.{dtype.__name__}"
-            msg = (
-                f"{name!r} is not valid in this context.\n\n"
-                f"Hint: instead of:\n\n"
-                f"    {name}\n\n"
-                "use:\n\n"
-                f"    {name}(...)"
-            )
+            msg = _nested_type_msg(dtype)
         else:
             msg = f"Expected Narwhals dtype, got: {qualified_type_name(dtype)!r}."
         raise TypeError(msg)
@@ -909,6 +915,76 @@ class List(NestedType):
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
         return f"{class_name}({self.inner!r})"
+
+
+class Map(NestedType):
+    """Key-value mapping type.
+
+    Keys are never null and entry order is preserved.
+
+    !!! warning
+        Handling of duplicate keys depends on the backend. For example:
+
+        - Polars keeps the first position and the last value.
+        - DuckDB doesn't allow duplicate keys.
+        - PyArrow keeps all entries as-is.
+
+    Arguments:
+        key: The datatype of the keys. `Object` is not allowed.
+        value: The datatype of the values.
+
+    Examples:
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> s_native = pa.chunked_array(
+        ...     [[[("a", 1), ("b", 2)]]], type=pa.map_(pa.string(), pa.int64())
+        ... )
+        >>> nw.from_native(s_native, series_only=True).dtype
+        Map(String, Int64)
+    """
+
+    __slots__ = ("key", "value")
+    key: IntoDType
+    """The DType of the keys."""
+    value: IntoDType
+    """The DType of the values."""
+
+    def __init__(self, key: IntoDType, value: IntoDType) -> None:
+        _validate_into_dtype(key)
+        _validate_into_dtype(value)
+        if isinstance_or_issubclass(key, Object):
+            msg = "`Object` is not allowed as a `Map` key dtype."
+            raise TypeError(msg)
+        self.key = key
+        self.value = value
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Map is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Map(nw.String, nw.Int64) == nw.Map(nw.String, nw.Int64)
+            True
+            >>> nw.Map(nw.String, nw.Int64) == nw.Map(nw.String, nw.Float32)
+            False
+
+            If a parent type is not specific about its inner type, we infer it as equal
+
+            >>> nw.Map(nw.String, nw.Int64) == nw.Map
+            True
+        """
+        if type(other) is DTypeClass and issubclass(other, self.__class__):
+            return True
+        if isinstance(other, self.__class__):
+            return self.key == other.key and self.value == other.value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.key, self.value))
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.key!r}, {self.value!r})"
 
 
 class Array(NestedType):

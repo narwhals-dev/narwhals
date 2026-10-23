@@ -358,6 +358,132 @@ def test_nested_dtypes_dask() -> None:
     }
 
 
+def test_map_dtype_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df_pa = pa.table({"m": pa.array([[("a", 1)]], type=pa.map_(pa.string(), pa.int64()))})
+    nwdf = nw.from_native(df_pa)
+    assert nwdf.collect_schema() == {"m": nw.Map(nw.String, nw.Int64)}
+    # roundtrip via cast
+    result = nwdf.select(nw.col("m").cast(nw.Map(nw.String, nw.Int32)))
+    assert result.collect_schema() == {"m": nw.Map(nw.String, nw.Int32)}
+
+
+def test_map_dtype_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    rel = duckdb.sql("SELECT MAP{'a': 1, 'b': 2} AS m")
+    nwdf = nw.from_native(rel)
+    assert nwdf.collect_schema() == {"m": nw.Map(nw.String, nw.Int32)}
+    result = nwdf.select(nw.col("m").cast(nw.Map(nw.String, nw.Int64)))
+    assert result.collect_schema() == {"m": nw.Map(nw.String, nw.Int64)}
+
+
+def test_map_dtype_ibis() -> None:  # pragma: no cover
+    pytest.importorskip("ibis")
+    import ibis
+
+    tbl = ibis.memtable({"m": [{"a": 1}]}, schema={"m": "map<string, int64>"})
+    nwdf = nw.from_native(tbl)
+    assert nwdf.collect_schema() == {"m": nw.Map(nw.String, nw.Int64)}
+
+
+@pytest.mark.parametrize("lazy", [False, True])
+@pytest.mark.parametrize("nested", [False, True])
+@pytest.mark.skipif(
+    POLARS_VERSION < PkgVersion("2"), reason="native Map dtype requires Polars 2.0.0"
+)
+def test_map_dtype_polars(*, lazy: bool, nested: bool) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    values = [{"a": [1, None]} if nested else {"a": 1, "b": None}, {}, None]
+    native_dtype = pl.Map(pl.String, pl.List(pl.Int64) if nested else pl.Int64)
+    dtype = nw.Map(nw.String, nw.List(nw.Int64) if nested else nw.Int64)
+    target_dtype = nw.Map(nw.String, nw.List(nw.Int32) if nested else nw.Int32)
+    expected_native_dtype = pl.Map(pl.String, pl.List(pl.Int32) if nested else pl.Int32)
+    s = pl.Series("m", values, dtype=native_dtype)
+    df = s.to_frame()
+    nwdf = nw.from_native(df.lazy() if lazy else df)
+    assert nwdf.collect_schema() == {"m": dtype}
+    result = nwdf.select(nw.col("m").cast(target_dtype))
+    assert result.collect_schema() == {"m": target_dtype}
+    native = result.lazy().collect().to_native()
+    assert native.schema == {"m": expected_native_dtype}
+    assert native["m"].to_list() == values
+    assert df.schema == {"m": native_dtype}
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < PkgVersion("2"), reason="native Map dtype requires Polars 2.0.0"
+)
+def test_map_dtype_polars_series() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    dtype = nw.Map(nw.Int64, nw.Struct({"a": nw.Int64}))
+    target_dtype = nw.Map(nw.Int64, nw.Struct({"a": nw.Int32}))
+    values = [{1: {"a": 2}}, {}, None]
+    s = nw.new_series("m", values, dtype=dtype, backend=pl)
+    assert s.dtype == dtype
+    result = s.cast(target_dtype)
+    assert result.dtype == target_dtype
+    assert result.to_native().dtype == pl.Map(pl.Int64, pl.Struct({"a": pl.Int32}))
+    assert result.to_list() == values
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION >= PkgVersion("2"),
+    reason="native polars.Map dtype is supported on 'polars>=2.0'",
+)
+def test_map_dtype_polars_unsupported() -> None:  # pragma: no cover
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame({"m": [[{"key": "a", "value": 1}]]}))
+    msg = "`Map` dtype is only supported for 'polars>=2.0'"
+    with pytest.raises(NotImplementedError, match=re.escape(msg)):
+        df.select(nw.col("m").cast(nw.Map(nw.String, nw.Int64)))
+
+
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
+)
+def test_map_dtype_pandas() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
+
+    s = pd.Series([[("a", 1)]], dtype=pd.ArrowDtype(pa.map_(pa.string(), pa.int64())))
+    nwdf = nw.from_native(pd.DataFrame({"m": s}))
+    assert nwdf.collect_schema() == {"m": nw.Map(nw.String, nw.Int64)}
+    # roundtrip via cast
+    result = nwdf.select(nw.col("m").cast(nw.Map(nw.String, nw.Int32)))
+    assert result.collect_schema() == {"m": nw.Map(nw.String, nw.Int32)}
+    native_dtype = result.to_native()["m"].dtype
+    assert isinstance(native_dtype, pd.ArrowDtype)
+    assert pa.types.is_map(native_dtype.pyarrow_dtype)
+
+
+def test_map_dtype_sqlframe() -> None:
+    pytest.importorskip("sqlframe")
+    from sqlframe.base import types
+    from sqlframe.duckdb import DuckDBSession
+
+    session = DuckDBSession()
+    schema = types.StructType(
+        [types.StructField("m", types.MapType(types.StringType(), types.LongType()))]
+    )
+    sdf = session.createDataFrame([({"a": 1},)], schema=schema)
+    nwdf = nw.from_native(sdf)
+    assert nwdf.collect_schema() == {"m": nw.Map(nw.String, nw.Int64)}
+    result = nwdf.select(nw.col("m").cast(nw.Map(nw.String, nw.Int32)))
+    assert result.collect_schema() == {"m": nw.Map(nw.String, nw.Int32)}
+
+
 def test_all_nulls_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
