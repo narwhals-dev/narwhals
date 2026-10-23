@@ -139,17 +139,6 @@ def test_explode_multiple_cols_shape_error(
     # backends that don't implement `explode` at all are.
     _apply_explode_markers(request, constructor)
 
-    # The Polars<1.36 backport pre-filters rows and then runs the old native explode,
-    # which expands both `null` and `[]` to one row, so it cannot raise on the
-    # flag-dependent `null`-vs-`[]` mismatch.
-    null_vs_empty = l1[1] in (None, []) and l2[1] in (None, [])
-    if (
-        "polars" in str(constructor)
-        and POLARS_VERSION < PkgVersion("1.36")
-        and null_vs_empty
-    ):
-        request.applymarker(pytest.mark.xfail(reason="needs Polars>=1.36", strict=True))
-
     df = (
         nw.from_native(constructor({"a": ["g", "p"], "l1": l1, "l2": l2}))
         .with_columns(nw.col("l1", "l2").cast(nw.List(nw.Int32())))

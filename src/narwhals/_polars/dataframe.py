@@ -310,20 +310,33 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         try:
             if self._backend_version < (1, 36):
                 # On old versions the native explode behaves as `empty_as_null=True,
-                # keep_nulls=True`, so backport the flags by dropping the rows we don't
-                # want kept first. A row is dropped only when every exploded column
-                # drops it, so a real list next to a dropped null/empty still reaches
-                # the native length check and raises.
+                # keep_nulls=True`, so backport the flags by dropping rows that no
+                # exploded column keeps. Polars>=1.36 raises on a row that some columns
+                # keep and others drop (e.g. `null` next to `[]` under mixed flags), so
+                # give two of its cells different lengths for the native check to fail.
                 frame = self.native
                 if not (empty_as_null and keep_nulls):
-                    keep = (
+                    keep = [
                         pl.all_horizontal(
                             (col.list.len() != 0) | col.is_null() | empty_as_null,
                             col.is_not_null() | keep_nulls,
                         )
                         for col in map(pl.col, columns)
-                    )
+                    ]
                     frame = frame.filter(pl.any_horizontal(keep))
+                    if len(columns) > 1:
+                        mixed = ~pl.all_horizontal(keep)
+                        first, second = map(pl.col, columns[:2])
+                        frame = frame.with_columns(
+                            pl.when(mixed)
+                            .then(first.list.head(0))
+                            .otherwise(first)
+                            .alias(columns[0]),
+                            pl.when(mixed)
+                            .then(second.list.first().repeat_by(1))
+                            .otherwise(second)
+                            .alias(columns[1]),
+                        )
                 result = frame.explode(columns)
             else:
                 result = self.native.explode(
