@@ -11,6 +11,7 @@ from packaging.version import Version as PkgVersion
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     assert_equal_data,
@@ -258,8 +259,8 @@ def test_contains_inner_dtypes_expr(
     ):
         pytest.skip(reason="Polars<1.28 doesn't support decimals, nor match NaN")
     if is_nan:
-        if "duckdb" in str(constructor):
-            reason = "DuckDB turns a NaN literal into NULL."
+        if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("2"):
+            reason = "DuckDB<2 turns a NaN literal into NULL."
             request.applymarker(pytest.mark.xfail(reason=reason))
         if PANDAS_VERSION < PkgVersion("3") and any(
             backend in str(constructor) for backend in ("pandas", "modin", "dask")

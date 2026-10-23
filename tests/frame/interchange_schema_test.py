@@ -196,6 +196,7 @@ def test_interchange_schema_duckdb() -> None:
         },
     )
     rel = duckdb.sql("select * from df_pl")
+    assert rel is not None
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     result = df.schema
     expected = {
