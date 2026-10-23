@@ -8,6 +8,7 @@ from polars.selectors import is_selector
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
+    ROUNDS_HALF_TO_EVEN,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -18,6 +19,7 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
     native_get_categories,
+    round_half_to_even,
 )
 from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
@@ -140,6 +142,14 @@ class PolarsExpr:
         if self._backend_version < (1,):  # pragma: no cover
             native = pl.when(~self.native.is_null()).then(native).otherwise(None)
         return self._with_native(native)
+
+    def round(self, decimals: int) -> Self:
+        result = (
+            self.native.round(decimals)
+            if ROUNDS_HALF_TO_EVEN
+            else round_half_to_even(self.native, decimals)
+        )
+        return self._with_native(result)
 
     def is_nan(self) -> Self:
         if self._backend_version >= (1, 18):
@@ -412,7 +422,6 @@ class PolarsExpr:
     null_count: Method[Self]
     quantile: Method[Self]
     rank: Method[Self]
-    round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
     sin: Method[Self]
