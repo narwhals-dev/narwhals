@@ -29,7 +29,7 @@ def _apply_explode_markers(
     unsupported = ["dask", "cudf", "pyarrow_table"]
     if multi_col:
         # Lazy SQL backends reject multi-column explode outright.
-        unsupported.extend(["duckdb", "pyspark", "ibis"])
+        unsupported.extend(("duckdb", "pyspark", "ibis"))
     if any(backend in str(constructor) for backend in unsupported):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
@@ -327,3 +327,72 @@ def test_explode_frame_single_elements(
 
     both = df.explode("b", "a").select("a", "b", "i").sort("i")
     assert_equal_data(both, {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 10, 20]})
+
+
+@pytest.mark.parametrize(
+    ("empty_as_null", "keep_nulls", "expected"),
+    [
+        (
+            True,
+            True,
+            {
+                "a": [None, 1, None, None, None],
+                "b": [[7], None, None, [8], []],
+                "i": [0, 1, 1, 2, 3],
+            },
+        ),
+        (
+            False,
+            True,
+            {"a": [None, 1, None, None], "b": [[7], None, None, [8]], "i": [0, 1, 1, 2]},
+        ),
+        (
+            True,
+            False,
+            {"a": [None, 1, None, None], "b": [[7], None, None, []], "i": [0, 1, 1, 3]},
+        ),
+        (False, False, {"a": [None, 1, None], "b": [[7], None, None], "i": [0, 1, 1]}),
+    ],
+)
+def test_explode_null_elements(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    *,
+    empty_as_null: bool,
+    keep_nulls: bool,
+    expected: dict[str, list[int | list[int] | None]],
+) -> None:
+    # Lists holding null *elements* are not null/empty lists: the flags must not drop
+    # them. `b` is a list column that is not exploded and must pass through untouched.
+    _apply_explode_markers(request, constructor)
+
+    data = {
+        "a": [[None], [None, 1], None, []],
+        "b": [[7], None, [8], []],
+        "i": [0, 1, 2, 3],
+    }
+    result = (
+        nw.from_native(constructor(data))
+        .with_columns(nw.col("a", "b").cast(nw.List(nw.Int32())))
+        .explode("a", empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        .select("a", "b", "i")
+        .sort("i", "a", nulls_last=True)
+    )
+    assert_equal_data(result, expected)
+
+
+def test_explode_drops_every_row(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    _apply_explode_markers(request, constructor)
+
+    # The `[1]` row only makes the list type inferable; it is filtered out before exploding.
+    data = {"a": [None, [], [1]], "i": [0, 1, 2]}
+    result = (
+        nw.from_native(constructor(data))
+        .with_columns(nw.col("a").cast(nw.List(nw.Int32())))
+        .filter(nw.col("i") < 2)
+        .explode("a", empty_as_null=False, keep_nulls=False)
+        .select("a", "i")
+    )
+    assert_equal_data(result, {"a": [], "i": []})

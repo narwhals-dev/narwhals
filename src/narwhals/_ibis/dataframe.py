@@ -388,10 +388,8 @@ class IbisLazyFrame(
         native = self.native
         column = cast("ir.ArrayColumn", native[name])
         if not empty_as_null:
-            # `length()` is null for null rows, so the comparison is null there too;
-            # coalesce to `True` to keep them (their fate is decided by `keep_nulls`).
-            non_empty = cast("ir.BooleanColumn", column.length() != 0)
-            native = native.filter(non_empty.fill_null(lit(True)))
+            # `length()` is null for null lists; keep them here (via `keep_nulls`).
+            native = native.filter(column.length().fill_null(lit(1)) > lit(0))
         if not keep_nulls:
             native = native.drop_null([name])
 
