@@ -14,6 +14,7 @@ from narwhals._arrow.utils import (
     arange,
     cast_for_truediv,
     chunked_array,
+    chunked_array_from_values,
     extract_native,
     floordiv_compat,
     is_array_or_scalar,
@@ -175,7 +176,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             if is_array_or_scalar(data):
                 data = data.cast(dtype_pa)
                 dtype_pa = None
-            native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
+            # A user-supplied dtype can be Categorical, which `chunked_array`
+            # deliberately does not handle.
+            native = (
+                data
+                if cls._is_native(data)
+                else chunked_array_from_values([data], dtype_pa)
+            )
         else:
             native = chunked_array([data])
         return cls.from_native(native, context=context, name=name)
