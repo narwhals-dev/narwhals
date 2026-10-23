@@ -26,14 +26,20 @@ def test_rename_swap(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_rename_duplicate_raises(constructor: Constructor) -> None:
+@pytest.mark.parametrize("mapping", [{"b": "a"}, {"a": "x", "b": "x"}])
+def test_rename_duplicate_raises(
+    constructor: Constructor, mapping: dict[str, str]
+) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
     with pytest.raises(DuplicateError):
-        df.rename({"b": "a"}).collect()
+        df.rename(mapping).collect()
 
 
-def test_rename_duplicate_raises_with_followup_op(constructor: Constructor) -> None:
+@pytest.mark.parametrize("mapping", [{"b": "a"}, {"a": "x", "b": "x"}])
+def test_rename_duplicate_raises_with_followup_op(
+    constructor: Constructor, mapping: dict[str, str]
+) -> None:
     # DuckDB used to silently rename the duplicate to `a_1` once another op followed
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
     with pytest.raises(DuplicateError):
-        df.rename({"b": "a"}).sort("a").collect()
+        df.rename(mapping).sort(*mapping.values()).collect()
