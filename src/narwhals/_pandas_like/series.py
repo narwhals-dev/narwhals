@@ -29,7 +29,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
+from narwhals._utils import NO_DEFAULT, Implementation, Version, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
     from narwhals._typing import NoDefault
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -328,7 +328,17 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
-        result = self.native.astype(pd_dtype)
+        native = self.native
+        if (
+            self._version is Version.MAIN
+            and self.dtype.is_float()
+            and dtype.is_signed_integer()
+            and self.is_native_dtype_pyarrow(native.dtype)
+        ):
+            from narwhals._arrow.utils import truncate_float
+
+            native = self._apply_pyarrow_compute_func(native, truncate_float)
+        result = native.astype(pd_dtype)
         if (
             pd_dtype is str
             and is_pandas_or_modin(self._implementation)

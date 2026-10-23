@@ -310,6 +310,16 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     def cast(self, dtype: IntoDType) -> Self:
         def _func(expr: ir.Column) -> ir.Value:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            if (
+                self._version is Version.MAIN
+                and dtype.is_signed_integer()
+                and is_floating(expr.type())
+            ):
+                numeric = cast("ir.FloatingValue", expr)
+                expr = cast(
+                    "ir.Column",
+                    ibis.ifelse(expr >= lit(0), numeric.floor(), numeric.ceil()),
+                )
             # ibis `cast` overloads do not include DataType, only literals
             return expr.cast(native_dtype)  # type: ignore[unused-ignore]
 

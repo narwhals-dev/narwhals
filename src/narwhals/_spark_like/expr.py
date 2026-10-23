@@ -258,19 +258,34 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(neg)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
+        def cast_exprs(df: SparkLikeLazyFrame, exprs: Sequence[Column]) -> list[Column]:
             spark_dtype = narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
-            return [expr.cast(spark_dtype) for expr in self(df)]
+            if (
+                self._version is Version.MAIN
+                and self._implementation is Implementation.SQLFRAME
+                and dtype.is_signed_integer()
+            ):
+                fields = df.native.select(*exprs).schema.fields
+                F = self._F
+                return [
+                    (
+                        F.when(expr >= F.lit(0), F.floor(expr)).otherwise(F.ceil(expr))
+                        if field.dataType.typeName() in {"float", "double"}
+                        else expr
+                    ).cast(spark_dtype)
+                    for expr, field in zip(exprs, fields, strict=True)
+                ]
+            return [expr.cast(spark_dtype) for expr in exprs]
+
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
+            return cast_exprs(df, self(df))
 
         def window_f(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_dtypes, df.native.sparkSession
-            )
-            return [expr.cast(spark_dtype) for expr in self.window_function(df, inputs)]
+            return cast_exprs(df, self.window_function(df, inputs))
 
         return self.__class__(
             func,

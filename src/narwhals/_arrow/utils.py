@@ -354,6 +354,12 @@ def floordiv_compat(left: ArrayOrScalar, right: ArrayOrScalar, /) -> Any:
     return result
 
 
+def truncate_float(native: ChunkedArrayAny) -> ChunkedArrayAny:
+    if pa.types.is_float16(native.type):
+        native = pc.cast(native, pa.float32())
+    return pc.trunc(native)
+
+
 def cast_for_truediv(
     arrow_array: ArrayOrScalarT1, pa_object: ArrayOrScalarT2
 ) -> tuple[ArrayOrScalarT1, ArrayOrScalarT2]:
