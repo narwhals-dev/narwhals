@@ -36,6 +36,32 @@ if TYPE_CHECKING:
     IntoRhs: TypeAlias = int
 
 
+def _split_unescaped_percent_s(format: str) -> list[str] | None:
+    """Split `format` on `%s` directives, ignoring escaped `%%`.
+
+    Returns `None` when there is no unescaped `%s` directive.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    i, n = 0, len(format)
+    while i < n:
+        char, nxt = format[i], format[i + 1] if i + 1 < n else ""
+        if char == "%" and nxt in {"%", "s"}:
+            if nxt == "s":
+                parts.append("".join(current))
+                current = []
+            else:
+                current.append("%%")
+            i += 2
+        else:
+            current.append(char)
+            i += 1
+    if not parts:
+        return None
+    parts.append("".join(current))
+    return parts
+
+
 class ArrowSeriesDateTimeNamespace(
     ArrowSeriesNamespace, DateTimeNamespace["ArrowSeries"]
 ):
@@ -57,6 +83,9 @@ class ArrowSeriesDateTimeNamespace(
         ("s", "ns"): (pc.multiply, NS_PER_SECOND),
         ("s", "us"): (pc.multiply, US_PER_SECOND),
         ("s", "ms"): (pc.multiply, MS_PER_SECOND),
+        ("ns", "s"): (floordiv_compat, NS_PER_SECOND),
+        ("us", "s"): (floordiv_compat, US_PER_SECOND),
+        ("ms", "s"): (floordiv_compat, MS_PER_SECOND),
     }
 
     @property
@@ -72,6 +101,17 @@ class ArrowSeriesDateTimeNamespace(
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
+        if parts := _split_unescaped_percent_s(format):
+            # `%s` (seconds since the epoch) isn't supported by `pc.strftime`,
+            # which passes it through as literal text - splice the epoch values
+            # in explicitly so the output matches the other backends.
+            epoch = pc.cast(self.timestamp("s").native, pa.string())
+            strftimed = (pc.strftime(self.native, part) for part in parts)
+            result = next(strftimed)
+            for part in strftimed:
+                # NB: `binary_join_element_wise` uses its last argument as separator.
+                result = pc.binary_join_element_wise(result, epoch, part, "")
+            return self.with_native(result)
         return self.with_native(pc.strftime(self.native, format))
 
     def replace_time_zone(self, time_zone: str | None) -> ArrowSeries:
