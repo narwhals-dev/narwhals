@@ -2293,6 +2293,8 @@ class Series(Generic[IntoSeriesT]):
         Can return multiple values.
 
         Note:
+            Null values are not ignored.
+
             For `keep="any"` a scalar is returned, while for `keep="all"` a Series in
             returned even in the case of unimodal values.
 

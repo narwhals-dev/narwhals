@@ -685,8 +685,8 @@ class DaskExpr(
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            result = expr.to_frame().mode()[_name]
-            return result.head(1) if keep == "any" else result
+            result = expr.to_frame().mode(dropna=False)[_name]
+            return result.head(1, compute=False) if keep == "any" else result
 
         return self._with_callable(func)
 

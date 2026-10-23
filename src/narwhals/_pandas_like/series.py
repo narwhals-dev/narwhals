@@ -1008,7 +1008,24 @@ class PandasLikeSeries(EagerSeries[Any]):
         return pa.Array.from_pandas(self.native)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
-        result = self.native.mode()
+        native = self.native
+        if (
+            self._implementation.is_pandas()
+            and self._backend_version >= (3,)
+            and native.dtype != "boolean"
+        ):
+            result = native.mode(dropna=False)
+        else:
+            # `mode(dropna=False)` is broken for nullable dtypes before pandas 3
+            # (pandas-dev/pandas#58926) and for nullable booleans before 3.2
+            # (pandas-dev/pandas#70487), so nulls are counted separately.
+            result = native.mode()
+            if null_count := native.isna().sum():
+                mode_count = (native == result.iloc[0]).sum() if len(result) else 0
+                if null_count >= mode_count:
+                    modes = result if null_count == mode_count else result.iloc[:0]
+                    # One label past the end appends a null of the same dtype.
+                    result = modes.reindex(range(len(modes) + 1))
         result.name = self.name
         return self._with_native(result.head(1) if keep == "any" else result)
 
