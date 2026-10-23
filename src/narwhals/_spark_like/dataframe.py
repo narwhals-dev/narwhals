@@ -468,7 +468,7 @@ class SparkLikeLazyFrame(
         explode_col = self._validate_explode_columns(columns)
         column_names = self.columns
 
-        # Both paths below emit a single null row for empty and null lists, so drop the
+        # Empty and null lists both explode to a single null row below, so drop the
         # rows the flags exclude up front. `array_size` is null for null lists.
         native = self.native
         if not empty_as_null:
@@ -478,51 +478,33 @@ class SparkLikeLazyFrame(
         if not keep_nulls:
             native = native.filter(~self._F.isnull(explode_col))
 
-        if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
-            return self._with_native(
-                native.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != explode_col
-                        else self._F.explode_outer(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                )
-            )
-        if self._implementation.is_sqlframe():
-            # Not every sqlframe dialect supports `explode_outer` function
-            # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
-            # therefore we simply explode the array column which will ignore nulls and
-            # zero sized arrays, and append these specific condition with nulls (to
-            # match polars behavior).
-
-            def null_condition(col_name: str) -> Column:
-                return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
-
-            exploded = native.select(
+        # Not every sqlframe dialect supports `explode_outer`
+        # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289),
+        # so sqlframe uses `explode`, which drops empty and null lists, and appends
+        # their null rows afterwards.
+        is_sqlframe = self._implementation.is_sqlframe()
+        explode = self._F.explode if is_sqlframe else self._F.explode_outer
+        exploded = native.select(
+            *[
+                self._F.col(col_name).alias(col_name)
+                if col_name != explode_col
+                else explode(col_name).alias(col_name)
+                for col_name in column_names
+            ]
+        )
+        if is_sqlframe and (empty_as_null or keep_nulls):
+            null_rows = native.filter(
+                self._F.isnull(explode_col) | (self._F.array_size(explode_col) == 0)
+            ).select(
                 *[
                     self._F.col(col_name).alias(col_name)
                     if col_name != explode_col
-                    else self._F.explode(col_name).alias(col_name)
+                    else self._F.lit(None).alias(col_name)
                     for col_name in column_names
                 ]
             )
-            if not (empty_as_null or keep_nulls):
-                return self._with_native(exploded)
-            return self._with_native(
-                exploded.union(
-                    native.filter(null_condition(explode_col)).select(
-                        *[
-                            self._F.col(col_name).alias(col_name)
-                            if col_name != explode_col
-                            else self._F.lit(None).alias(col_name)
-                            for col_name in column_names
-                        ]
-                    )
-                )
-            )
-        msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
-        raise AssertionError(msg)
+            exploded = exploded.union(null_rows)
+        return self._with_native(exploded)
 
     def unpivot(
         self,
