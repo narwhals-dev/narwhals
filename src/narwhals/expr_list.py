@@ -117,7 +117,7 @@ class ExprListNamespace(Generic[ExprT]):
     def get(self, index: int) -> ExprT:
         """Return the value by index in each list.
 
-        Negative indices are not accepted.
+        Negative indices count from the end of each list.
 
         Examples:
             >>> import polars as pl
@@ -145,10 +145,6 @@ class ExprListNamespace(Generic[ExprT]):
                 f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
             )
             raise TypeError(msg)
-
-        if index < 0:
-            msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
-            raise ValueError(msg)
 
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "list.get", index=index)

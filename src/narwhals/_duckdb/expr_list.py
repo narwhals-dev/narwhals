@@ -48,7 +48,7 @@ class DuckDBExprListNamespace(
 
     def get(self, index: int) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: F("list_extract", expr, lit(index + 1))
+            lambda expr: F("list_extract", expr, lit(index + 1 if index >= 0 else index))
         )
 
     def min(self) -> DuckDBExpr:
