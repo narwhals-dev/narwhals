@@ -19,6 +19,7 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
+    check_column_names_are_unique,
     extend_bool,
     generate_temporary_column_name,
     not_implemented,
@@ -358,6 +359,7 @@ class SparkLikeLazyFrame(
         rename_mapping = {
             colname: mapping.get(colname, colname) for colname in self.columns
         }
+        check_column_names_are_unique(list(rename_mapping.values()))
         return self._with_native(
             self.native.select(
                 [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
