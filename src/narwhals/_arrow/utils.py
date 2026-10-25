@@ -663,10 +663,13 @@ def list_get(array: ChunkedArrayAny, index: int) -> ChunkedArrayAny:
         offsets = chunk.offsets
         positions = pc.add(offsets.slice(1), lit(index, offsets.type))  # type: ignore[arg-type]
         in_bounds = pc.greater_equal(positions, offsets.slice(0, len(chunk)))
-        if not pc.all(pc.or_kleene(in_bounds, chunk.is_null()), min_count=0).as_py():
+        is_valid = chunk.is_valid()
+        if not pc.all(pc.or_kleene(in_bounds, pc.invert(is_valid)), min_count=0).as_py():
             msg = f"Index {index} is out of bounds."
             raise ComputeError(msg)
-        chunks.append(chunk.values.take(pc.if_else(in_bounds, positions, None)))
+        # A null list may still span values, so it must not take one.
+        take = pc.and_(in_bounds, is_valid)
+        chunks.append(chunk.values.take(pc.if_else(take, positions, None)))
     list_type = cast("pa.ListType[Any] | pa.LargeListType[Any]", array.type)
     return pa.chunked_array(chunks, list_type.value_type)
 
