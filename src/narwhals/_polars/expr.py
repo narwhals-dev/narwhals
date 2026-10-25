@@ -305,8 +305,10 @@ class PolarsExpr:
                 and isinstance(self.native, selector_cls)
                 and isinstance(other_native, selector_cls)
             ):
+                # Polars < 1.0 orders selector unions left to right instead of by schema.
                 return self._with_native(
-                    (self.native - other_native) | (other_native - self.native)
+                    pl.selectors.all()
+                    & ((self.native - other_native) | (other_native - self.native))
                 )
         return self._with_native(self.native.__xor__(other_native))
 

@@ -284,6 +284,7 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
         (ncs.boolean() | True, ["d"]),
         (ncs.numeric() - 1, ["a", "c"]),
         (ncs.numeric() ^ ncs.boolean(), ["a", "c", "d"]),
+        (ncs.boolean() ^ ncs.numeric(), ["a", "c", "d"]),
         (ncs.numeric() ^ ncs.by_dtype(nw.Int64), ["c"]),
         (ncs.by_dtype(nw.Int64) ^ ncs.numeric(), ["c"]),
         (ncs.numeric() ^ ncs.numeric(), []),

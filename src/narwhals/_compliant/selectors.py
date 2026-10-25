@@ -335,25 +335,17 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                selected = set(lhs_names).symmetric_difference(rhs_names)
                 return [
-                    *(
-                        x
-                        for x, name in zip(self(df), lhs_names, strict=True)
-                        if name not in rhs_names
-                    ),
-                    *(
-                        x
-                        for x, name in zip(other(df), rhs_names, strict=True)
-                        if name not in lhs_names
-                    ),
+                    ser
+                    for ser, name in self.selectors._iter_columns_names(df)
+                    if name in selected
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [
-                    *(x for x in lhs_names if x not in rhs_names),
-                    *(x for x in rhs_names if x not in lhs_names),
-                ]
+                selected = set(lhs_names).symmetric_difference(rhs_names)
+                return [name for name in df.columns if name in selected]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() ^ other
