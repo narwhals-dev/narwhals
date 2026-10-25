@@ -13,6 +13,9 @@ data = {
         "to infinity,and BEYOND!",
         "with123numbers",
         "__dunder__score_a1_.2b ?three",
+        "münchen straße, café olé",
+        "αβγ δεζ",
+        "привет мир",
     ]
 }
 

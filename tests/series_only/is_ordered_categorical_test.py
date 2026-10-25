@@ -6,6 +6,7 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation, Version
 from tests.utils import POLARS_VERSION, PYARROW_VERSION
 
@@ -70,6 +71,20 @@ def test_is_ordered_categorical_pyarrow_string() -> None:
     tp = pa.dictionary(pa.int32(), pa.string())
     s = chunked_array([pa.array(["a", "b"], type=tp)], tp)
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
+
+
+@pytest.mark.parametrize("namespace", [nw, nw_v1])
+def test_is_ordered_categorical_enum(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, namespace: Any
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        # PyArrow does not support casting to Enum.
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager({"a": ["a", "b"]}), eager_only=True)
+    native = df.select(nw.col("a").cast(nw.Enum(["a", "b"]))).to_native()
+    series = namespace.from_native(native, eager_only=True)["a"]
+    assert namespace.is_ordered_categorical(series)
 
 
 def test_is_definitely_not_ordered_categorical(

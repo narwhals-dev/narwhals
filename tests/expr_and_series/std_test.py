@@ -71,10 +71,8 @@ def expected_std(values: list[float | None], ddof: int) -> float | None:
 def test_std_ddof(
     constructor: Constructor, ddof: int, request: pytest.FixtureRequest
 ) -> None:
-    if ddof == 10 and any(x in str(constructor) for x in ("pandas_nullable", "dask")):
-        reason = (
-            "pandas (nullable) and Dask return `inf` when N == ddof (10 non-null values)."
-        )
+    if ddof == 10 and "pandas_nullable" in str(constructor):
+        reason = "pandas (nullable) returns `inf` when N == ddof (10 non-null values)."
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data_ddof))
     result = df.select(nw.col("a").std(ddof=ddof))
@@ -82,12 +80,7 @@ def test_std_ddof(
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
-def test_std_ddof_group_by(
-    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
-) -> None:
-    if ddof == 10 and "dask" in str(constructor):
-        reason = "Dask's `groupby.var` returns `inf` when ddof > N."
-        request.applymarker(pytest.mark.xfail(reason=reason))
+def test_std_ddof_group_by(constructor: Constructor, ddof: int) -> None:
     df = nw.from_native(constructor(data_ddof))
     result = df.group_by("g").agg(nw.col("a").std(ddof=ddof)).sort("g")
     expected = {
@@ -107,3 +100,11 @@ def test_std_ddof_over(constructor: Constructor, ddof: int) -> None:
         "a": [expected_std(group_1, ddof)] * 6 + [expected_std(group_2, ddof)] * 5
     }
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("ddof", [0, 1, 2])
+def test_std_constant_group_by(constructor: Constructor, ddof: int) -> None:
+    # 3.3 makes the sum-of-squares formula round the variance below zero on Dask.
+    df = nw.from_native(constructor({"g": [1] * 5, "a": [3.3] * 5}))
+    result = df.group_by("g").agg(nw.col("a").std(ddof=ddof))
+    assert_equal_data(result, {"g": [1], "a": [0.0]})
