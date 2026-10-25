@@ -84,6 +84,20 @@ def test_get_series_negative_index_out_of_bounds(
         df["a"].cast(nw.List(nw.Int32())).list.get(-2)
 
 
+def test_get_negative_index_null_list_spanning_values() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    # The null list's offsets still span the values `3, 4`.
+    native = pa.ListArray.from_arrays(
+        pa.array([0, 2, 4, 5], pa.int32()),
+        pa.array([1, 2, 3, 4, 5]),
+        mask=pa.array([False, True, False]),
+    )
+    s = nw.from_native(pa.chunked_array([native]), series_only=True)
+    assert_equal_data({"a": s.list.get(-1)}, {"a": [2, None, 5]})
+
+
 def test_get_expr_non_int_index(constructor: Constructor) -> None:
     data = {"a": [[1, 2], [None, 3], [None], None], "index": [0, 1, 0, 0]}
     index = "index"
