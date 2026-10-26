@@ -200,6 +200,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _first(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
     def _last(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
     def _any_value(self, expr: NativeExprT, *, ignore_nulls: bool) -> NativeExprT: ...
+    def _singleton_list(self, expr: NativeExprT) -> NativeExprT: ...
+    def _list_first(self, expr: NativeExprT) -> NativeExprT: ...
     def _when(
         self,
         condition: NativeExprT,
@@ -946,7 +948,28 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             )
             raise NotImplementedError(msg)
 
-        return self._with_callable(lambda expr: self._function("mode", expr))
+        def aggregate(
+            expr: NativeExprT, wrap: Callable[[NativeExprT], NativeExprT]
+        ) -> NativeExprT:
+            # SQL `mode` skips nulls, but a list holding a null is itself non-null,
+            # so wrapping each value in a one-element list makes nulls count.
+            mode = wrap(self._function("mode", self._singleton_list(expr)))
+            return self._list_first(mode)
+
+        def func(expr: NativeExprT) -> NativeExprT:
+            return aggregate(expr, lambda agg: agg)
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            assert not inputs.order_by  # noqa: S101
+
+            def wrap(agg: NativeExprT) -> NativeExprT:
+                return self._window_expression(agg, inputs.partition_by)
+
+            return [aggregate(expr, wrap) for expr in self(df)]
+
+        return self._with_callable(func, window_f)
 
     # Namespaces
     @property

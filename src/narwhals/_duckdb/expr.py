@@ -123,6 +123,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             else self._function("first", expr)
         )
 
+    def _singleton_list(self, expr: Expression) -> Expression:
+        return F("list_value", expr)
+
+    def _list_first(self, expr: Expression) -> Expression:
+        return F("list_extract", expr, lit(1))
+
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
