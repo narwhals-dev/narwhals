@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
@@ -16,7 +17,7 @@ def test_to_uppercase(constructor: Constructor) -> None:
 
 
 def test_to_uppercase_after_alias(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.32"):
         pytest.skip(reason="https://github.com/pola-rs/polars/issues/23765")
     df = nw.from_native(constructor(data))
     result = df.select((nw.col("foo")).alias("alias_for_foo").name.to_uppercase())

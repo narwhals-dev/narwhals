@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
@@ -233,7 +234,11 @@ def test_to_datetime_tz_aware(
         if any(x in str(constructor) for x in ("duckdb", "ibis")) and format is None
         else does_not_raise()
     )
-    if "polars" in str(constructor) and POLARS_VERSION >= (1, 33, 0) and format is None:
+    if (
+        "polars" in str(constructor)
+        and POLARS_VERSION >= PkgVersion("1.33")
+        and format is None
+    ):
         # Polars 1.33.0+ raises an error when parsing timezone-aware datetimes without specifying the timezone
         context = pytest.raises(ComputeError)
     df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
@@ -344,14 +349,14 @@ def test_to_datetime_invalid_raises(
     if (
         "trailing" in case
         and "pandas_constructor" in str(constructor)
-        and PANDAS_VERSION < (2,)
+        and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip(reason="old pandas ignores trailing input")
     if (
         "unparsable" in case
         and "pyspark" in str(constructor)
         and "sqlframe" not in str(constructor)
-        and PYSPARK_VERSION < (4,)
+        and PYSPARK_VERSION < PkgVersion("4")
     ):
         request.applymarker(pytest.mark.xfail(reason="Spark<4 (ANSI off) returns null"))
     df = nw.from_native(constructor(data))
@@ -360,7 +365,9 @@ def test_to_datetime_invalid_raises(
         maybe_collect(df.select(nw.col("a").str.to_datetime(format)))
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
+)
 def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     # Remark that pandas doesn't have a numpy-nullable datetime dtype, so
     # `.convert_dtypes(dtype_backend="numpy_nullable")` is a no-op in `_to_datetime(...)`

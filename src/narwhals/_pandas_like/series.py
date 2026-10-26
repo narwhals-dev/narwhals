@@ -208,7 +208,8 @@ class PandasLikeSeries(EagerSeries[Any]):
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         implementation = context._implementation
         arr = data if is_numpy_array_1d(data) else [data]
-        native = implementation.to_native_namespace().Series(arr, name="")
+        kwds: dict[str, Any] = {"copy": False} if implementation.is_pandas() else {}
+        native = implementation.to_native_namespace().Series(arr, name="", **kwds)
         return cls.from_native(native, context=context)
 
     @classmethod
@@ -406,11 +407,23 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
-    def arg_min(self) -> int:
-        return self.native.argmin()
+    def arg_min(self) -> int | None:
+        return self._arg_extremum(self.native.argmin)
 
-    def arg_max(self) -> int:
-        return self.native.argmax()
+    def arg_max(self) -> int | None:
+        return self._arg_extremum(self.native.argmax)
+
+    def _arg_extremum(self, func: Callable[[], int]) -> int | None:
+        if self._implementation.is_pandas() and self._backend_version >= (3,):
+            # pandas>=3 raises for empty and all-null input on every dtype.
+            try:
+                return func()
+            except ValueError:
+                if self.native.count():
+                    raise
+                return None
+        # NOTE: pandas<3 returns -1 (and warns) for all-NaN float and object input.
+        return func() if self.native.count() else None  # pragma: no cover
 
     # Binary comparisons
 
@@ -996,7 +1009,24 @@ class PandasLikeSeries(EagerSeries[Any]):
         return pa.Array.from_pandas(self.native)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
-        result = self.native.mode()
+        native = self.native
+        if (
+            self._implementation.is_pandas()
+            and self._backend_version >= (3,)
+            and native.dtype != "boolean"
+        ):
+            result = native.mode(dropna=False)
+        else:
+            # `mode(dropna=False)` is broken for nullable dtypes before pandas 3
+            # (pandas-dev/pandas#58926) and for nullable booleans before 3.2
+            # (pandas-dev/pandas#70487), so nulls are counted separately.
+            result = native.mode()
+            if null_count := native.isna().sum():
+                mode_count = (native == result.iloc[0]).sum() if len(result) else 0
+                if null_count >= mode_count:
+                    modes = result if null_count == mode_count else result.iloc[:0]
+                    # One label past the end appends a null of the same dtype.
+                    result = modes.reindex(range(len(modes) + 1))
         result.name = self.name
         return self._with_native(result.head(1) if keep == "any" else result)
 

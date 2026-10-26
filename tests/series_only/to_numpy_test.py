@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("numpy")
 import numpy as np
@@ -36,8 +37,14 @@ def test_to_numpy(
 
 def test_to_numpy_tz_aware(constructor_eager: ConstructorEager) -> None:
     if (
-        ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
-        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2))
+        (
+            "pandas_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("2.2")
+        )
+        or (
+            "modin_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("2.2")
+        )
         or ("pyarrow" in str(constructor_eager) and is_windows())
     ):
         pytest.skip()

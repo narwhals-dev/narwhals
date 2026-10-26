@@ -6,10 +6,12 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     assert_equal_data,
@@ -37,7 +39,7 @@ def skip_or_xfail_unsupported(
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="`list.contains` unsupported"))
     if any(backend in str(constructor) for backend in ("pandas", "modin", "dask")):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip(reason="casting to `List` needs pandas>=2.2")
         pytest.importorskip("pyarrow")
 
@@ -96,7 +98,7 @@ def test_contains_numeric_coercion_expr(
     # does today so a future change is visible, it is not a guarantee.
     # Polars 2.0 requires an explicit cast rather than lossily coercing to `Float64`.
     mixes_kinds = isinstance(item, float) != inner.is_float()
-    if "polars" in str(constructor) and POLARS_VERSION >= (2,) and mixes_kinds:
+    if "polars" in str(constructor) and POLARS_VERSION >= PkgVersion("2") and mixes_kinds:
         request.applymarker(pytest.mark.xfail(reason="polars 2.0 needs a cast"))
     skip_or_xfail_unsupported(request, constructor)
     result = nw.from_native(constructor(data)).select(
@@ -127,8 +129,8 @@ def test_contains_invalid_item_raises(
     item: NonNestedLiteral,
 ) -> None:
     if "polars" in str(constructor) and (
-        (isinstance(item, float) and POLARS_VERSION < (1, 28, 0))
-        or (isinstance(item, datetime) and POLARS_VERSION < (2,))
+        (isinstance(item, float) and POLARS_VERSION < PkgVersion("1.28"))
+        or (isinstance(item, datetime) and POLARS_VERSION < PkgVersion("2"))
     ):
         request.applymarker(pytest.mark.xfail(reason="old polars coerces the item"))
     if any(backend in str(constructor) for backend in SQL_BACKENDS):
@@ -144,7 +146,7 @@ def test_contains_datetime_precision_coerced(
 ) -> None:
     # Before 2.0, Polars doesn't convert the item to the list's time unit, so it never
     # finds the match (1.28-1.x raises instead when the list's unit is finer).
-    if "polars" in str(constructor) and POLARS_VERSION < (2,):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("2"):
         request.applymarker(pytest.mark.xfail(reason="old polars mismatches units"))
     if any(backend in str(constructor) for backend in ("pyspark", "sqlframe")):
         pytest.skip(reason="only microsecond precision is supported")
@@ -222,7 +224,7 @@ def test_contains_none_inner_dtypes_expr(
     skip_or_xfail_unsupported(request, constructor)
     if (
         "polars" in str(constructor)
-        and POLARS_VERSION >= (1, 30)
+        and POLARS_VERSION >= PkgVersion("1.30")
         and dtype.inner == nw.List
     ):
         # Raises in Polars 1.30-1.x; 2.0 works lazily but panics eagerly.
@@ -252,22 +254,18 @@ def test_contains_inner_dtypes_expr(
     is_nan = isinstance(y, float) and math.isnan(y)
     if (
         "polars" in str(constructor)
-        and POLARS_VERSION < (1, 28)
+        and POLARS_VERSION < PkgVersion("1.28")
         and (isinstance(dtype, nw.Decimal) or is_nan)
     ):
         pytest.skip(reason="Polars<1.28 doesn't support decimals, nor match NaN")
     if is_nan:
-        if "duckdb" in str(constructor):
-            reason = "DuckDB turns a NaN literal into NULL."
+        if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("2"):
+            reason = "DuckDB<2 turns a NaN literal into NULL."
             request.applymarker(pytest.mark.xfail(reason=reason))
-        if PANDAS_VERSION < (3,) and any(
+        if PANDAS_VERSION < PkgVersion("3") and any(
             backend in str(constructor) for backend in ("pandas", "modin", "dask")
         ):
             pytest.skip(reason="pandas<3 turns NaN into null when casting to `List`")
-    if "sqlframe" in str(constructor) and isinstance(x, float) and math.isinf(x):
-        # https://github.com/eakmanrq/sqlframe/issues/648
-        reason = "SQLFrame writes `inf` into SQL unquoted, which DuckDB can't parse."
-        request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [[x, None], [y], [x, y], [], None]}
     list_ = nw.col("a").cast(nw.List(dtype))
     result = nw.from_native(constructor(data)).select(
@@ -286,7 +284,9 @@ def test_contains_chunked(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     skip_or_xfail_unsupported(request, constructor_eager)
-    if "polars" in str(constructor_eager) and (1, 44) <= POLARS_VERSION < (2,):
+    if "polars" in str(constructor_eager) and (
+        PkgVersion("1.44") <= POLARS_VERSION < PkgVersion("2")
+    ):
         # Fixed in Polars 2.0 (https://github.com/pola-rs/polars/pull/29635). Not
         # strict, as only some CPUs hit the bug: arm64 does, while the x86_64 CI
         # runners don't.

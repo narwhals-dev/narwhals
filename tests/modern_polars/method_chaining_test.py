@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
@@ -35,7 +36,7 @@ def test_split_list_get(request: pytest.FixtureRequest, constructor: Constructor
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     if (

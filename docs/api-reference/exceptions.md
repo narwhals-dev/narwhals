@@ -11,6 +11,7 @@
         - InvalidOperationError
         - MultiOutputExpressionError
         - NarwhalsUnstableWarning
+        - PluginError
         - ShapeError
         - UnsupportedDTypeError
       show_source: false

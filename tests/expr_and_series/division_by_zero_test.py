@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -57,7 +58,7 @@ def test_series_floordiv_by_zero(
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
@@ -74,7 +75,7 @@ def test_expr_floordiv_by_zero(
 ) -> None:
     df = nw.from_native(constructor(data))
 
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -126,7 +127,7 @@ def test_expr_rtruediv_by_zero(
 def test_series_rfloordiv_by_zero(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest, numerator: float
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
     if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
@@ -141,7 +142,7 @@ def test_series_rfloordiv_by_zero(
 def test_expr_rfloordiv_by_zero(
     constructor: Constructor, request: pytest.FixtureRequest, numerator: float
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -156,9 +157,9 @@ def test_expr_rfloordiv_by_zero(
 def test_floordiv_by_mixed_divisor(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -190,14 +191,9 @@ def test_floordiv_by_mixed_divisor(
         )
 
 
-def test_floordiv_by_null_scalar(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_floordiv_by_null_scalar(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
-    if "pyarrow_table" in str(constructor):
-        # `floordiv_compat` raises on a null scalar divisor.
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [7, 8], "b": [1, 2]}))
     null_scalar = nw.when(nw.col("b") > 99).then(nw.col("b")).max()
@@ -208,7 +204,7 @@ def test_floordiv_by_null_scalar(
 def test_floordiv_by_zero_keeps_dtype(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)

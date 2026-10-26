@@ -109,9 +109,7 @@ class DaskExpr(
     mean = simple_aggregation("mean")
     min = simple_aggregation("min")
     skew = simple_aggregation("skew")
-    std = simple_aggregation("std")
     sum = simple_aggregation("sum")
-    var = simple_aggregation("var")
     __invert__ = simple_method("__invert__")
     __neg__ = simple_method("__neg__")
     abs = simple_method("abs")
@@ -449,6 +447,24 @@ class DaskExpr(
     def n_unique(self) -> Self:
         return self._with_callable(lambda expr: expr.nunique(dropna=False).to_series())
 
+    def _var_or_std(self, *, ddof: int, sqrt: bool) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            if ddof <= 1:
+                return (expr.std if sqrt else expr.var)(ddof=ddof).to_series()
+            # Dask gives `inf` (and warns) when N == ddof, so rescale the population
+            # variance instead and mask N <= ddof.
+            n = expr.count().to_series()
+            var = (expr.var(ddof=0).to_series() * n / (n - ddof)).where(n > ddof)
+            return var**0.5 if sqrt else var
+
+        return self._with_callable(func)
+
+    def std(self, *, ddof: int) -> Self:
+        return self._var_or_std(ddof=ddof, sqrt=True)
+
+    def var(self, *, ddof: int) -> Self:
+        return self._var_or_std(ddof=ddof, sqrt=False)
+
     def is_nan(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             dtype = native_to_narwhals_dtype(
@@ -669,8 +685,8 @@ class DaskExpr(
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            result = expr.to_frame().mode()[_name]
-            return result.head(1) if keep == "any" else result
+            result = expr.to_frame().mode(dropna=False)[_name]
+            return result.head(1, compute=False) if keep == "any" else result
 
         return self._with_callable(func)
 

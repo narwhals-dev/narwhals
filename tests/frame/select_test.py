@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.selectors as ncs
@@ -158,9 +159,9 @@ def test_missing_columns(
 
 
 def test_left_to_right_broadcasting(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
