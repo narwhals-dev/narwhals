@@ -19,6 +19,7 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
+from narwhals.expr_map import ExprMapNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
@@ -2603,6 +2604,10 @@ class Expr:
     @property
     def list(self) -> ExprListNamespace[Self]:
         return ExprListNamespace(self)
+
+    @property
+    def map(self) -> ExprMapNamespace[Self]:
+        return ExprMapNamespace(self)
 
     @property
     def struct(self) -> ExprStructNamespace[Self]:

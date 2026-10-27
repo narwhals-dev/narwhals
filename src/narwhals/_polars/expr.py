@@ -12,6 +12,7 @@ from narwhals._polars.utils import (
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
     PolarsListNamespace,
+    PolarsMapNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
     extract_args_kwargs,
@@ -368,6 +369,10 @@ class PolarsExpr:
         return PolarsExprListNamespace(self)
 
     @property
+    def map(self) -> PolarsExprMapNamespace:
+        return PolarsExprMapNamespace(self)
+
+    @property
     def struct(self) -> PolarsExprStructNamespace:
         return PolarsExprStructNamespace(self)
 
@@ -574,6 +579,11 @@ class PolarsExprListNamespace(
         if self.compliant._backend_version < (1, 28):
             contains = pl.when(native.is_not_null()).then(contains)
         return self.compliant._with_native(contains)
+
+
+class PolarsExprMapNamespace(
+    PolarsExprNamespace, PolarsMapNamespace[PolarsExpr, pl.Expr]
+): ...
 
 
 class PolarsExprStructNamespace(

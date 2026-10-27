@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -422,6 +422,16 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     sort: Method[CompliantT]
 
     sum: Method[CompliantT]
+
+
+class PolarsMapNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "map"
+
+    def get(self, key: NonNestedLiteral) -> CompliantT:
+        if not HAS_MAP:  # pragma: no cover
+            msg = f"`Map` dtype is only supported for 'polars>=2.0', found version {BACKEND_VERSION}."
+            raise NotImplementedError(msg)
+        return self.__getattr__("get")(key)
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

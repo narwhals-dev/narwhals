@@ -6,6 +6,7 @@ from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
     ListNamespace,
+    MapNamespace,
     StringNamespace,
     StructNamespace,
 )
@@ -67,6 +68,7 @@ __all__ = [
     "EagerSeriesDateTimeNamespace",
     "EagerSeriesHist",
     "EagerSeriesListNamespace",
+    "EagerSeriesMapNamespace",
     "EagerSeriesNamespace",
     "EagerSeriesStringNamespace",
     "EagerSeriesStructNamespace",
@@ -261,6 +263,8 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     @property
     def list(self) -> EagerSeriesListNamespace[Self, NativeSeriesT]: ...
     @property
+    def map(self) -> EagerSeriesMapNamespace[Self, NativeSeriesT]: ...
+    @property
     def struct(self) -> EagerSeriesStructNamespace[Self, NativeSeriesT]: ...
 
 
@@ -323,6 +327,13 @@ class EagerSeriesListNamespace(  # pyright: ignore[reportInvalidTypeVarUse]
     _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
     ListNamespace[EagerSeriesT],
     Protocol[EagerSeriesT, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesMapNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    MapNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
 
 

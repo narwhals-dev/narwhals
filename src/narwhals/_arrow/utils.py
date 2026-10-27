@@ -575,6 +575,15 @@ def list_agg(
     )
 
 
+def map_get(array: ChunkedArrayAny, key: NonNestedLiteral) -> ChunkedArrayAny:
+    # PyArrow maps may hold duplicate keys; take the last value, as Polars does when
+    # building a map.
+    map_type = cast("pa.MapType[Any, Any]", array.type)
+    if key is None:
+        return pa.chunked_array([pa.nulls(len(array), type=map_type.item_type)])
+    return pc.map_lookup(array, pa.scalar(key, type=map_type.key_type), "last")
+
+
 _LIST_BLOCK_VALUES = 1 << 21
 _LIST_MIN_BLOCK_VALUES = _LIST_BLOCK_VALUES >> 4
 

@@ -18,6 +18,7 @@ __all__ = [
     "CatNamespace",
     "DateTimeNamespace",
     "ListNamespace",
+    "MapNamespace",
     "NameNamespace",
     "NamespaceAccessor",
     "StringNamespace",
@@ -76,6 +77,12 @@ class ListNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def median(self) -> CompliantT_co: ...
     def sum(self) -> CompliantT_co: ...
     def sort(self, *, descending: bool, nulls_last: bool) -> CompliantT_co: ...
+
+
+class MapNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
+    _accessor: ClassVar[Accessor] = "map"
+
+    def get(self, key: NonNestedLiteral) -> CompliantT_co: ...
 
 
 class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
