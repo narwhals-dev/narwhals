@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.27.1"
+version = "2.28.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
