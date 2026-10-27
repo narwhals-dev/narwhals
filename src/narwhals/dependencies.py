@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
 # their responsibility.
-IMPORT_HOOKS = frozenset(["fireducks"])
+IMPORT_HOOKS = frozenset(["fireducks.pandas"])
 
 
 def _get_imported_module(name: str, /) -> ModuleType | None:
@@ -172,7 +172,7 @@ def _is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
         (mod := _get_imported_module(module_name)) is not None
-        and isinstance(df, mod.pandas.DataFrame)
+        and isinstance(df, mod.DataFrame)
         for module_name in IMPORT_HOOKS
     )
 
@@ -191,7 +191,7 @@ def _is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := _get_imported_module(module_name)) is not None
-        and isinstance(ser, mod.pandas.Series)
+        and isinstance(ser, mod.Series)
         for module_name in IMPORT_HOOKS
     )
 
@@ -210,7 +210,7 @@ def is_pandas_index(index: Any) -> TypeIs[pd.Index[Any]]:
     """Check whether `index` is a pandas Index without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or any(
         (mod := _get_imported_module(module_name)) is not None
-        and isinstance(index, mod.pandas.Index)
+        and isinstance(index, mod.Index)
         for module_name in IMPORT_HOOKS
     )
 
@@ -460,12 +460,9 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
 
 def _is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
-    # Look the submodule up instead of importing it: its import runs PySpark's dependency checks.
-    return bool(
-        (connect_dataframe := _get_imported_module("pyspark.sql.connect.dataframe"))
-        is not None
-        and isinstance(df, connect_dataframe.DataFrame)
-    )
+    return (
+        connect_dataframe := _get_imported_module("pyspark.sql.connect.dataframe")
+    ) is not None and isinstance(df, connect_dataframe.DataFrame)
 
 
 def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
@@ -480,11 +477,9 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
 
 def _is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
-    if get_sqlframe() is not None:
-        from sqlframe.base.dataframe import BaseDataFrame
-
-        return isinstance(df, BaseDataFrame)
-    return False  # pragma: no cover
+    return (
+        sqlframe_dataframe := _get_imported_module("sqlframe.base.dataframe")
+    ) is not None and isinstance(df, sqlframe_dataframe.BaseDataFrame)
 
 
 def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
