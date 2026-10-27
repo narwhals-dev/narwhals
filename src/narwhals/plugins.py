@@ -13,7 +13,6 @@ installed plugin's entry point in the `narwhals.plugins` group.
 
 from __future__ import annotations
 
-import sys
 from functools import cache
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Protocol, cast
@@ -21,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 from narwhals._compliant import CompliantNamespace, EagerNamespace
 from narwhals._typing import PluginName
 from narwhals._typing_compat import TypeVar
+from narwhals.dependencies import _get_imported_module
 from narwhals.exceptions import PluginError
 
 if TYPE_CHECKING:
@@ -224,7 +224,7 @@ def _might_be(cls: type, type_: str) -> bool:  # pragma: no cover
 def _is_native_plugin(native_object: Any, plugin: Plugin) -> bool:
     pkg = plugin.NATIVE_PACKAGE
     return (
-        sys.modules.get(pkg) is not None
+        _get_imported_module(pkg) is not None
         and _might_be(type(native_object), pkg)  # type: ignore[arg-type]
         and plugin.is_native(native_object)
     )
