@@ -9,7 +9,13 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 data_nulls = {
@@ -19,6 +25,10 @@ data_nulls = {
     "bool_null_mode": [None, None, True],
     "bool_value_mode": [True, True, None],
     "bool_no_nulls": [True, True, False],
+}
+data_group_nulls = {
+    "grp": ["g1", "g1", "g1", "g2", "g2", "g2"],
+    "vals": [None, None, 2.0, 3.0, None, 3.0],
 }
 data_group = {
     "grp": ["g1", "g1", "g1", "g1", "g2", "g2", "g2"],
@@ -224,15 +234,50 @@ def test_mode_series_nulls_boolean(
     ("column", "expected"), [("null_mode", None), ("value_mode", 2.0)]
 )
 def test_mode_expr_keep_any_nulls(
-    constructor: Constructor,
-    column: str,
-    expected: float | None,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, column: str, expected: float | None
 ) -> None:
-    sql_backends = ("duckdb", "sqlframe", "ibis", "pyspark")
-    if column == "null_mode" and any(x in str(constructor) for x in sql_backends):
-        reason = "SQL `mode` aggregates skip nulls."
-        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data_nulls))
     result = df.select(nw.col(column).mode(keep="any")).lazy().collect()
     assert_equal_data(result, {column: [expected]})
+
+
+def test_mode_group_by_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(constructor(data_group_nulls))
+    impl = df.implementation
+
+    if impl.is_dask() or impl.is_pyarrow():
+        # Issue tracker:
+        #   - Dask: https://github.com/narwhals-dev/narwhals/pull/3019#issuecomment-3216649862
+        #   - PyArrow: https://github.com/apache/arrow/issues/20359
+        request.applymarker(pytest.mark.xfail)
+
+    result = (
+        df.group_by("grp")
+        .agg(nw.col("vals").mode(keep="any"))
+        .sort("grp")
+        .lazy()
+        .collect()
+    )
+    assert_equal_data(result, {"grp": ["g1", "g2"], "vals": [None, 3.0]})
+
+
+def test_mode_over_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip(reason="`over` requires DuckDB 1.3.0")
+    df = nw.from_native(constructor(data_group_nulls))
+    impl = df.implementation
+    if impl.is_pandas_like() or impl.is_pyarrow() or impl.is_dask():
+        reason = "`mode` is not supported in `over` for pandas-like, PyArrow and Dask."
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    result = df.with_columns(nw.col("vals").mode(keep="any").over("grp")).sort(
+        "grp", "vals", nulls_last=True
+    )
+    expected = {
+        "grp": ["g1", "g1", "g1", "g2", "g2", "g2"],
+        "vals": [None, None, None, 3.0, 3.0, 3.0],
+    }
+    assert_equal_data(result, expected)
