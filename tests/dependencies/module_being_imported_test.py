@@ -11,9 +11,11 @@ import pytest
 import narwhals as nw
 from narwhals.dependencies import (
     _get_imported_module,
+    get_pyspark_connect,
     is_into_dataframe,
     is_into_series,
     is_pandas_index,
+    is_pyspark_connect_dataframe,
 )
 
 if TYPE_CHECKING:
@@ -53,3 +55,18 @@ def test_detection_skips_module_being_imported(
     assert not is_into_series(obj)
     assert not is_pandas_index(obj)
     assert nw.from_native(obj, pass_through=True) is obj
+
+
+def test_pyspark_connect_detection_does_not_import_dataframe_module(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Importing it runs PySpark's dependency checks, which fail if e.g. pandas is
+    # still being imported.
+    (tmp_path / "dataframe.py").write_text("raise AssertionError('imported')\n")
+    connect = ModuleType("pyspark.sql.connect")
+    connect.__path__ = [str(tmp_path)]
+    monkeypatch.setitem(sys.modules, "pyspark.sql.connect", connect)
+    monkeypatch.delitem(sys.modules, "pyspark.sql.connect.dataframe", raising=False)
+
+    assert get_pyspark_connect() is connect
+    assert not is_pyspark_connect_dataframe(object())
