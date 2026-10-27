@@ -9,7 +9,13 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 data_nulls = {
@@ -260,6 +266,8 @@ def test_mode_group_by_nulls(
 def test_mode_over_nulls(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip(reason="`over` requires DuckDB 1.3.0")
     df = nw.from_native(constructor(data_group_nulls))
     impl = df.implementation
     if impl.is_pandas_like() or impl.is_pyarrow() or impl.is_dask():

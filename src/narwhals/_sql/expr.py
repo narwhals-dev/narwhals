@@ -951,8 +951,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def aggregate(
             expr: NativeExprT, wrap: Callable[[NativeExprT], NativeExprT]
         ) -> NativeExprT:
-            # SQL `mode` skips nulls, but a list holding a null is itself non-null,
-            # so wrapping each value in a one-element list makes nulls count.
+            # SQL `mode` ignores nulls, so temporarily wrap each value in a
+            # one-element list (`NULL` -> `[NULL]`, which `mode` does count) and
+            # unwrap the result.
             mode = wrap(self._function("mode", self._singleton_list(expr)))
             return self._list_first(mode)
 
