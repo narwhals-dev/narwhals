@@ -33,6 +33,8 @@ TimedeltaKwd: TypeAlias = Literal[
 PATTERN_INTERVAL: re.Pattern[str] = re.compile(
     r"^(?P<multiple>-?\d+)(?P<unit>ns|us|ms|mo|m|s|h|d|q|y)\Z"
 )
+PATTERN_INTERVAL_SQL = r"^(-?\d+)(ns|us|ms|mo|m|s|h|d|q|y)$"
+"""`PATTERN_INTERVAL` in a syntax which DuckDB's and Spark's regex engines accept."""
 MONTH_MULTIPLES = frozenset([1, 2, 3, 4, 6, 12])
 QUARTER_MULTIPLES = frozenset([1, 2, 4])
 UNIT_TO_TIMEDELTA: Mapping[IntervalUnit, TimedeltaKwd] = {

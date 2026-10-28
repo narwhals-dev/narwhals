@@ -11,6 +11,7 @@ import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
+    PYSPARK_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -242,6 +243,53 @@ def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
         ]
     }
     assert_equal_data(result, expected)
+
+
+def test_offset_by_expr(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    offsets = ["2us", "2ms", "10s", "7m", "7h", "13d", "3mo", "2q", "3y", "-7h", "-3y"]
+    df = nw.from_native(
+        constructor({"a": [datetime(2021, 3, 1, 12, 34, 56, 49012)] * 11, "b": offsets})
+    )
+    expected = [
+        datetime(2021, 3, 1, 12, 34, 56, 49014),
+        datetime(2021, 3, 1, 12, 34, 56, 51012),
+        datetime(2021, 3, 1, 12, 35, 6, 49012),
+        datetime(2021, 3, 1, 12, 41, 56, 49012),
+        datetime(2021, 3, 1, 19, 34, 56, 49012),
+        datetime(2021, 3, 14, 12, 34, 56, 49012),
+        datetime(2021, 6, 1, 12, 34, 56, 49012),
+        datetime(2021, 9, 1, 12, 34, 56, 49012),
+        datetime(2024, 3, 1, 12, 34, 56, 49012),
+        datetime(2021, 3, 1, 5, 34, 56, 49012),
+        datetime(2018, 3, 1, 12, 34, 56, 49012),
+    ]
+    unsupported = ("pandas", "modin", "cudf", "pyarrow_table", "dask", "ibis")
+    is_pyspark_pre_4 = (
+        "pyspark" in str(constructor)
+        and "sqlframe" not in str(constructor)
+        and PYSPARK_VERSION < PkgVersion("4")
+    )
+    if any(x in str(constructor) for x in unsupported) or is_pyspark_pre_4:
+        with pytest.raises(NotImplementedError, match="with an expression"):
+            df.select(nw.col("a").dt.offset_by(nw.col("b")))
+        return
+    result = df.select(nw.col("a").dt.offset_by(nw.col("b")))
+    assert_equal_data(result, {"a": expected})
+
+
+def test_offset_by_expr_invalid_offsets_give_null(constructor: Constructor) -> None:
+    # Documented divergence: SQL backends can't raise per row, unlike Polars.
+    if not any(x in str(constructor) for x in ("duckdb", "sqlframe")):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    df = nw.from_native(
+        constructor({"a": [datetime(2021, 3, 1)] * 4, "b": ["1d", "bad", "5ns", None]})
+    )
+    result = df.select(nw.col("a").dt.offset_by(nw.col("b")))
+    assert_equal_data(result, {"a": [datetime(2021, 3, 2), None, None, None]})
 
 
 def test_offset_by_invalid_interval(constructor: Constructor) -> None:
