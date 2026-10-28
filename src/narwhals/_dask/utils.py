@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._pandas_like.utils import (
     make_group_by_kwargs as pd_make_group_by_kwargs,
+    narwhals_to_native_arrow_dtype,
     select_columns_by_name,
 )
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
@@ -96,7 +97,6 @@ NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
     dtypes_v1.Duration: "timedelta64[ns]",
 }
 UNSUPPORTED_DTYPES = (
-    dtypes.List,
     dtypes.Struct,
     dtypes.Array,
     dtypes.Time,
@@ -127,6 +127,8 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
             return pd.CategoricalDtype(dtype.categories, ordered=True)  # type: ignore[arg-type]
         msg = "Can not cast / initialize Enum without categories present"
         raise ValueError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.List):
+        return narwhals_to_native_arrow_dtype(dtype, Implementation.PANDAS, version)
     if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
         msg = f"Converting to {base_type.__name__} dtype is not supported for Dask."
         raise NotImplementedError(msg)

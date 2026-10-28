@@ -63,7 +63,7 @@ class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
             >>> assets = table("assets", schema)
             >>> result = assets.filter(nw.col("price") > 100)
             >>> print(result.to_sql())
-            SELECT * FROM main.assets WHERE (price > 100)
+            SELECT * FROM "assets" WHERE (("price" > 100))
         """
         sql_query = self.to_native().sql_query()
         if not pretty:

@@ -27,10 +27,11 @@
 
 Narwhals does not import your backend in order to recognise its objects: you must already
 have imported it to have an object to pass, so it looks the module up in `sys.modules`
-instead. It *does* import on your behalf when you name a backend
-(`nw.from_dict(..., backend="pandas")`) or convert between them (`to_polars`, `to_arrow`,
-...). Since a module is [visible in `sys.modules` before its body finishes executing][loading],
-import your backends on the main thread rather than racing that first import from a pool.
+instead. Since a module is [visible in `sys.modules` before its body finishes executing][loading],
+Narwhals skips one that another thread is still importing: no object can come from it yet.
+It *does* import on your behalf when you name a backend (`nw.from_dict(..., backend="pandas")`)
+or convert between them (`to_polars`, `to_arrow`, ...), through a regular `import`, which
+Python already serializes across threads.
 
 ## Sharing Narwhals objects
 

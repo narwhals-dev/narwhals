@@ -22,8 +22,6 @@ permissions:
 jobs:
   altair:
     if: github.head_ref != 'bump-version'
-    env:
-      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -38,7 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: altair-${{ matrix.python-version }}
@@ -48,19 +46,19 @@ jobs:
           git clone https://github.com/vega/altair.git
           cd altair
           git log
-      - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-altair-dev
         run: |
           cd altair
           uv sync --all-extras
-          uv pip install -e .
       - name: install-narwhals-dev
         run: |
+          cd altair
           uv pip uninstall narwhals
-          uv pip install -e .
+          uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd altair
+          uv pip freeze
       - name: Run pytest
         run: |
           cd altair
@@ -87,7 +85,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: marimo-${{ matrix.python-version }}
@@ -137,7 +135,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: sklego-${{ matrix.python-version }}
@@ -179,7 +177,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: shiny-${{ matrix.python-version }}
@@ -205,6 +203,10 @@ jobs:
           cd py-shiny
           uv pip uninstall narwhals
           uv pip install -e ./..
+          # Temporary pin to get CI green: pytest 9.2.0 deprecates session-scoped fixtures
+          # defined as instance methods, which pytest-playwright 0.10.0's fallback
+          # `base_url` is, and py-shiny turns that warning into a setup error.
+          uv pip install "pytest<9.2"
       - name: show-deps
         env:
           UV_SYSTEM_PYTHON: "1"
@@ -237,7 +239,7 @@ jobs:
           cd tea-tasting
           git log
       - name: install-uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
           cache-suffix: tea-tasting-${{ matrix.python-version }}
@@ -247,6 +249,9 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
+          # Temporary pin, same as pointblank: sqlglot>=30.18.0 breaks ibis's
+          # in-memory `create_table` (ibis-project/ibis#12124).
+          uv pip install "sqlglot<30.18.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -281,7 +286,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: tubular-${{ matrix.python-version }}
@@ -298,6 +303,11 @@ jobs:
         run: |
           cd tubular
           uv pip install -e ".[dev]"
+          # Temporary pin to get CI green: beartype 0.23.0 rejects the `DType` that
+          # tubular imports to resolve `nw.Schema`'s forward ref, because
+          # `repr(DType)` is `DType` but `repr(DType | int)` is `narwhals.dtypes.DType | int`.
+          # See https://github.com/azukds/tubular/issues/772
+          uv pip install "beartype<0.23"
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -325,7 +335,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: plotly-${{ matrix.python-version }}
@@ -375,7 +385,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: hierarchicalforecast-${{ matrix.python-version }}
@@ -390,7 +400,9 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" pytest pytest-benchmark pytest-cov
+          # Temporary pin to get CI green: pytest-benchmark 5.3.0 reads `Function._nodeid`,
+          # which pytest 9.2.0 removed.
+          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" "pytest<9.2" pytest-benchmark pytest-cov
           uv pip install .
       - name: install-narwhals-dev
         run: |
@@ -420,7 +432,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: formulaic-${{ matrix.python-version }}
@@ -467,7 +479,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: pointblank-${{ matrix.python-version }}
@@ -484,7 +496,9 @@ jobs:
           cd pointblank
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
-          uv pip install . --group dev
+          # Editable, as `make test` runs `--doctest-modules pointblank` on the source tree,
+          # which otherwise clashes with the copy in site-packages ("import file mismatch").
+          uv pip install -e . --group dev
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
           # Temporary pin to get CI green: sqlglot 30.18.0 refactored `DROP TABLE`
           # to use a `tables` argument instead of `this` (tobymao/sqlglot#8229),
@@ -497,7 +511,7 @@ jobs:
           cd pointblank
           . .venv/bin/activate
           uv pip uninstall narwhals
-          uv pip install -e .
+          uv pip install -e ./..
       - name: show-deps
         run: |
           cd pointblank
@@ -527,7 +541,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: validoopsie-${{ matrix.python-version }}
@@ -579,7 +593,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: darts-${{ matrix.python-version }}
@@ -627,7 +641,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: gt-extras-${{ matrix.python-version }}
@@ -673,7 +687,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: fairlearn-${{ matrix.python-version }}
@@ -717,7 +731,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: lightgbm-${{ matrix.python-version }}
@@ -740,7 +754,7 @@ jobs:
           # satisfied, while numpy/pandas/pyarrow/etc still resolve as nightlies.
           sklearn_spec=$(grep -E '^scikit-learn' LightGBM/.ci/pip-envs/requirements-latest.txt)
           uv pip install "$sklearn_spec"
-          uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt
+          uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt -r LightGBM/.ci/pip-envs/requirements-test.txt
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -769,7 +783,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}

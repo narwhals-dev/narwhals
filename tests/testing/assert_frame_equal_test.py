@@ -6,6 +6,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.testing import assert_frame_equal
@@ -183,18 +184,12 @@ def test_height_mismatch(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize("check_row_order", [True, False])
-def test_check_row_order(
-    constructor: Constructor, request: pytest.FixtureRequest, *, check_row_order: bool
-) -> None:
-    if "pandas" in str(constructor):  # pragma: no cover
-        if PANDAS_VERSION < (2, 2):
+def test_check_row_order(constructor: Constructor, *, check_row_order: bool) -> None:
+    if "pandas" in str(constructor) or "dask" in str(constructor):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
-
-    if "dask" in str(constructor):
-        reason = "Unsupported List type"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"a": [1, 2], "b": [["x", "y"], ["x", "z"]]}
 
@@ -216,18 +211,12 @@ def test_check_row_order(
         assert_frame_equal(left, right, check_row_order=check_row_order)
 
 
-def test_check_row_order_nested_only(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "pandas" in str(constructor):  # pragma: no cover
-        if PANDAS_VERSION < (2, 2):
+def test_check_row_order_nested_only(constructor: Constructor) -> None:
+    if "pandas" in str(constructor) or "dask" in str(constructor):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
-
-    if "dask" in str(constructor):
-        reason = "Unsupported List type"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"b": [["x", "y"], ["x", "z"]]}
 
@@ -246,7 +235,9 @@ def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     """
     cols_to_drop = ("categorical", "enum", "duration", "struct", "time")
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):  # pragma: no cover
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion(
+        "2.2"
+    ):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -23,7 +24,9 @@ expected = {"cum_min": [3, 1, None, 1], "reverse_cum_min": [1, 1, None, 2]}
 def test_cum_min_expr(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager, *, reverse: bool
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < PkgVersion("2.1")) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_min" if reverse else "cum_min"
@@ -51,8 +54,8 @@ def test_lazy_cum_min_grouped(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
@@ -91,14 +94,18 @@ def test_lazy_cum_min_ordered_by_nulls(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows() and PYARROW_VERSION < (22, 0):
+    if (
+        "pyarrow" in str(constructor)
+        and is_windows()
+        and PYARROW_VERSION < PkgVersion("22")
+    ):
         # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)
 
@@ -139,8 +146,8 @@ def test_lazy_cum_min_ungrouped(
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
     df = nw.from_native(
@@ -169,8 +176,8 @@ def test_lazy_cum_min_ungrouped_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
     df = nw.from_native(
@@ -196,7 +203,9 @@ def test_lazy_cum_min_ungrouped_ordered_by_nulls(
 def test_cum_min_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < PkgVersion("2.1")) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)

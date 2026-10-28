@@ -9,6 +9,7 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
     Data: TypeAlias = "dict[str, list[Any]]"
 
 
-MIN_PANDAS_NULLABLE_VERSION = (2,)
+MIN_PANDAS_NULLABLE_VERSION = PkgVersion("2")
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -206,16 +207,27 @@ def duckdb_lazy_constructor(obj: dict[str, Any]) -> NativeDuckDB:
     return conn.sql("select * from _df")
 
 
-def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
+def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no cover
     import dask.dataframe as dd
+    import pandas as pd
 
-    return cast("NativeDask", dd.from_dict(obj, npartitions=1))
+    frame = pd.DataFrame(obj)
+    if PANDAS_VERSION >= PkgVersion("2.2") and find_spec("pyarrow"):
+        import pyarrow as pa
+
+        for name, values in obj.items():
+            if any(isinstance(value, list) for value in values):
+                # Dask's `convert-string` would turn object lists into strings.
+                frame[name] = pd.arrays.ArrowExtensionArray(pa.array(values))
+    return cast("NativeDask", dd.from_pandas(frame, npartitions=npartitions))
+
+
+def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
+    return _dask_constructor(obj, npartitions=1)
 
 
 def dask_lazy_p2_constructor(obj: Data) -> NativeDask:  # pragma: no cover
-    import dask.dataframe as dd
-
-    return cast("NativeDask", dd.from_dict(obj, npartitions=2))
+    return _dask_constructor(obj, npartitions=2)
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
@@ -275,11 +287,13 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
     pytest.importorskip("ibis")
     pytest.importorskip("polars")
+    import ibis
     import polars as pl
 
     ldf = pl.LazyFrame(obj)
     table_name = str(uuid.uuid4())
-    return _ibis_backend().create_table(table_name, ldf)
+    # Wrapping in `memtable` sidesteps ibis-project/ibis#12124 (sqlglot>=30.18).
+    return _ibis_backend().create_table(table_name, ibis.memtable(ldf))
 
 
 EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {

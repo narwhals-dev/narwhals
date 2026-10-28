@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -58,7 +59,7 @@ def test_median_group_by(
 
 
 def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="pyarrow median over differs"))

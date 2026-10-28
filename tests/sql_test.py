@@ -3,8 +3,10 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from tests.utils import DUCKDB_VERSION
 
 pytest.importorskip("duckdb", minversion="1.3.0")
 
@@ -28,16 +30,32 @@ def test_sql() -> None:
             "symbol", order_by="date"
         )
     )
-    expected = f"""SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM main.{name}"""  # noqa: S608
+    # DuckDB 2.0 renders the relation's own SQL instead of the parsed query.
+    if DUCKDB_VERSION >= PkgVersion("2"):  # pragma: no cover
+        expected = (
+            'SELECT "date", "price", "symbol", ("price" / (\n'  # noqa: S608
+            'lag("price", 1) over (partition by "symbol" order by "date" asc nulls first )\n'
+            f')) AS "returns" FROM "{name}"'
+        )
+        expected_pretty = (
+            'SELECT "date",\n'
+            '       "price",\n'
+            '       "symbol",\n'
+            '       ("price" / (lag("price", 1) OVER (PARTITION BY "symbol"\n'
+            '                                         ORDER BY "date" ASC NULLS FIRST))) AS "returns"\n'
+            f'FROM "{name}"'
+        )
+    else:  # pragma: no cover
+        expected = f"""SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM main.{name}"""  # noqa: S608
+        expected_pretty = (
+            "SELECT date, price,\n"
+            "             symbol,\n"
+            "             (price / lag(price, 1) OVER (PARTITION BY symbol\n"
+            '                                          ORDER BY date ASC NULLS FIRST)) AS "returns"\n'
+            f"FROM main.{name}"
+        )
     assert result.to_sql() == expected
-    expected = (
-        "SELECT date, price,\n"
-        "             symbol,\n"
-        "             (price / lag(price, 1) OVER (PARTITION BY symbol\n"
-        '                                          ORDER BY date ASC NULLS FIRST)) AS "returns"\n'
-        f"FROM main.{name}"
-    )
-    assert result.to_sql(pretty=True) == expected
+    assert result.to_sql(pretty=True) == expected_pretty
 
 
 def test_sql_table_schema_pairs() -> None:
@@ -53,10 +71,10 @@ def test_sql_table_combine() -> None:
     rhs = table(rhs_name, {"id": nw.Int64(), "y": nw.Int64()})
 
     joined = lhs.join(rhs, on="id", how="inner").to_sql()
-    assert f"main.{lhs_name}" in joined
-    assert f"main.{rhs_name}" in joined
+    assert lhs_name in joined
+    assert rhs_name in joined
 
     # `nw.concat` is typed as a plain `LazyFrame`, so go through the relation.
     concatenated = nw.concat([lhs.select("id"), rhs.select("id")]).to_native().sql_query()
-    assert f"main.{lhs_name}" in concatenated
-    assert f"main.{rhs_name}" in concatenated
+    assert lhs_name in concatenated
+    assert rhs_name in concatenated

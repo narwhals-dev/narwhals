@@ -16,6 +16,7 @@ from narwhals._duckdb.utils import (
     join_column_names,
     lit,
     native_to_narwhals_dtype,
+    qualified_col,
     temporary_view_name,
     window_expression,
 )
@@ -24,6 +25,7 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_column_names_are_unique,
     extend_bool,
     generate_temporary_column_name,
     parse_columns_to_drop,
@@ -101,7 +103,7 @@ class DuckDBLazyFrame(
         if self._version is Version.V1:
             from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-            return DataFrameV1(self, level="interchange")  # type: ignore[no-any-return]
+            return DataFrameV1(self, level="interchange")
         return self._version.lazyframe(self, level="lazy")
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
@@ -260,7 +262,7 @@ class DuckDBLazyFrame(
 
     def to_pandas(self) -> pd.DataFrame:
         # only if version is v1, keep around for backcompat
-        return self.native.df()
+        return self.native.df()  # type: ignore[no-any-return, unused-ignore]
 
     def to_arrow(self) -> pa.Table:
         # only if version is v1, keep around for backcompat
@@ -281,6 +283,7 @@ class DuckDBLazyFrame(
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         df = self.native
+        check_column_names_are_unique([mapping.get(name, name) for name in df.columns])
         selection = (
             col(name).alias(mapping[name]) if name in mapping else col(name)
             for name in df.columns
@@ -310,7 +313,7 @@ class DuckDBLazyFrame(
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
             it = (
-                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                qualified_col("lhs", left) == qualified_col("rhs", right)
                 for left, right in zip(left_on, right_on, strict=True)
             )
             condition: Expression = reduce(and_, it)
@@ -322,18 +325,21 @@ class DuckDBLazyFrame(
             )
 
         if native_how in {"inner", "left", "cross", "outer"}:
-            select = [col(f'lhs."{x}"') for x in self.columns]
+            select = [qualified_col("lhs", x) for x in self.columns]
             for name in other.columns:
                 col_in_lhs: bool = name in self.columns
                 if native_how == "outer" and not col_in_lhs:
-                    select.append(col(f'rhs."{name}"'))
+                    select.append(qualified_col("rhs", name))
                 elif (native_how == "outer") or (
                     col_in_lhs and (right_on is None or name not in right_on)
                 ):
-                    select.append(col(f'rhs."{name}"').alias(f"{name}{suffix}"))
+                    select.append(qualified_col("rhs", name).alias(f"{name}{suffix}"))
                 elif right_on is None or name not in right_on:
                     select.append(col(name))
-            res = rel.select(*select).set_alias(self.native.alias)
+            res = rel.select(*select)
+            # DuckDB>=2.0 `set_alias` renames duplicate columns instead of keeping them.
+            check_column_names_are_unique(res.columns)
+            res = res.set_alias(self.native.alias)
         else:  # semi, anti
             res = rel.select("lhs.*").set_alias(self.native.alias)
 
@@ -355,15 +361,19 @@ class DuckDBLazyFrame(
         conditions: list[Expression] = []
         if by_left is not None and by_right is not None:
             conditions.extend(
-                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                qualified_col("lhs", left) == qualified_col("rhs", right)
                 for left, right in zip(by_left, by_right, strict=True)
             )
         else:
             by_left = by_right = []
         if strategy == "backward":
-            conditions.append(col(f'lhs."{left_on}"') >= col(f'rhs."{right_on}"'))
+            conditions.append(
+                qualified_col("lhs", left_on) >= qualified_col("rhs", right_on)
+            )
         elif strategy == "forward":
-            conditions.append(col(f'lhs."{left_on}"') <= col(f'rhs."{right_on}"'))
+            conditions.append(
+                qualified_col("lhs", left_on) <= qualified_col("rhs", right_on)
+            )
         else:
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
@@ -403,6 +413,7 @@ class DuckDBLazyFrame(
             ON {condition}
             """,  # noqa: S608
         )
+        assert joined is not None  # noqa: S101
 
         select = [col(name) for name in lhs.columns]
         select.extend(
@@ -562,6 +573,7 @@ class DuckDBLazyFrame(
                 value {col(value_name)}
             """,
         )
+        assert unpivoted is not None  # noqa: S101
         return self._with_native(unpivoted.select(*index_, variable_name, value_name))
 
     @requires.backend_version((1, 3))

@@ -170,7 +170,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, pl.List):
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
     if isinstance(dtype, pl.Array):
-        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
+        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
         return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
     if isinstance(dtype, pl.Decimal):
         return dtypes.Decimal(dtype.precision, dtype.scale)
@@ -375,7 +375,7 @@ def native_get_categories(native: pl.Series) -> pl.Series:
     dtype = native.dtype
     if isinstance(dtype, pl.Enum):
         return dtype.categories
-    return native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+    return native.drop_nulls().unique(maintain_order=True).cast(pl.String)
 
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

@@ -407,10 +407,6 @@ def from_native(
 def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
-) -> DataFrame[IntoDataFrameT]: ...
-@overload
-def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
 @overload
@@ -421,6 +417,10 @@ def from_native(
 def from_native(
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrame[IntoDataFrameT]: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
@@ -746,6 +746,8 @@ def sum(*columns: str) -> Expr:
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is zero.
+
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
 
@@ -791,6 +793,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
+    Null values are ignored.
+
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
@@ -800,6 +804,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the minimum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `min_horizontal` over numeric columns only.
@@ -813,6 +819,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the maximum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `max_horizontal` over numeric columns only.

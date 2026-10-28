@@ -5,6 +5,7 @@ from functools import partial
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
@@ -123,7 +124,7 @@ def test_pivot(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
@@ -151,7 +152,7 @@ def test_pivot_no_agg(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
@@ -175,7 +176,7 @@ def test_pivot_sort_columns(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
@@ -223,7 +224,7 @@ def test_pivot_names_out(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
@@ -246,7 +247,7 @@ def test_pivot_no_index(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # not implemented
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)

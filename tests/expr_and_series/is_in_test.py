@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.conftest import (
@@ -133,7 +134,7 @@ def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
 def test_is_in_incompatible_dtype(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION >= (2,):
+    if "polars" in str(constructor) and POLARS_VERSION >= PkgVersion("2"):
         reason = "Polars>=2.0 rejects operands which can't be coerced losslessly"
         request.applymarker(pytest.mark.xfail(reason=reason))
 

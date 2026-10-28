@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -88,7 +89,7 @@ def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) 
         request.applymarker(pytest.mark.xfail(reason="NaN handling"))
     if (
         "duckdb" in str(constructor) or "sqlframe" in str(constructor)
-    ) and DUCKDB_VERSION < (1, 3, 1):
+    ) and DUCKDB_VERSION < PkgVersion("1.3.1"):
         request.applymarker(pytest.mark.xfail(reason="old duckdb NaN handling"))
     df = nw.from_native(constructor({"a": [1.0, float("nan"), 2.0]}))
     result = df.select(nw.col("a").quantile(0.5, "linear").alias("q"))

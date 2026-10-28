@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, PYARROW_VERSION, assert_equal_data
@@ -143,7 +144,7 @@ def test_shared_expr_over_push_down() -> None:
 
 def test_shared_expr_evaluation(constructor_eager: ConstructorEager) -> None:
     """Evaluating one shared `Expr` in several contexts at once must not mutate it."""
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip("`over(order_by=...)` requires polars>=1.10")
 
     df = nw.from_native(constructor_eager(DATA), eager_only=True)
@@ -174,7 +175,7 @@ def test_shared_group_by_agg(constructor_eager: ConstructorEager) -> None:
     Regression test: `agg` used to stash the native `groupby` on `self`, so one thread
     could read another's grouping and silently aggregate the wrong rows.
     """
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (14, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip("https://github.com/apache/arrow/issues/36709")
 
     grouped = nw.from_native(constructor_eager(DATA), eager_only=True).group_by("g")

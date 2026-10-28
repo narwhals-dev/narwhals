@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
 
-polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
+polars_lt_v1 = POLARS_VERSION < PkgVersion("1")
 skip_reason = "replace_strict only available after 1.0"
 pl_skip_reason = "replace_strict only available after 1.0"
 
