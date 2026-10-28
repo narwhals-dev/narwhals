@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -37,7 +38,7 @@ def test_concat_str(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         # nth only available after 1.0
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
@@ -187,7 +188,8 @@ def test_pyarrow_string_type(
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < (2, 3), reason='"add" was not implemented yet for large-string'
+    PANDAS_VERSION < PkgVersion("2.3"),
+    reason='"add" was not implemented yet for large-string',
 )
 def test_concat_str_with_large_string() -> None:
     # https://github.com/pandas-dev/pandas/issues/64393

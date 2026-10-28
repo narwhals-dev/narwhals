@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import re
 import string
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime
 from itertools import chain
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import (
@@ -21,9 +24,10 @@ from narwhals._utils import (
     requires,
 )
 from tests.utils import (
+    NOT_INSTALLED,
     any_integer_like_floats,
     assert_equal_data,
-    get_module_version_as_tuple,
+    get_module_version,
 )
 
 pytest.importorskip("pandas")
@@ -277,9 +281,26 @@ def test_maybe_convert_dtypes_polars() -> None:
     assert result is df
 
 
-def test_get_trivial_version_with_uninstalled_module() -> None:
-    result = get_module_version_as_tuple("non_existent_module")
-    assert result == (0, 0, 0)
+def test_get_module_version_not_installed() -> None:
+    result = get_module_version("non_existent_module")
+    assert result == NOT_INSTALLED
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("2.2.0", "2.2.0"),
+        ("3.0.0rc1", "3.0.0"),
+        ("1.4.0-dev123", "1.4.0"),
+        ("3.0.0.dev0+618.gb552dc95c9", "3.0.0"),
+        ("22.0.0.dev241", "22.0.0"),
+    ],
+)
+def test_get_module_version_strips_suffixes(
+    monkeypatch: pytest.MonkeyPatch, version: str, expected: str
+) -> None:
+    monkeypatch.setitem(sys.modules, "fake_module", SimpleNamespace(__version__=version))
+    assert get_module_version("fake_module") == PkgVersion(expected)
 
 
 @given(n_bytes=st.integers(1, 100))
@@ -322,7 +343,7 @@ def test_generate_temporary_column_name_raise() -> None:
 def test_generate_temporary_column_name_pr_3118_example() -> None:
     from tests.utils import DUCKDB_VERSION
 
-    if DUCKDB_VERSION < (1, 3, 0):
+    if DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     import duckdb
@@ -332,7 +353,7 @@ def test_generate_temporary_column_name_pr_3118_example() -> None:
 
     df = nw.from_native(conn.table("df"))
     sql = df.unique("b", keep="any").select("a").to_native().sql_query()
-    assert "AS row_index_" in sql
+    assert re.search(r'AS "?row_index_', sql)
 
 
 @pytest.mark.parametrize(

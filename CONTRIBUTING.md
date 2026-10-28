@@ -380,7 +380,11 @@ Note: While we're not currently totally consistent with these patterns, any effo
 2. `pytest.mark.skipif`: Used when there's a condition under which the test cannot run (e.g., unsupported pandas versions).
 
    ```python
-   @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires pandas 2.0+")
+   from packaging.version import Version as PkgVersion
+
+   from tests.utils import PANDAS_VERSION
+
+   @pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="requires pandas 2.0+")
    def test_version_dependent():
        # Test implementation
    ```

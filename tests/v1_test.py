@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
@@ -145,7 +146,7 @@ def test_constructors() -> None:
     import numpy as np
     import pandas as pd
 
-    if PANDAS_VERSION < (2, 2):
+    if PANDAS_VERSION < PkgVersion("2.2"):
         pytest.skip()
     assert nw_v1.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
     arr: np.ndarray[tuple[int, int], Any] = np.array([[1, 2], [3, 4]])  # pyright: ignore[reportAssignmentType]
@@ -306,7 +307,9 @@ def test_hist_v1() -> None:
 
 
 @pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="requires interchange protocol"
+)
 def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -399,13 +402,11 @@ def test_v1_enum_duckdb_2550() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    result_v1 = nw_v1.from_native(
-        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
-    ).collect_schema()
+    rel = duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
+    assert rel is not None
+    result_v1 = nw_v1.from_native(rel).collect_schema()
     assert result_v1 == {"a": nw_v1.Enum()}
-    result = nw.from_native(
-        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
-    ).collect_schema()
+    result = nw.from_native(rel).collect_schema()
     assert result == {"a": nw.Enum(("a", "b", "c"))}
 
 
@@ -505,7 +506,7 @@ def test_all_horizontal() -> None:
 
 
 def test_with_row_index(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
@@ -1124,7 +1125,7 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
         assert isinstance(supports_arrow_c_stream.to_native(), pa.Table)
     else:
         assert not isinstance(supports_arrow_c_stream.to_native(), pa.Table)
-    if PYARROW_VERSION < (14,):  # pragma: no cover
+    if PYARROW_VERSION < PkgVersion("14"):  # pragma: no cover
         ...
     else:
         result = nw_v1.DataFrame.from_arrow(
@@ -1231,7 +1232,7 @@ def test_mode_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
     df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
@@ -1279,7 +1280,9 @@ def test_schema_from_generator() -> None:
 
 
 def test_get_categories_v1(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     data = {"a": ["one", "two", "two", None]}
@@ -1296,7 +1299,9 @@ def test_get_categories_v1(constructor_eager: ConstructorEager) -> None:
 
 def test_get_categories_lazy_v1(constructor_eager: ConstructorEager) -> None:
     # `stable.v1` allows length-changing expressions in `LazyFrame.select`.
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     data = {"a": ["one", "two", "two", None]}

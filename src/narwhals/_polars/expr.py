@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import polars as pl
+from polars.selectors import is_selector
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
@@ -282,7 +283,11 @@ class PolarsExpr:
         return self._with_native(self.native.__and__(extract_native(other)))
 
     def __or__(self, other: PolarsExpr) -> Self:
-        return self._with_native(self.native.__or__(extract_native(other)))
+        native = self.native.__or__(extract_native(other))
+        if BACKEND_VERSION < (1,) and is_selector(native):  # pragma: no cover
+            # Polars < 1.0 orders selector unions left to right instead of by schema.
+            native = pl.selectors.all() & native
+        return self._with_native(native)
 
     def __add__(self, other: Any) -> Self:
         return self._with_native(self.native.__add__(extract_native(other)))
@@ -451,7 +456,7 @@ class PolarsExprStringNamespace(
         if BACKEND_VERSION < (1, 35):
             native_result = (
                 native_expr.str.to_lowercase()
-                .str.extract_all(r"[a-z]*[^a-z]*")
+                .str.extract_all(r"\p{L}*\P{L}*")
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
             )
@@ -461,19 +466,21 @@ class PolarsExprStringNamespace(
         return self.compliant._with_native(native_result)
 
     def zfill(self, width: int) -> PolarsExpr:
+        native = self.native
         if width == 0:
-            return self.compliant._with_native(self.native)
-        native_result = self.native.str.zfill(width)
-
-        if self.compliant._backend_version <= (1, 30, 0):
-            plus, minus = "+", "-"
-            sign, rest = self.native.str.slice(0, 1), self.native.str.slice(1)
+            return self.compliant._with_native(native)
+        if BACKEND_VERSION < (2,):
+            # Native `zfill` pads to a byte count (and ignores a `+` sign up to 1.30),
+            # `pad_start` counts characters.
+            has_sign = native.str.starts_with("+") | native.str.starts_with("-")
+            padded_rest = native.str.slice(1).str.pad_start(width - 1, "0")
             native_result = (
-                pl.when(self.native.str.starts_with(plus))
-                .then(sign + (minus + rest).str.zfill(width).str.slice(1))
-                .otherwise(native_result)
+                pl.when(has_sign)
+                .then(native.str.slice(0, 1) + padded_rest)
+                .otherwise(native.str.pad_start(width, "0"))
             )
-
+        else:  # pragma: no cover
+            native_result = native.str.zfill(width)
         return self.compliant._with_native(native_result)
 
     def slice(self, offset: int, length: int | None) -> PolarsExpr:
@@ -557,13 +564,16 @@ class PolarsExprListNamespace(
         return self.compliant._with_native(native_result)
 
     def contains(self, item: Any) -> PolarsExpr:
-        if self.compliant._backend_version < (1, 28):
-            result: pl.Expr = pl.when(self.native.is_not_null()).then(
-                self.native.list.contains(item)
-            )
+        native = self.native
+        if item is None and self.compliant._backend_version < (1, 30):
+            # `list.contains(None)` returns a single null before 1.24, and `True` for
+            # empty lists before 1.30.
+            contains = native.list.len() > native.list.drop_nulls().list.len()
         else:
-            result = self.native.list.contains(item)
-        return self.compliant._with_native(result)
+            contains = native.list.contains(item)
+        if self.compliant._backend_version < (1, 28):
+            contains = pl.when(native.is_not_null()).then(contains)
+        return self.compliant._with_native(contains)
 
 
 class PolarsExprStructNamespace(

@@ -75,3 +75,11 @@ def test_series_from_numpy_not_eager() -> None:  # pragma: no cover
 def test_series_from_numpy_not_1d(eager_backend: EagerAllowed) -> None:
     with pytest.raises(ValueError, match="`from_numpy` only accepts 1D numpy arrays"):
         nw.Series.from_numpy(NAME, np.array([[0], [2]]), backend=eager_backend)  # pyright: ignore[reportArgumentType]
+
+
+def test_series_from_numpy_pandas_no_copy() -> None:
+    pytest.importorskip("pandas")
+    values = cast("_1DArray", np.array([5, 2, 0, 1]))
+    # An empty name skips `Series.rename`, which always copies on pandas<2.
+    result = nw.Series.from_numpy("", values, backend="pandas")
+    assert np.shares_memory(result.to_numpy(), values)

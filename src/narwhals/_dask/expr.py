@@ -7,6 +7,7 @@ import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
+from narwhals._dask.expr_list import DaskExprListNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
@@ -108,9 +109,7 @@ class DaskExpr(
     mean = simple_aggregation("mean")
     min = simple_aggregation("min")
     skew = simple_aggregation("skew")
-    std = simple_aggregation("std")
     sum = simple_aggregation("sum")
-    var = simple_aggregation("var")
     __invert__ = simple_method("__invert__")
     __neg__ = simple_method("__neg__")
     abs = simple_method("abs")
@@ -404,20 +403,26 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        def func(expr: dx.Series, value: Self | None = None) -> dx.Series:
-            if value is not None:
-                res_ser = expr.fillna(value)
-            else:
-                res_ser = (
+        if value is None:
+            return self._with_callable(
+                lambda expr: (
                     expr.ffill(limit=limit)
                     if strategy == "forward"
                     else expr.bfill(limit=limit)
                 )
-            return res_ser
+            )
 
-        if value is not None:
-            return self._with_callable(func, expression_args={"value": value})
-        return self._with_callable(func)
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            fill_value = df._evaluate_single_output_expr(value)
+            aligned = (align_series_full_broadcast(df, s, fill_value) for s in self(df))
+            return [series.fillna(fill) for series, fill in aligned]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         return self._with_callable(
@@ -441,6 +446,24 @@ class DaskExpr(
 
     def n_unique(self) -> Self:
         return self._with_callable(lambda expr: expr.nunique(dropna=False).to_series())
+
+    def _var_or_std(self, *, ddof: int, sqrt: bool) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            if ddof <= 1:
+                return (expr.std if sqrt else expr.var)(ddof=ddof).to_series()
+            # Dask gives `inf` (and warns) when N == ddof, so rescale the population
+            # variance instead and mask N <= ddof.
+            n = expr.count().to_series()
+            var = (expr.var(ddof=0).to_series() * n / (n - ddof)).where(n > ddof)
+            return var**0.5 if sqrt else var
+
+        return self._with_callable(func)
+
+    def std(self, *, ddof: int) -> Self:
+        return self._var_or_std(ddof=ddof, sqrt=True)
+
+    def var(self, *, ddof: int) -> Self:
+        return self._var_or_std(ddof=ddof, sqrt=False)
 
     def is_nan(self) -> Self:
         def func(expr: dx.Series) -> dx.Series:
@@ -662,8 +685,8 @@ class DaskExpr(
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         def func(expr: dx.Series) -> dx.Series:
             _name = expr.name
-            result = expr.to_frame().mode()[_name]
-            return result.head(1) if keep == "any" else result
+            result = expr.to_frame().mode(dropna=False)[_name]
+            return result.head(1, compute=False) if keep == "any" else result
 
         return self._with_callable(func)
 
@@ -710,6 +733,10 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
+    @property
+    def list(self) -> DaskExprListNamespace:
+        return DaskExprListNamespace(self)
+
     any_value = not_implemented()
     filter = not_implemented(
         hint=length_changing_hint(
@@ -722,5 +749,4 @@ class DaskExpr(
     last = not_implemented()
 
     # namespaces
-    list: Any = not_implemented()
     struct: Any = not_implemented()

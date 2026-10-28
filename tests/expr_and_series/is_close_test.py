@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -19,8 +20,8 @@ from tests.conftest import (
     pandas_constructor,
 )
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
-    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -129,7 +130,7 @@ def test_is_close_series_with_series(
 
     if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else nans_equal for v in expected]
-    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= PkgVersion("3"):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -157,7 +158,7 @@ def test_is_close_series_with_scalar(
 
     if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
-    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= PkgVersion("3"):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -202,7 +203,7 @@ def test_is_close_expr_with_expr(
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else nans_equal for v in expected]
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -243,7 +244,7 @@ def test_is_close_expr_with_scalar(
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -266,15 +267,12 @@ def test_is_close_pandas_unnamed() -> None:
 def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
     frame = nw.from_native(constructor_eager({"a": [0, 1, 2]}))
 
-    if frame.implementation.is_polars() and POLARS_VERSION >= (2,):  # pragma: no cover
-        pytest.xfail("Polars >=2.0 rejects is_nan on Decimal")
-
     if frame.implementation.is_pandas_like() and (
-        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
+        PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2.2")
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
-    frame = frame.with_columns(nw.col("a").cast(nw.Decimal()))
+    frame = frame.cast({"a": nw.Decimal()})
     assert frame["a"].is_close(frame["a"]).all()
 
 
@@ -290,14 +288,11 @@ def test_issue_3474_expr_decimal(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     frame = nw.from_native(constructor({"a": [0, 1, 2]}))
-    if frame.implementation.is_polars() and POLARS_VERSION >= (2,):  # pragma: no cover
-        reason = "Polars >=2.0 rejects is_finite on Decimal"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     if frame.implementation.is_pandas_like() and (
-        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
+        PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2.2")
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
-    frame = frame.lazy().with_columns(nw.col("a").cast(nw.Decimal()))
+    frame = frame.lazy().cast({"a": nw.Decimal()})
     assert frame.select((nw.col("a").is_close(nw.col("a"))).all()).collect().item()

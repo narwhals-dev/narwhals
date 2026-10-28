@@ -3,7 +3,6 @@ from __future__ import annotations
 import operator
 from datetime import date, datetime
 from functools import partial, reduce
-from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
@@ -27,12 +26,13 @@ from narwhals._utils import (
     Implementation,
     ensure_path_source,
     is_nested_literal,
+    isinstance_or_issubclass,
     not_implemented,
     validate_separators,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable
 
     import dask.dataframe.dask_expr as dx
 
@@ -86,6 +86,11 @@ class DaskNamespace(
         if is_nested_literal(value):
             msg = f"Nested structures are not supported for Dask backend, found {type(value).__name__}"
             raise NotImplementedError(msg)
+        if isinstance_or_issubclass(dtype, self._version.dtypes.List):
+            # Dask scalars drop the dtype, so this would be a String column:
+            # https://github.com/dask/dask/issues/11637
+            msg = "`List` literals are not supported for Dask backend."
+            raise NotImplementedError(msg)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
@@ -125,13 +130,13 @@ class DaskNamespace(
 
     def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series: Iterator[dx.Series] = chain.from_iterable(e(df) for e in exprs)
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
             # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             if ignore_nulls:
                 # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                series = (s if s.dtype == "bool" else s.fillna(True) for s in series)
-            return [reduce(operator.and_, align_series_full_broadcast(df, *series))]
+                series = [s if s.dtype == "bool" else s.fillna(True) for s in series]
+            return [reduce(operator.and_, series)]
 
         return self._expr(
             call=func,
@@ -142,10 +147,10 @@ class DaskNamespace(
 
     def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series: Iterator[dx.Series] = chain.from_iterable(e(df) for e in exprs)
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
             if ignore_nulls:
-                series = (s if s.dtype == "bool" else s.fillna(False) for s in series)
-            return [reduce(operator.or_, align_series_full_broadcast(df, *series))]
+                series = [s if s.dtype == "bool" else s.fillna(False) for s in series]
+            return [reduce(operator.or_, series)]
 
         return self._expr(
             call=func,

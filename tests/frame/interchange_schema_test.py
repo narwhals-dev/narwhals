@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals.stable.v1 as nw_v1
 from tests.utils import IBIS_VERSION
@@ -106,7 +107,7 @@ def test_interchange_schema_ibis(
     tbl = ibis.read_parquet(filepath)
     df = nw_v1.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
-    if IBIS_VERSION > (6, 0, 0):
+    if IBIS_VERSION > PkgVersion("6"):
         expected = {
             "a": nw_v1.Int64,
             "b": nw_v1.Int32,
@@ -195,6 +196,7 @@ def test_interchange_schema_duckdb() -> None:
         },
     )
     rel = duckdb.sql("select * from df_pl")
+    assert rel is not None
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     result = df.schema
     expected = {

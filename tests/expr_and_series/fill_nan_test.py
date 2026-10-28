@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.conftest import (
@@ -40,7 +41,7 @@ def test_fill_nan(request: pytest.FixtureRequest, constructor: Constructor) -> N
         # no nan vs null distinction
         expected = {"float": [-1.0, 1.0, 3.0], "float_na": [3.0, 1.0, 3.0]}
         assert result.lazy().collect()["float_na"].null_count() == 0
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
         expected = {"float": [-1.0, 1.0, None], "float_na": [None, 1.0, None]}
         assert result.lazy().collect()["float_na"].null_count() == 2
     else:
@@ -58,7 +59,7 @@ def test_fill_nan_series(constructor_eager: ConstructorEager) -> None:
     if any(constructor_eager is c for c in NON_NULLABLE_CONSTRUCTORS):
         # no nan vs null distinction
         assert_equal_data({"a": result}, {"a": [999.0, 1.0, 999.0]})
-    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= PkgVersion("3"):
         assert_equal_data({"a": result}, {"a": [None, 1.0, None]})
     else:
         assert_equal_data({"a": result}, {"a": [999.0, 1.0, None]})
