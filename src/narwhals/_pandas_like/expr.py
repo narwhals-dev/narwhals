@@ -269,7 +269,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 "Only elementary expressions are supported for `.over` in pandas-like backends "
                 "when `partition_by` is specified.\n\n"
                 "Please see: "
-                "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
+                "https://narwhals-dev.github.io/narwhals/how-to/improve_group_by_operation/"
             )
             raise NotImplementedError(msg)
         nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
