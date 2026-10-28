@@ -318,7 +318,8 @@ def test_huge_int() -> None:
     else:  # pragma: no cover
         pass
 
-    rel = duckdb.sql("""
+    conn = duckdb.connect()
+    rel = conn.sql("""
         select cast(a as int128) as a
         from df
                      """)
@@ -327,7 +328,7 @@ def test_huge_int() -> None:
         result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
 
-    rel = duckdb.sql("""
+    rel = conn.sql("""
         select cast(a as uint128) as a
         from df
                      """)
@@ -401,7 +402,8 @@ def test_decimal() -> None:
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal
-    rel = duckdb.sql("""
+    con = duckdb.connect()
+    rel = con.sql("""
         select *
         from df
                      """)
@@ -489,7 +491,8 @@ def test_huge_int_to_native() -> None:
     )
     assert df_casted.schema["a_int"] == pl.Int128
 
-    rel = duckdb.sql("""
+    con = duckdb.connect()
+    rel = con.sql("""
         select cast(a as int64) as a
         from df
                      """)
@@ -679,21 +682,22 @@ def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
-    rel = duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
-    assert rel is not None
-    df = nw.from_native(rel)
+    conn = duckdb.connect()
+    conn.sql("""set timezone = 'Europe/Amsterdam'""")
+    df = nw.from_native(
+        conn.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
+    )
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Europe/Amsterdam")
-    duckdb.sql("""set timezone = 'Asia/Kathmandu'""")
+    conn.sql("""set timezone = 'Asia/Kathmandu'""")
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
 
-    rel = duckdb.sql(
-        """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
+    df = nw.from_native(
+        conn.sql(
+            """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
+        )
     )
-    assert rel is not None
-    df = nw.from_native(rel)
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
