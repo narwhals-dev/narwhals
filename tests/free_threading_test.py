@@ -296,9 +296,10 @@ def test_duckdb_per_thread_cursor() -> None:
     con = duckdb.connect()
 
     def check(barrier: threading.Barrier) -> None:
+        # Nothing before the barrier: a worker failing there would leave the rest blocked.
+        barrier.wait()
         cursor = con.cursor()
         cursor.sql("set timezone = 'UTC'")
-        barrier.wait()
         for _ in range(5):
             lf = nw.from_native(cursor.sql(f"{_SELECT_TZ}, 1 as idx, 2 as a, 3 as b"))
             assert lf.collect_schema()["t"] == nw.Datetime(time_zone="UTC")

@@ -54,8 +54,7 @@ All of the following are safe to share between threads:
 | --- | --- | --- |
 | Polars | Safe | Operations return new objects, though immutability is [not enforced][polars-immutable] |
 | PyArrow | Safe | [Arrow data is immutable][arrow-immutable] |
-| pandas (NumPy-backed) | Safe | **Not safe** through the NumPy buffer (`.values`, `.to_numpy()`):<br/>[mutating a shared array races][numpy-thread-safety]. pandas' own writes go<br/>through [copy-on-write], the default since pandas 3.0 |
-| pandas (Arrow-backed) | Safe | [copy-on-write]: a write produces new buffers rather than mutating shared ones |
+| pandas | Safe | **Not safe**: `from_native` keeps the same object, so an in-place write (`df.loc[...] = ...`,<br/>or through the NumPy buffer of `.values` / `.to_numpy()`, which [races][numpy-thread-safety]) changes it<br/>under every reader. [Copy-on-write] (the default since pandas 3.0) only protects *other* objects sharing the data |
 | DuckDB | One connection per thread, see below | N/A |
 | PySpark, SQLFrame, Ibis, Dask | Delegated to the session / scheduler | Consult the backend's own docs |
 
@@ -84,8 +83,9 @@ def worker(con: duckdb.DuckDBPyConnection) -> None:
    `join` or `concat` in the thread that uses them.
 3. **`collect_schema()` on frames from a shared connection is safe, executing on one is
    not**: a time-zone-aware dtype is the one case where Narwhals queries your connection
-   *implicitly*, and it serializes that query. Explicit execution (`collect`, `to_arrow`,
-   ...) runs on the connection you gave it and follows DuckDB's rules.
+   *implicitly*, and it serializes that query against its own calls only, so do not run
+   your own queries on that connection meanwhile. Explicit execution (`collect`,
+   `to_arrow`, ...) runs on the connection you gave it and follows DuckDB's rules.
 4. **`join_asof`, `unpivot` and `concat(how="diagonal")` leave a view behind on
    duckdb-python < 1.5.4**: DuckDB has no relational-API equivalent for ASOF joins,
    `UNPIVOT` ([duckdb#16980]) or `UNION ALL BY NAME` ([duckdb#16996]), so Narwhals runs
@@ -116,9 +116,12 @@ Narwhals is pure Python with no compiled extensions, so importing it never re-en
 GIL. Whether *your* stack supports the [free-threaded] build depends on the backend: check
 that its wheels are built for `cp314t` (or whichever version you run).
 
-CI covers it in two ways: the whole suite runs again under [pytest-run-parallel] with
-`--parallel-threads=4`, which surfaces races through global state, and
-`tests/free_threading_test.py` stresses every guarantee on this page. If you find a race,
+CI covers it in two ways. On a free-threaded build, the suite runs again under
+[pytest-run-parallel] with `--parallel-threads=4`, which surfaces races through global state;
+it covers pandas and PyArrow only, until the other backends ship free-threaded wheels, and
+tests marked `thread_unsafe` run single-threaded. `tests/free_threading_test.py` stresses
+the guarantees on this page with its own thread pools; its DuckDB and Polars cases run in
+the regular (GIL-enabled) jobs. If you find a race,
 please [open an issue](https://github.com/narwhals-dev/narwhals/issues) with a script that
 reproduces it, ideally on a free-threaded build or with `sys.setswitchinterval(1e-7)`.
 
