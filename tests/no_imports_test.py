@@ -44,17 +44,17 @@ def test_pandas(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # With pyarrow-backed strings (the default on pandas>=3 when pyarrow is
     # installed), pandas' own string operations re-import pyarrow.
-    monkeypatch.setattr(pd.options.mode, "string_storage", "python")
-    df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
-    monkeypatch.delitem(sys.modules, "polars", raising=False)
-    monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
-    monkeypatch.delitem(sys.modules, "duckdb", raising=False)
-    monkeypatch.delitem(sys.modules, "dask", raising=False)
-    monkeypatch.delitem(sys.modules, "ibis", raising=False)
-    monkeypatch.delitem(sys.modules, "pyspark", raising=False)
-    nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean()).filter(
-        nw.col("a") > 1
-    )
+    with pd.option_context("mode.string_storage", "python"):
+        df = pd.DataFrame({"a": [1, 1, 2], "b": [4, 5, 6]})
+        monkeypatch.delitem(sys.modules, "polars", raising=False)
+        monkeypatch.delitem(sys.modules, "pyarrow", raising=False)
+        monkeypatch.delitem(sys.modules, "duckdb", raising=False)
+        monkeypatch.delitem(sys.modules, "dask", raising=False)
+        monkeypatch.delitem(sys.modules, "ibis", raising=False)
+        monkeypatch.delitem(sys.modules, "pyspark", raising=False)
+        nw.from_native(df, eager_only=True).group_by("a").agg(nw.col("b").mean()).filter(
+            nw.col("a") > 1
+        )
     assert "polars" not in sys.modules
     assert "pandas" in sys.modules
     assert "numpy" in sys.modules
