@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pytest
+from packaging.version import Version as PkgVersion
+
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["foo", "foobar", "Café", "345", "東京"]}
 
@@ -20,7 +23,12 @@ def test_str_len_chars_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_str_len_chars_all_null(constructor: Constructor) -> None:
+def test_str_len_chars_all_null(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "sqlframe" in str(constructor) and DUCKDB_VERSION >= PkgVersion("2"):
+        # DuckDB 2.0 describes a bare NULL as `"NULL"`, which sqlframe cannot parse.
+        request.applymarker(pytest.mark.xfail)
     # Null the column out with `lit` rather than passing all-null data to the
     # constructor: some backends cannot infer a dtype from that.
     df = nw.from_native(constructor({"a": ["foo", "bar"]})).with_columns(a=nw.lit(None))
