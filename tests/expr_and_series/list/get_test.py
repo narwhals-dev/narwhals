@@ -12,7 +12,10 @@ from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_eq
 data = {"a": [[1, 2], [None, 3], [None], None, [4]]}
 
 
-@pytest.mark.parametrize(("index", "expected"), [(0, {"a": [1, None, None, None, 4]})])
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [(0, {"a": [1, None, None, None, 4]}), (-1, {"a": [2, 3, None, None, 4]})],
+)
 def test_get_expr(
     request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: Any
 ) -> None:
@@ -31,7 +34,10 @@ def test_get_expr(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(("index", "expected"), [(0, {"a": [1, None, None, None, 4]})])
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [(0, {"a": [1, None, None, None, 4]}), (-1, {"a": [2, 3, None, None, 4]})],
+)
 def test_get_series(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
@@ -62,38 +68,34 @@ def test_get_series(
     assert_equal_data({"a": result}, expected)
 
 
-def test_get_expr_negative_index(constructor: Constructor) -> None:
-    data = {"a": [[1, 2], [None, 3], [None], None]}
-    index = -1
-
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < PkgVersion("2.2"):
-            pytest.skip()
-        pytest.importorskip("pyarrow")
-
-    df = nw.from_native(constructor(data))
-    msg = re.escape(
-        f"Index {index} is out of bounds: should be greater than or equal to 0."
-    )
-    with pytest.raises(ValueError, match=msg):
-        df.select(nw.col("a").cast(nw.List(nw.Int32())).list.get(index))
-
-
-def test_get_series_negative_index(constructor_eager: ConstructorEager) -> None:
-    data = {"a": [[1, 2], [None, 3], [None], None]}
-    index = -1
+def test_get_series_negative_index_out_of_bounds(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-    msg = re.escape(
-        f"Index {index} is out of bounds: should be greater than or equal to 0."
+    df = nw.from_native(constructor_eager({"a": [[1, 2], [3]]}), eager_only=True)
+    with pytest.raises(Exception, match="out of bounds"):
+        df["a"].cast(nw.List(nw.Int32())).list.get(-2)
+
+
+def test_get_negative_index_null_list_spanning_values() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    # The null list's offsets still span the values `3, 4`.
+    native = pa.ListArray.from_arrays(
+        pa.array([0, 2, 4, 5], pa.int32()),
+        pa.array([1, 2, 3, 4, 5]),
+        mask=pa.array([False, True, False]),
     )
-    with pytest.raises(ValueError, match=msg):
-        df["a"].list.get(index)
+    s = nw.from_native(pa.chunked_array([native]), series_only=True)
+    assert_equal_data({"a": s.list.get(-1)}, {"a": [2, None, 5]})
 
 
 def test_get_expr_non_int_index(constructor: Constructor) -> None:
