@@ -1045,7 +1045,11 @@ class EagerExprDateTimeNamespace(
     def truncate(self, every: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("dt", "truncate", every=every)
 
-    def offset_by(self, by: str) -> EagerExprT:
+    def offset_by(self, by: str | EagerExprT) -> EagerExprT:
+        if not isinstance(by, str):
+            implementation = self.compliant._implementation
+            msg = f"`dt.offset_by` with an expression is not supported for {implementation}."
+            raise NotImplementedError(msg)
         return self.compliant._reuse_series_namespace("dt", "offset_by", by=by)
 
 

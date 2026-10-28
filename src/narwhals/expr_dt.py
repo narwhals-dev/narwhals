@@ -693,12 +693,13 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "dt.truncate", every=every)
         )
 
-    def offset_by(self, by: str) -> ExprT:
+    def offset_by(self, by: str | Expr) -> ExprT:
         """Offset this date by a relative time offset.
 
         Arguments:
-            by: The offset. Must be of form `<multiple><unit>`,
-                where `multiple` is a positive integer and `unit` is one of
+            by: The offset, or an expression of offsets. Must be of form
+                `<multiple><unit>`, where `multiple` is a positive integer and
+                `unit` is one of
 
                 - 'ns': nanosecond.
                 - 'us': microsecond.
@@ -715,6 +716,11 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             For the Ibis backend, offsetting timezone-aware data by a calendar
             unit ('d', 'mo', 'q' or 'y') raises: Ibis stores such values as UTC,
             so the result would diverge from other backends across DST transitions.
+
+            Passing an expression as `by` is only supported for Polars, DuckDB and
+            Spark-like backends. For DuckDB and Spark-like, an offset that isn't of
+            form `<multiple><unit>`, or one in nanoseconds, gives null rather than
+            raising.
 
         Examples:
             >>> from datetime import datetime
@@ -738,6 +744,10 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             |└─────────────────────┴───────────────────────┘|
             └───────────────────────────────────────────────┘
         """
+        if isinstance(by, str):
+            return self._expr._append_node(
+                ExprNode(ExprKind.ELEMENTWISE, "dt.offset_by", by=by)
+            )
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "dt.offset_by", by=by)
+            ExprNode(ExprKind.ELEMENTWISE, "dt.offset_by", exprs=(by,))
         )
