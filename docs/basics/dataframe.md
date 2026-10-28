@@ -2,7 +2,7 @@
 
 This is the first of three pages building up to a dataframe-agnostic
 [Standard Scaler](complete_example.md), a class which works unchanged with pandas, Polars,
-PyArrow, and every other backend Narwhals supports.
+PyArrow, and every other eager backend Narwhals supports.
 
 By the end of this page, you'll be able to write a function which takes a dataframe from
 any supported library, transforms it, and gives back a dataframe of that same library.

@@ -61,9 +61,9 @@ print("series match")
 ## Running a test against several backends
 
 Narwhals parametrises its own suite over a dict of constructors: functions which take a
-column-oriented `dict` and return a native frame. Each one imports its backend lazily, so
-a backend which isn't installed is skipped rather than collected. The same pattern works
-downstream:
+column-oriented `dict` and return a native frame. Each one imports its backend inside the
+function, so a backend which isn't installed skips its tests instead of breaking collection.
+The same pattern works downstream:
 
 ```py
 # conftest.py
@@ -107,8 +107,7 @@ def duckdb_lazy_constructor(obj: Data) -> IntoFrame:
     import duckdb
     import pyarrow as pa
 
-    _df = pa.table(obj)
-    return duckdb.sql("select * from _df")
+    return duckdb.from_arrow(pa.table(obj))
 
 
 CONSTRUCTORS: dict[str, Constructor] = {

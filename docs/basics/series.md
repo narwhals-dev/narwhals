@@ -2,7 +2,7 @@
 
 In [DataFrame](dataframe.md), you learned how to write a dataframe-agnostic function.
 By the end of this page, you'll know when to use an expression and when to use a `Series`,
-and how to get a plain Python scalar out of a dataframe of any library.
+and how to get a plain Python scalar out of an eager dataframe of any library.
 
 We only used DataFrame methods there - but what if we need to operate on its columns?
 There are two ways to do this:

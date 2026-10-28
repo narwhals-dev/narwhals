@@ -72,8 +72,8 @@ print(df.select(nw.any_horizontal("a", "b", ignore_nulls=False)).to_native())
 ```
 
 `ignore_nulls=False` keeps the `stable.v1` behaviour, and is unsupported by pandas backed
-by classic NumPy dtypes. [Boolean logic](../concepts/boolean.md) covers what the two
-options mean.
+by classic NumPy dtypes when null values are present. [Boolean logic](../concepts/boolean.md)
+covers what the two options mean.
 
 ### `LazyFrame.with_row_index` requires `order_by`
 
