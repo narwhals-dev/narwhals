@@ -26,7 +26,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     to_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -465,71 +464,49 @@ class SparkLikeLazyFrame(
             self.native.join(other_native, on=on_, how=how_native).select(col_order)
         )
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = self._version.dtypes
-
-        schema = self.collect_schema()
-        for col_to_explode in columns:
-            dtype = schema[col_to_explode]
-
-            if dtype != dtypes.List:
-                msg = (
-                    f"`explode` operation not supported for dtype `{dtype}`, "
-                    "expected List type"
-                )
-                raise InvalidOperationError(msg)
-
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        explode_col = self._validate_explode_columns(columns)
         column_names = self.columns
 
-        if len(columns) != 1:
-            msg = (
-                "Exploding on multiple columns is not supported with SparkLike backend since "
-                "we cannot guarantee that the exploded columns have matching element counts."
+        # Empty and null lists both explode to a single null row below, so drop the
+        # rows the flags exclude up front. `array_size` is null for null lists.
+        native = self.native
+        if not empty_as_null:
+            native = native.filter(
+                self._F.isnull(explode_col) | (self._F.array_size(explode_col) > 0)
             )
-            raise NotImplementedError(msg)
+        if not keep_nulls:
+            native = native.filter(~self._F.isnull(explode_col))
 
-        if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
-            return self._with_native(
-                self.native.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != columns[0]
-                        else self._F.explode_outer(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                )
+        # Not every sqlframe dialect supports `explode_outer`
+        # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289),
+        # so sqlframe uses `explode`, which drops empty and null lists, and appends
+        # their null rows afterwards.
+        is_sqlframe = self._implementation.is_sqlframe()
+        explode = self._F.explode if is_sqlframe else self._F.explode_outer
+        exploded = native.select(
+            *[
+                self._F.col(col_name).alias(col_name)
+                if col_name != explode_col
+                else explode(col_name).alias(col_name)
+                for col_name in column_names
+            ]
+        )
+        if is_sqlframe and (empty_as_null or keep_nulls):
+            null_rows = native.filter(
+                self._F.isnull(explode_col) | (self._F.array_size(explode_col) == 0)
+            ).select(
+                *[
+                    self._F.col(col_name).alias(col_name)
+                    if col_name != explode_col
+                    else self._F.lit(None).alias(col_name)
+                    for col_name in column_names
+                ]
             )
-        if self._implementation.is_sqlframe():
-            # Not every sqlframe dialect supports `explode_outer` function
-            # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
-            # therefore we simply explode the array column which will ignore nulls and
-            # zero sized arrays, and append these specific condition with nulls (to
-            # match polars behavior).
-
-            def null_condition(col_name: str) -> Column:
-                return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
-
-            return self._with_native(
-                self.native.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != columns[0]
-                        else self._F.explode(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                ).union(
-                    self.native.filter(null_condition(columns[0])).select(
-                        *[
-                            self._F.col(col_name).alias(col_name)
-                            if col_name != columns[0]
-                            else self._F.lit(None).alias(col_name)
-                            for col_name in column_names
-                        ]
-                    )
-                )
-            )
-        msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
-        raise AssertionError(msg)
+            exploded = exploded.union(null_rows)
+        return self._with_native(exploded)
 
     def unpivot(
         self,
