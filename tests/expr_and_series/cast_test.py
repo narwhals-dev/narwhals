@@ -312,10 +312,10 @@ def test_cast_datetime_tz_aware(
 def test_cast_datetime_utc(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if (
-        "dask" in str(constructor)
+    if "dask" in str(constructor) or (
         # https://github.com/eakmanrq/sqlframe/issues/406
-        or "sqlframe" in str(constructor)
+        "sqlframe" in str(constructor)
+        and nw.Implementation.SQLFRAME._backend_version() < (4, 7)
     ):
         request.applymarker(pytest.mark.xfail)
     if is_pyarrow_windows_no_tzdata(constructor):

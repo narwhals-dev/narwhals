@@ -203,6 +203,10 @@ jobs:
           cd py-shiny
           uv pip uninstall narwhals
           uv pip install -e ./..
+          # Temporary pin to get CI green: pytest 9.2.0 deprecates session-scoped fixtures
+          # defined as instance methods, which pytest-playwright 0.10.0's fallback
+          # `base_url` is, and py-shiny turns that warning into a setup error.
+          uv pip install "pytest<9.2"
       - name: show-deps
         env:
           UV_SYSTEM_PYTHON: "1"
@@ -396,7 +400,9 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" pytest pytest-benchmark pytest-cov
+          # Temporary pin to get CI green: pytest-benchmark 5.3.0 reads `Function._nodeid`,
+          # which pytest 9.2.0 removed.
+          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" "pytest<9.2" pytest-benchmark pytest-cov
           uv pip install .
       - name: install-narwhals-dev
         run: |

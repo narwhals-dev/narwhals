@@ -416,7 +416,7 @@ def is_native_pandas(obj: Any) -> TypeIs[NativePandas]:
         (pd := get_pandas()) is not None and isinstance(obj, (pd.DataFrame, pd.Series))
     ) or any(
         (mod := _get_imported_module(module_name)) is not None
-        and isinstance(obj, (mod.pandas.DataFrame, mod.pandas.Series))
+        and isinstance(obj, (mod.DataFrame, mod.Series))
         for module_name in IMPORT_HOOKS
     )
 

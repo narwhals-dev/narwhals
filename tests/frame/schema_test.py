@@ -382,6 +382,7 @@ def test_map_dtype_duckdb() -> None:
     rel = duckdb.sql(
         "SELECT * FROM (VALUES (0, MAP{'a': 1, 'b': NULL}), (1, MAP{}), (2, NULL)) t(i, m)"
     )
+    assert rel is not None
     nwdf = nw.from_native(rel)
     assert nwdf.collect_schema() == {"i": nw.Int32, "m": nw.Map(nw.String, nw.Int32)}
     result = nwdf.select("i", nw.col("m").cast(nw.Map(nw.String, nw.Int64))).sort("i")
