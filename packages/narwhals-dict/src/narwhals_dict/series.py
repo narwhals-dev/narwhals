@@ -426,16 +426,17 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             # which already handles alignment and null propagation.
             return super().is_between(lower_bound, upper_bound, closed)
         values = self.native
-        if closed == "left":
-            result = [None if v is None else lo <= v < hi for v in values]
-        elif closed == "right":
-            result = [None if v is None else lo < v <= hi for v in values]
-        elif closed == "none":
-            result = [None if v is None else lo < v < hi for v in values]
-        elif closed == "both":
-            result = [None if v is None else lo <= v <= hi for v in values]
-        else:
-            assert_never(closed)
+        match closed:
+            case "left":
+                result = [None if v is None else lo <= v < hi for v in values]
+            case "right":
+                result = [None if v is None else lo < v <= hi for v in values]
+            case "none":
+                result = [None if v is None else lo < v < hi for v in values]
+            case "both":
+                result = [None if v is None else lo <= v <= hi for v in values]
+            case _:
+                assert_never(closed)
         return self._with_native(result, preserve_broadcast=True)
 
     # Aggregations (return Python scalars, `None` for empty/all-null where applicable)
@@ -530,19 +531,20 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         position = (len(values) - 1) * quantile
         lower = values[math.floor(position)]
         higher = values[math.ceil(position)]
-        if interpolation == "lower":
-            result = lower
-        elif interpolation == "higher":
-            result = higher
-        elif interpolation == "midpoint":
-            result = (lower + higher) / 2
-        elif interpolation == "linear":
-            result = lower + (higher - lower) * (position - math.floor(position))
-        elif interpolation == "nearest":
-            # Polars rounds a tie up, where `round` would round it to even.
-            result = values[math.floor(position + 0.5)]
-        else:
-            assert_never(interpolation)
+        match interpolation:
+            case "lower":
+                result = lower
+            case "higher":
+                result = higher
+            case "midpoint":
+                result = (lower + higher) / 2
+            case "linear":
+                result = lower + (higher - lower) * (position - math.floor(position))
+            case "nearest":
+                # Polars rounds a tie up, where `round` would round it to even.
+                result = values[math.floor(position + 0.5)]
+            case _:
+                assert_never(interpolation)
         return float(result)
 
     def any(self) -> bool:
@@ -738,18 +740,19 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                 end += 1
             dense_rank += 1
             for offset in range(end - start):
-                if method == "average":
-                    rank_value: float = (start + 1 + end) / 2
-                elif method == "min":
-                    rank_value = start + 1
-                elif method == "max":
-                    rank_value = end
-                elif method == "dense":
-                    rank_value = dense_rank
-                elif method == "ordinal":
-                    rank_value = start + offset + 1
-                else:
-                    assert_never(method)
+                match method:
+                    case "average":
+                        rank_value: float = (start + 1 + end) / 2
+                    case "min":
+                        rank_value = start + 1
+                    case "max":
+                        rank_value = end
+                    case "dense":
+                        rank_value = dense_rank
+                    case "ordinal":
+                        rank_value = start + offset + 1
+                    case _:
+                        assert_never(method)
                 result[ordered[start + offset][1]] = rank_value
             start = end
         return self._with_native(result)
