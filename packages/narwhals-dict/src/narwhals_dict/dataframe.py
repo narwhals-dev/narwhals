@@ -370,47 +370,20 @@ class DictDataFrame(
         self, by: Sequence[str], *, descending: bool | Sequence[bool], nulls_last: bool
     ) -> list[int]:
         """Row indices ordered by `by`, ascending unless `descending` says otherwise."""
-        columns = [nan_last_column(self.native[name]) for name in by]
-        if len(columns) == 1:
-            # Single key (the common case): sort the non-null positions directly
-            # on the column values and add nulls onto the requested end.
-            # Both passes and the stable sort preserve original order for ties.
-            column, size = columns[0], len(self)
-            desc = descending if isinstance(descending, bool) else descending[0]
-            non_null = sorted(
-                (i for i in range(size) if column[i] is not None),
-                key=column.__getitem__,
-                reverse=desc,
-            )
-            nulls = [i for i in range(size) if column[i] is None]
-            return non_null + nulls if nulls_last else nulls + non_null
-        if isinstance(descending, bool):
-            # Uniform direction: sort once on a per-row tuple key, letting Python's
-            # tuple comparison do the work. A null can't be in the key directly
-            # as `None < value` raises, so each cell becomes a `(rank, value)` pair:
-            # non-nulls share rank 0 and compare by value, while nulls take a rank
-            # that floats them to the required end and a constant value
-            # (so null-vs-null never compares).
-            # `reverse` flips the null rank too, hence `nulls_last == descending`.
-            null_rank = -1 if nulls_last == descending else 1
-
-            def key(index: int) -> tuple[tuple[int, Any], ...]:
-                return tuple(
-                    (0, value) if (value := column[index]) is not None else (null_rank, 0)
-                    for column in columns
-                )
-
-            return sorted(range(len(self)), key=key, reverse=descending)
-        # Mixed per-column directions can't be a single tuple sort, so fall back
-        # to repeated stable sorts, from the least to the most significant key.
+        flags = [descending] * len(by) if isinstance(descending, bool) else descending
         indices = list(range(len(self)))
-        for column, desc in reversed(tuple(zip(columns, descending, strict=True))):
+        # Python's sort is stable (with `reverse=True` too), so sorting by each key
+        # from the least to the most significant one orders by all of them, keyed
+        # in C by `column.__getitem__` rather than by a per-row Python tuple. Nulls
+        # can't be compared, so they are split off onto the requested end.
+        for name, desc in reversed(tuple(zip(by, flags, strict=True))):
+            column = nan_last_column(self.native[name])
+            if None not in column:
+                indices.sort(key=column.__getitem__, reverse=desc)
+                continue
             nulls = [i for i in indices if column[i] is None]
-            rest = sorted(
-                (i for i in indices if column[i] is not None),
-                key=lambda i: column[i],
-                reverse=desc,
-            )
+            rest = [i for i in indices if column[i] is not None]
+            rest.sort(key=column.__getitem__, reverse=desc)
             indices = rest + nulls if nulls_last else nulls + rest
         return indices
 

@@ -14,7 +14,7 @@ from narwhals_dict.dataframe import DictDataFrame
 from narwhals_dict.expr import DictExpr
 from narwhals_dict.selectors import DictSelectorNamespace
 from narwhals_dict.series import DictSeries
-from narwhals_dict.utils import csv_to_native, to_str
+from narwhals_dict.utils import csv_to_native
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -196,14 +196,14 @@ class DictNamespace(
     ) -> DictExpr:
         def reducer(row: tuple[Any, ...]) -> Any:
             if ignore_nulls:
-                values = [value for value in row if value is not None]
-            elif any(value is None for value in row):
-                return None
-            else:
-                values = list(row)
-            return separator.join(map(to_str, values))
+                return separator.join(value for value in row if value is not None)
+            return None if None in row else separator.join(row)
 
-        return self._horizontal(exprs, reducer)
+        # Cast first (Polars' rendering, e.g. `true` for bools), so a row without
+        # nulls joins in C via `separator.join`.
+        string = self._version.dtypes.String()
+        strings = [expr.cast(string) for expr in exprs]
+        return self._horizontal(strings, reducer, separator.join)
 
     # `when`/`then`/`otherwise` chains are desugared into nested `when_then` calls,
     # which `EagerNamespace` implements on top of the `_if_then_else` hook.

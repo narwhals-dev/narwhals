@@ -12,6 +12,7 @@ from narwhals_dict.utils import (
     MICROSECONDS_PER_UNIT,
     datetime_to_us,
     duration_to_ns,
+    first_non_null,
     timedelta_to_us,
     trunc_div,
 )
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals_dict.series import DictSeries
 
 _NS_PER_MINUTE = 60_000_000_000
+_US_PER_DAY = 86_400_000_000
 
 
 def _add_months(value: datetime | date, months: int) -> datetime | date:
@@ -31,6 +33,26 @@ def _add_months(value: datetime | date, months: int) -> datetime | date:
     month = month0 % 12 + 1
     day = min(value.day, monthrange(year, month)[1])
     return value.replace(year=year, month=month, day=day)
+
+
+def _floor_time_of_day(
+    every_us: int, *, fallback: Callable[[Any], Any]
+) -> Callable[[Any], Any]:
+    """`truncate` for an `every` that divides a day, `fallback` for plain dates.
+
+    The epoch is a midnight, so flooring the time of day (in local wall time) gives the
+    same result as flooring the time since the epoch, without its arithmetic.
+    """
+
+    def fn(value: Any) -> Any:
+        if not isinstance(value, datetime):
+            return fallback(value)
+        us = value.microsecond + 1_000_000 * (
+            value.second + 60 * (value.minute + 60 * value.hour)
+        )
+        return value - timedelta(microseconds=us % every_us)
+
+    return fn
 
 
 class DictSeriesDateTimeNamespace(
@@ -42,6 +64,9 @@ class DictSeriesDateTimeNamespace(
         )
 
     def to_string(self, format: str) -> DictSeries:
+        if format == "%Y-%m-%d" and isinstance(first_non_null(self.native), date):
+            # The (date part's) ISO form, in C and ~5x faster than `strftime`.
+            return self._unary(date.isoformat)
         # Polars' parser treats `'%.f'` as `strftime` does `'.%f'`.
         fmt = format.replace("%S%.f", "%S.%f")
         return self._unary(lambda value: value.strftime(fmt))
@@ -184,7 +209,11 @@ class DictSeriesDateTimeNamespace(
             truncated = EPOCH_NAIVE + timedelta(microseconds=us - us % every_us)
             return truncated.replace(tzinfo=tzinfo)
 
-        return self._unary(fn_time)
+        return self._unary(
+            fn_time
+            if _US_PER_DAY % every_us
+            else _floor_time_of_day(every_us, fallback=fn_time)
+        )
 
     def offset_by(self, by: str) -> DictSeries:
         interval = Interval.parse_no_constraints(by)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 import re
 from datetime import datetime, time
-from functools import lru_cache
+from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerSeriesNamespace
@@ -20,28 +20,25 @@ _RUST_GROUP_REF = re.compile(r"\$(?:\$|\{([^}]*)\}|([0-9A-Za-z_]+))")
 
 
 @lru_cache(maxsize=256)
-def _polars_replacement(template: str) -> Callable[[re.Match[str]], str]:
-    """An `re.sub` replacement following Polars' (Rust regex) template syntax.
+def _python_template(template: str, pattern: re.Pattern[str]) -> str:
+    r"""Translate a Polars (Rust regex) replacement template to Python's `re` syntax.
 
-    `$1`, `$name` and `${name}` expand to that group (empty if it doesn't exist or
-    didn't match) and `$$` is a literal `$`. Unlike Python templates, backslashes are
-    literal: a callable replacement is returned as is, with no escape processing.
+    `$1`, `$name` and `${name}` become `\g<...>` when `pattern` has that group, and
+    nothing otherwise (Rust expands a missing group to ""; an unmatched one is ""
+    in both). `$$` is a literal `$`, and backslashes, literal in Rust, are escaped.
+    `re` then expands the template in C, with no Python call per match.
     """
-    if "$" not in template:
-        return lambda _: template
 
-    def expand(match: re.Match[str]) -> str:
-        def group(ref: re.Match[str]) -> str:
-            if (name := ref[1] if ref[1] is not None else ref[2]) is None:
-                return "$"
-            try:
-                return match.group(int(name) if name.isdigit() else name) or ""
-            except IndexError:
-                return ""
+    def group(ref: re.Match[str]) -> str:
+        if (name := ref[1] if ref[1] is not None else ref[2]) is None:
+            return "$"
+        key: int | str = int(name) if name.isdigit() else name
+        exists = (
+            key <= pattern.groups if isinstance(key, int) else key in pattern.groupindex
+        )
+        return f"\\g<{key}>" if exists else ""
 
-        return _RUST_GROUP_REF.sub(group, template)
-
-    return expand
+    return _RUST_GROUP_REF.sub(group, template.replace("\\", "\\\\"))
 
 
 class DictSeriesStringNamespace(
@@ -76,26 +73,31 @@ class DictSeriesStringNamespace(
             msg = "dict backend `.str.replace` with `n > 1` only supports str replacement values"
             raise TypeError(msg)
 
-        if n == 0:
+        # Unlike `_with_other`, a null replacement leaves the string as is (Polars).
+        replacements, is_scalar = self.compliant._extract_comparand(value)
+        if n == 0 or (is_scalar and replacements is None):
             return self.with_native(list(self.native))
+        # A scalar replacement is prepared once, so each row is a single C call.
         if literal:
+            if is_scalar:
+                return self._unary(
+                    operator.methodcaller("replace", pattern, replacements, n)
+                )
 
             def fn(string: str, replacement: str) -> str:
                 return string.replace(pattern, replacement, n)
         else:
             # `pattern` is a fixed regex, so compile it once rather than per row.
-            sub = re.compile(pattern).sub
+            compiled = re.compile(pattern)
             count = max(n, 0)  # `re.sub` replaces all with `count=0`, i.e. `n=-1`
+            if is_scalar:
+                template = _python_template(replacements, compiled)
+                return self._unary(partial(compiled.sub, template, count=count))
 
             def fn(string: str, replacement: str) -> str:
-                return sub(_polars_replacement(replacement), string, count=count)
+                template = _python_template(replacement, compiled)
+                return compiled.sub(template, string, count=count)
 
-        # Unlike `_with_other`, a null replacement leaves the string as is (Polars).
-        replacements, is_scalar = self.compliant._extract_comparand(value)
-        if is_scalar:
-            if replacements is None:
-                return self.with_native(list(self.native))
-            return self._unary(lambda string: fn(string, replacements))
         return self.with_native(
             [
                 string

@@ -551,9 +551,32 @@ def _caster_for(dtype: IntoDType, version: Version) -> Callable[[Any], Any]:
     raise NotImplementedError(msg)
 
 
-def cast_values(values: Iterable[Any], dtype: IntoDType, version: Version) -> list[Any]:
+# Casters that leave values already of this exact type unchanged.
+_NO_OP_TYPE: Mapping[Callable[[Any], Any], type] = {
+    to_str: str,
+    _to_int: int,
+    float: float,
+    bool: bool,
+}
+_PLAIN_STR_TYPES = frozenset({int, float, str})
+
+
+def cast_values(values: Sequence[Any], dtype: IntoDType, version: Version) -> list[Any]:
     """Cast values elementwise to `dtype`'s native representation, propagating nulls."""
     caster = _caster_for(dtype, version)
+    target = _NO_OP_TYPE.get(caster)
+    first = type(first_non_null(values))
+    # The full type scan pays off only if the first value hints at a shortcut.
+    if target is first or (caster is to_str and first in _PLAIN_STR_TYPES):
+        types = set(map(type, values)) - {type(None)}
+        if types <= {target}:
+            # Nothing to convert: share the column, as no operation mutates it in place.
+            return values if isinstance(values, list) else list(values)
+        if caster is to_str and types <= _PLAIN_STR_TYPES:
+            # `to_str` reduces to `str` for these types: skip its checks per value.
+            caster = str
+    if None not in values:
+        return list(map(caster, values))
     return [None if value is None else caster(value) for value in values]
 
 
@@ -590,7 +613,9 @@ def nan_last(value: Any) -> tuple[bool, Any]:
 
 def nan_last_key(values: Iterable[Any]) -> Callable[[Any], Any] | None:
     """`nan_last` if `values` hold a NaN, else no key at all (a faster, plain sort)."""
-    return nan_last if any(map(_is_nan, values)) else None
+    # All in C: only floats reach `math.isnan`, with no Python call per value.
+    has_nan = any(map(math.isnan, filter(float.__instancecheck__, values)))
+    return nan_last if has_nan else None
 
 
 def nan_last_column(values: Sequence[Any]) -> Sequence[Any]:

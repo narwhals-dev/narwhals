@@ -388,6 +388,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_unary(math.ceil)
 
     def round(self, decimals: int) -> Self:
+        if None not in self.native:
+            return self._with_native(list(map(round, self.native, repeat(decimals))))
         return self._with_unary(lambda value: round(value, decimals))
 
     def cast(self, dtype: IntoDType) -> Self:
@@ -725,35 +727,45 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         keys = nan_last_column(self.native)
-        ordered = sorted(
-            ((value, index) for index, value in enumerate(keys) if value is not None),
-            key=operator.itemgetter(0),
-            reverse=descending,
-        )
-        size = len(ordered)
-        result: list[Any] = [None] * len(self.native)
+        # Sort row indices by key (stable, so ties keep their order), in C.
+        order = [index for index, key in enumerate(keys) if key is not None]
+        order.sort(key=keys.__getitem__, reverse=descending)
+        size = len(order)
+        result: list[Any] = [None] * len(keys)
         start = 0
         dense_rank = 0
         while start < size:
+            key = keys[order[start]]
             end = start + 1
-            while end < size and ordered[end][0] == ordered[start][0]:
+            while end < size and keys[order[end]] == key:
                 end += 1
             dense_rank += 1
-            for offset in range(end - start):
-                match method:
-                    case "average":
-                        rank_value: float = (start + 1 + end) / 2
-                    case "min":
-                        rank_value = start + 1
-                    case "max":
-                        rank_value = end
-                    case "dense":
-                        rank_value = dense_rank
-                    case "ordinal":
-                        rank_value = start + offset + 1
-                    case _:
-                        assert_never(method)
-                result[ordered[start + offset][1]] = rank_value
+            if end - start == 1:  # no tie, the common case: skip the dispatch below
+                result[order[start]] = (
+                    dense_rank
+                    if method == "dense"
+                    else float(end)
+                    if method == "average"
+                    else end
+                )
+                start = end
+                continue
+            ranks: Iterator[float]
+            match method:
+                case "average":
+                    ranks = repeat((start + 1 + end) / 2)
+                case "min":
+                    ranks = repeat(start + 1)
+                case "max":
+                    ranks = repeat(end)
+                case "dense":
+                    ranks = repeat(dense_rank)
+                case "ordinal":
+                    ranks = count(start + 1)
+                case _:
+                    assert_never(method)
+            for index, rank_value in zip(order[start:end], ranks, strict=False):
+                result[index] = rank_value
             start = end
         return self._with_native(result)
 
@@ -791,6 +803,13 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     def _cum_agg(self, op: Callable[[Any, Any], Any], *, reverse: bool) -> Self:
         native = self.native
+        if None not in native:
+            # No nulls to skip: `op` (a C builtin) accumulates entirely in C.
+            if not reverse:
+                return self._with_native(list(accumulate(native, op)))
+            result = list(accumulate(reversed(native), op))
+            result.reverse()
+            return self._with_native(result)
         # Accumulate skipping nulls, then restore nulls at their original positions.
         accumulated: Iterator[Any] = accumulate(
             reversed(native) if reverse else native,
