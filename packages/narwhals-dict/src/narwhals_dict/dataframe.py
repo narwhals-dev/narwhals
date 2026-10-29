@@ -264,8 +264,10 @@ class DictDataFrame(
     def rename(self, mapping: Mapping[str, str]) -> Self:
         if error := self._check_columns_exist(list(mapping)):
             raise error
-        native = {mapping.get(name, name): column for name, column in self.native.items()}
-        check_column_names_are_unique(native.keys())
+        # Check before building the dict: duplicate keys would silently drop columns.
+        names = [mapping.get(name, name) for name in self.native]
+        check_column_names_are_unique(names)
+        native = dict(zip(names, self.native.values(), strict=True))
         return self._with_native(native, validate_column_names=False)
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
