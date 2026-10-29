@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
@@ -995,3 +996,11 @@ def test_join_on_nan_values(
     sort_by = ["x", "y"] if how == "full" else ["x"]
     result = df_left.join(df_right, on="k", how=how).sort(sort_by, nulls_last=True)
     assert_equal_data(result, expected)
+    # `assert_equal_data` accepts `null` where `NaN` is expected.
+    key_cols: list[str] = [name for name in ("k", "k_right") if name in expected]
+    nan_counts = result.select(nw.col(key_cols).is_nan().cast(nw.Int64).sum())
+    expected_nan_counts = {
+        name: [sum(isinstance(v, float) and math.isnan(v) for v in expected[name])]
+        for name in key_cols
+    }
+    assert_equal_data(nan_counts, expected_nan_counts)
