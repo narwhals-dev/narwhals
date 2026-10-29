@@ -946,3 +946,52 @@ def test_join_on_strings(constructor: Constructor) -> None:
     result = df_l.join(df_r, on="a").sort("a")
     expected = {"a": ["one", "two", "two"], "b": [5, 6, 6]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("how", "expected"),
+    [
+        ("inner", {"k": [0.0, float("nan")], "x": [1, 2], "y": [20, 10]}),
+        (
+            "left",
+            {
+                "k": [0.0, float("nan"), None, 1.0],
+                "x": [1, 2, 3, 4],
+                "y": [20, 10, None, None],
+            },
+        ),
+        ("semi", {"k": [0.0, float("nan")], "x": [1, 2]}),
+        ("anti", {"k": [None, 1.0], "x": [3, 4]}),
+        (
+            "full",
+            {
+                "k": [0.0, float("nan"), None, 1.0, None, None],
+                "x": [1, 2, 3, 4, None, None],
+                "k_right": [0.0, float("nan"), None, None, None, 2.0],
+                "y": [20, 10, None, None, 30, 40],
+            },
+        ),
+    ],
+)
+def test_join_on_nan_values(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    how: JoinStrategy,
+    expected: dict[str, list[Any]],
+) -> None:
+    # `NaN` matches `NaN` and `null` never matches, as in Polars.
+    # See https://github.com/narwhals-dev/narwhals/issues/3554
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
+        # pandas-like join keys treat `NaN` as missing, so `NaN` rows never match.
+        request.applymarker(pytest.mark.xfail)
+    nan = float("nan")
+    df_left = from_native_lazy(
+        constructor({"k": [0.0, nan, None, 1.0], "x": [1, 2, 3, 4]})
+    )
+    df_right = from_native_lazy(
+        constructor({"k": [nan, 0.0, None, 2.0], "y": [10, 20, 30, 40]})
+    )
+
+    sort_by = ["x", "y"] if how == "full" else ["x"]
+    result = df_left.join(df_right, on="k", how=how).sort(sort_by, nulls_last=True)
+    assert_equal_data(result, expected)
