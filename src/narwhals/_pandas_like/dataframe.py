@@ -601,11 +601,17 @@ class PandasLikeDataFrame(
 
     # --- actions ---
     def group_by(
-        self, keys: Sequence[str] | Sequence[PandasLikeExpr], *, drop_null_keys: bool
+        self,
+        keys: Sequence[str] | Sequence[PandasLikeExpr],
+        *,
+        drop_null_keys: bool,
+        maintain_order: bool = False,
     ) -> PandasLikeGroupBy:
         from narwhals._pandas_like.group_by import PandasLikeGroupBy
 
-        return PandasLikeGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return PandasLikeGroupBy(
+            self, keys, drop_null_keys=drop_null_keys, maintain_order=maintain_order
+        )
 
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
