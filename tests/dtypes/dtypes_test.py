@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import re
 from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
@@ -98,6 +99,31 @@ def test_array_valid() -> None:
 
     with pytest.raises(TypeError, match="invalid input for shape"):
         nw.Array(nw.Int64(), shape="invalid_type")  # type: ignore[arg-type]
+
+
+def test_map_valid() -> None:
+    dtype = nw.Map(nw.Int64, nw.String)
+    assert dtype == nw.Map(nw.Int64, nw.String)
+    assert dtype == nw.Map
+    assert dtype != nw.Map(nw.Int64, nw.Int64)
+    assert dtype != nw.Duration
+    assert repr(dtype) == "Map(Int64, String)"
+    assert_equal_hash(dtype, nw.Map(nw.Int64, nw.String))
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "match"),
+    [
+        (nw.Object, nw.Int64, "`Object` is not allowed as a `Map` key dtype."),
+        (nw.Object(), nw.Int64, "`Object` is not allowed as a `Map` key dtype."),
+        (nw.List, nw.Int64, "'nw.List' is not valid in this context."),
+        (nw.String, nw.Struct, "'nw.Struct' is not valid in this context."),
+        ("str", nw.Int64, "Expected Narwhals dtype, got: 'str'."),
+    ],
+)
+def test_map_invalid(key: Any, value: Any, match: str) -> None:
+    with pytest.raises(TypeError, match=re.escape(match)):
+        nw.Map(key, value)
 
 
 def test_struct_valid() -> None:
