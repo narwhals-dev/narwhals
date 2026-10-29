@@ -6,6 +6,7 @@ from packaging.version import Version as PkgVersion
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, ShapeError
 from tests.utils import (
+    PANDAS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -127,3 +128,17 @@ def test_with_columns_numpy_array(constructor: Constructor) -> None:
     else:
         with pytest.raises(ValueError, match="lazy-only, but `new_series`"):
             df.with_columns(b=arr)
+
+
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="pandas<2 copies in `Series.rename`"
+)
+def test_with_columns_numpy_array_pandas_no_copy() -> None:
+    pytest.importorskip("pandas")
+    import numpy as np
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
+    arr = np.array([4, 5, 6])
+    result = df.with_columns(b=arr)
+    assert np.shares_memory(result["b"].to_numpy(), arr)

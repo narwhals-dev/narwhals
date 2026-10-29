@@ -54,6 +54,10 @@ class FakeCompliantLazyFrame:
         return self
 
 
+class FakeCompliantEagerDataFrame(FakeCompliantDataFrame, FakeCompliantLazyFrame):
+    """Eager compliant frames define both dunders, like `ArrowDataFrame` does."""
+
+
 class FakeCompliantSeries:
     def __narwhals_series__(self) -> Self:  # pragma: no cover
         return self
@@ -306,6 +310,14 @@ def test_series_scatter_plugin() -> None:
 
 
 @requires_plugin
+def test_series_getitem_list_plugin() -> None:
+    # The native series is a `list`, so a list index is also of the native series type.
+    s = nw.Series.from_iterable("a", [1, 2, 3], backend=BACKEND)
+    assert s[[2, 0]].to_native() == [3, 1]
+    assert s[[]].to_native() == []
+
+
+@requires_plugin
 def test_dataframe_filter_mask_plugin() -> None:
     # Reaching `all_horizontal` means the mask was built by the plugin's namespace.
     df = nw.from_dict(DATA, backend=BACKEND)
@@ -431,6 +443,7 @@ def test_is_into_dataframe() -> None:
     ("compliant_cls", "expected_kind"),
     [
         (FakeCompliantDataFrame, "dataframe"),
+        (FakeCompliantEagerDataFrame, "dataframe"),
         (FakeCompliantLazyFrame, "lazyframe"),
         (FakeCompliantSeries, "series"),
     ],
@@ -449,6 +462,12 @@ def test_is_into_mocked_plugin(
         assert dependencies.is_into_dataframe(native) is (expected_kind == "dataframe")
         assert dependencies.is_into_lazyframe(native) is (expected_kind == "lazyframe")
         assert dependencies.is_into_series(native) is (expected_kind == "series")
+
+
+def test_get_native_namespace_plugin(plugin_module: ModuleType) -> None:
+    lf = nw.from_native(DATA)  # type: ignore[call-overload]
+    assert nw.get_native_namespace(DATA) is plugin_module  # type: ignore[arg-type]
+    assert nw.get_native_namespace(lf) is plugin_module
 
 
 @requires_plugin

@@ -114,6 +114,12 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def _any_value(self, expr: Column, *, ignore_nulls: bool) -> Column:
         return self._F.any_value(expr, ignoreNulls=ignore_nulls)
 
+    def _singleton_list(self, expr: Column) -> Column:
+        return self._F.array(expr)
+
+    def _list_first(self, expr: Column) -> Column:
+        return expr.getItem(0)
+
     def broadcast(self) -> Self:
         return self.over([self._F.lit(1)], [])
 

@@ -407,10 +407,6 @@ def from_native(
 def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
-) -> DataFrame[IntoDataFrameT]: ...
-@overload
-def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
 @overload
@@ -421,6 +417,10 @@ def from_native(
 def from_native(
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrame[IntoDataFrameT]: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
