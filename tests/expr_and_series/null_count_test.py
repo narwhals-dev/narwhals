@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -28,7 +29,7 @@ def test_null_count_select(constructor: Constructor) -> None:
 def test_null_count_with_columns(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         reason = "broadcasting aggregations requires DuckDB>=1.3"
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data)).lazy()
@@ -60,7 +61,7 @@ def test_null_count_over(
     ):
         reason = "`null_count().over()` is not supported on these backends"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         request.applymarker(pytest.mark.xfail(reason="`over` requires DuckDB>=1.3"))
     df = nw.from_native(constructor(data)).lazy()
     result = df.with_columns(nw.col("a", "b").null_count().over("g")).sort("g")
