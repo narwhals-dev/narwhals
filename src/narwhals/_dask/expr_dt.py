@@ -147,7 +147,11 @@ class DaskExprDateTimeNamespace(
         freq = f"{interval.multiple}{ALIAS_DICT.get(unit, unit)}"
         return self.compliant._with_callable(lambda expr: expr.dt.floor(freq))
 
-    def offset_by(self, by: str) -> DaskExpr:
+    def offset_by(self, by: str | DaskExpr) -> DaskExpr:
+        if not isinstance(by, str):
+            msg = "`dt.offset_by` with an expression is not supported for dask."
+            raise NotImplementedError(msg)
+
         def func(s: dx.Series) -> dx.Series:
             interval = Interval.parse_no_constraints(by)
             unit = interval.unit

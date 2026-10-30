@@ -305,9 +305,10 @@ class PolarsDateTimeNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
         Interval.parse(every)
         return self.__getattr__("truncate")(every)
 
-    def offset_by(self, by: str) -> CompliantT:
-        # Ensure consistent error message is raised.
-        Interval.parse_no_constraints(by)
+    def offset_by(self, by: str | CompliantT) -> CompliantT:
+        if isinstance(by, str):
+            # Ensure consistent error message is raised.
+            Interval.parse_no_constraints(by)
         return self.__getattr__("offset_by")(by)
 
     to_string: Method[CompliantT]
