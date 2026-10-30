@@ -281,15 +281,23 @@ def test_offset_by_expr(constructor: Constructor) -> None:
 
 def test_offset_by_expr_invalid_offsets_give_null(constructor: Constructor) -> None:
     # Documented divergence: SQL backends can't raise per row, unlike Polars.
-    if not any(x in str(constructor) for x in ("duckdb", "sqlframe")):
+    if not any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark")):
         pytest.skip()
+    if (
+        "pyspark" in str(constructor)
+        and "sqlframe" not in str(constructor)
+        and PYSPARK_VERSION < PkgVersion("4")
+    ):
+        pytest.skip(reason="expression `by` requires PySpark 4")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(
-        constructor({"a": [datetime(2021, 3, 1)] * 4, "b": ["1d", "bad", "5ns", None]})
+        constructor(
+            {"a": [datetime(2021, 3, 1)] * 5, "b": ["1d", "bad", "5ns", "1d\n", None]}
+        )
     )
     result = df.select(nw.col("a").dt.offset_by(nw.col("b")))
-    assert_equal_data(result, {"a": [datetime(2021, 3, 2), None, None, None]})
+    assert_equal_data(result, {"a": [datetime(2021, 3, 2), None, None, None, None]})
 
 
 def test_offset_by_invalid_interval(constructor: Constructor) -> None:
