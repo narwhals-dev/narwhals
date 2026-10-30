@@ -18,6 +18,7 @@ from narwhals._utils import (
     is_compliant_series,
     is_index_selector,
     qualified_type_name,
+    supports_arrow_c_array,
     supports_arrow_c_stream,
     unstable,
 )
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
@@ -170,6 +172,56 @@ class Series(Generic[IntoSeriesT]):
         compliant = ns._series.from_numpy(values, context=ns).alias(name)
         if dtype:
             return cls(compliant.cast(dtype), level="full")
+        return cls(compliant, level="full")
+
+    @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        """Construct a Series from an object which supports the PyCapsule Interface.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: Object which implements `__arrow_c_array__` or `__arrow_c_stream__`.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = pa.array([5, 6, 7])
+            >>> nw.Series.from_arrow("arr", arr, backend="polars")
+            ┌───────────────────┐
+            |  Narwhals Series  |
+            |-------------------|
+            |shape: (3,)        |
+            |Series: 'arr' [i64]|
+            |[                  |
+            |        5          |
+            |        6          |
+            |        7          |
+            |]                  |
+            └───────────────────┘
+        """
+        if not (supports_arrow_c_array(values) or supports_arrow_c_stream(values)):
+            msg = f"Given object of type {type(values)} does not support PyCapsule interface"
+            raise TypeError(msg)
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="Series.from_arrow"
+        )
+        compliant = ns._series.from_arrow(values, context=ns).alias(name)
         return cls(compliant, level="full")
 
     @classmethod

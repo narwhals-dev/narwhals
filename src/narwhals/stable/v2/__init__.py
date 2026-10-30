@@ -83,6 +83,7 @@ if TYPE_CHECKING:
         AllowLazy,
         AllowSeries,
         ExcludeSeries,
+        IntoArrowSeries,
         IntoArrowTable,
         OnlySeries,
         PassThroughUnknown,
@@ -293,6 +294,17 @@ class Series(NwSeries[IntoSeriesT]):
         backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
+
+    @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        result = super().from_arrow(name, values, backend=backend)
         return cast("Series[Any]", result)
 
     @classmethod

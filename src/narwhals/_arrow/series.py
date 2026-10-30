@@ -33,6 +33,8 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
+    supports_arrow_c_array,
+    supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -62,6 +64,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -204,6 +207,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return cls.from_iterable(
             data if is_numpy_array_1d(data) else [data], context=context
         )
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        backend_version = context._implementation._backend_version()
+        # NOTE: The stubs don't accept PyCapsule objects in `pa.array` and `pa.chunked_array`
+        into_array: Incomplete = pa.array
+        into_chunked_array: Incomplete = pa.chunked_array
+        if isinstance(data, (pa.Array, pa.ChunkedArray)):
+            native = chunked_array(data)
+        elif supports_arrow_c_array(data) and backend_version >= (14,):
+            native = chunked_array(into_array(data))
+        elif supports_arrow_c_stream(data) and backend_version >= (16,):
+            native = into_chunked_array(data)
+        elif supports_arrow_c_array(data) or supports_arrow_c_stream(
+            data
+        ):  # pragma: no cover
+            msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {type(data).__name__!r}."
+            raise ModuleNotFoundError(msg)
+        else:  # pragma: no cover
+            msg = f"`Series.from_arrow` is not supported for object of type {type(data).__name__!r}."
+            raise TypeError(msg)
+        return cls.from_native(native, context=context)
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:

@@ -36,6 +36,7 @@
         - filter
         - first
         - floor
+        - from_arrow
         - from_iterable
         - from_numpy
         - gather_every
