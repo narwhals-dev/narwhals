@@ -12,6 +12,7 @@ from narwhals._polars.utils import (
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
     PolarsListNamespace,
+    PolarsMapNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
     catch_polars_exception,
@@ -783,6 +784,10 @@ class PolarsSeries:
     def list(self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
 
+    @property
+    def map(self) -> PolarsSeriesMapNamespace:
+        return PolarsSeriesMapNamespace(self)
+
 
 class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
     def __init__(self, series: PolarsSeries) -> None:
@@ -886,6 +891,11 @@ class PolarsSeriesListNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
+
+
+class PolarsSeriesMapNamespace(
+    PolarsSeriesNamespace, PolarsMapNamespace[PolarsSeries, pl.Series]
+): ...
 
 
 class PolarsSeriesStructNamespace(

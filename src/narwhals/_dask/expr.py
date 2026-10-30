@@ -749,4 +749,5 @@ class DaskExpr(
     last = not_implemented()
 
     # namespaces
+    map: Any = not_implemented()
     struct: Any = not_implemented()

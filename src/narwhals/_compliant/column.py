@@ -11,6 +11,7 @@ if TYPE_CHECKING:
         CatNamespace,
         DateTimeNamespace,
         ListNamespace,
+        MapNamespace,
         StringNamespace,
         StructNamespace,
     )
@@ -148,5 +149,7 @@ class CompliantColumn(Protocol):
     def cat(self) -> CatNamespace[Self]: ...
     @property
     def list(self) -> ListNamespace[Self]: ...
+    @property
+    def map(self) -> MapNamespace[Self]: ...
     @property
     def struct(self) -> StructNamespace[Self]: ...
