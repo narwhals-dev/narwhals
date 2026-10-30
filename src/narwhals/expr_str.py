@@ -401,6 +401,7 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
+            If `n` is zero, an empty string is returned for each non-null value.
 
         Examples:
             >>> import pyarrow as pa
@@ -416,7 +417,9 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics_tail: [["taata","atata","kkyun"]]
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=-n, length=None)
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.slice", offset=-n, length=0 if n == 0 else None
+            )
         )
 
     def to_datetime(self, format: str | None = None) -> ExprT:
