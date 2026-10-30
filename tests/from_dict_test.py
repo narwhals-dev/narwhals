@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -130,7 +131,7 @@ def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
 
 
 def test_from_dict_dtype_none(eager_backend: EagerAllowed) -> None:
-    if str(eager_backend) == "pyarrow" and PYARROW_VERSION < (14,):
+    if str(eager_backend) == "pyarrow" and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip()
     schema = {"a": nw.String(), "b": None}
     data = {"a": ["a", "b"], "b": [1, 2]}

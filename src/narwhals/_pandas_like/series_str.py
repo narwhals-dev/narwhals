@@ -36,7 +36,11 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(result)
 
     def len_chars(self) -> PandasLikeSeries:
-        return self.with_native(self.native.str.len())
+        result = self.native.str.len()
+        if result.dtype == object:
+            # pandas returns `object` instead of a number for an all-null `object` column.
+            result = self.implementation.to_native_namespace().to_numeric(result)
+        return self.with_native(result)
 
     def replace(
         self, value: PandasLikeSeries, pattern: str, *, literal: bool, n: int

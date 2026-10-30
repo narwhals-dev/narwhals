@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -19,7 +20,9 @@ MODIN_STR_CAST_REASON = "Modin returns a NumPy unicode dtype when casting to Str
 def test_get_categories_eager(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     if "modin" in str(constructor_eager):
@@ -39,7 +42,9 @@ def test_get_categories_eager(
 def test_get_categories_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     if "modin" in str(constructor_eager):
@@ -68,7 +73,9 @@ def test_get_categories_enum(constructor_eager: ConstructorEager) -> None:
 
 
 def test_get_categories_lazy(constructor_eager: ConstructorEager) -> None:
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
         pytest.skip()
 
     df = nw.from_native(constructor_eager(data)).lazy()

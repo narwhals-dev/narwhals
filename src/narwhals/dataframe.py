@@ -32,11 +32,11 @@ from narwhals._utils import (
     can_lazyframe_collect,
     check_column_names_are_unique,
     check_columns_exist,
+    eager_namespace,
     flatten,
     generate_repr,
     is_compliant_dataframe,
     is_compliant_lazyframe,
-    is_eager_allowed,
     is_index_selector,
     is_iterator,
     is_lazy_allowed,
@@ -47,6 +47,7 @@ from narwhals._utils import (
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
+    validate_bool_flags,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.dtypes import _validate_dtype
@@ -161,9 +162,7 @@ class BaseFrame(Generic[_FrameT]):
         # NOTE: Strings are interpreted as column names.
         out_exprs = []
         ns = self.__narwhals_namespace__()
-        parse = partial(
-            _parse_into_expr, backend=self._compliant._implementation, allow_literal=False
-        )
+        parse = partial(_parse_into_expr, namespace=ns, allow_literal=False)
         all_exprs = chain(
             (parse(x) for x in flatten(exprs)),
             (parse(expr).alias(alias) for alias, expr in named_exprs.items()),
@@ -310,6 +309,7 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
+        validate_bool_flags(flags=descending, by=by, param_name="descending")
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
@@ -318,6 +318,7 @@ class BaseFrame(Generic[_FrameT]):
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
     ) -> Self:
         flatten_by = flatten([by])
+        validate_bool_flags(flags=reverse, by=flatten_by, param_name="reverse")
         return self._with_compliant(
             self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )
@@ -580,17 +581,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
             msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
             raise TypeError(msg)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_arrow(native_frame, context=ns)
-            return cls(compliant, level="full")
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_arrow` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_arrow(df, backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_arrow"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_arrow(native_frame, context=ns)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_dict(
@@ -642,18 +637,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if backend is None:
             data, backend = _from_dict_no_backend(data)
         schema = dict(schema) if schema is not None else None
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
-            return cls(compliant, level="full")
-        # NOTE: (#2786) needs resolving for extensions
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dict` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_dict"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_dicts(
@@ -720,18 +708,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             └──────────────────────────┘
         """
         schema = dict(schema) if schema is not None else None
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
-            return cls(compliant, level="full")
-        # NOTE: (#2786) needs resolving for extensions
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dicts` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_dicts"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_numpy(
@@ -796,16 +777,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise TypeError(msg)
         if not (schema is None or is_sequence_of(schema, str)):
             schema = Schema(schema)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            return cls(ns.from_numpy(data, schema), level="full")
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_numpy` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_numpy"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_numpy(data, schema=schema, context=ns)
+        return cls(compliant, level="full")
 
     def __len__(self) -> int:
         return self._compliant_frame.__len__()
@@ -1783,10 +1759,15 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        impl = self.implementation
+
+        def into_series(values: list[bool]) -> Series[Any]:
+            ns = self.__narwhals_namespace__()
+            return self._series(
+                ns._series.from_iterable(values, context=ns), level="full"
+            )
+
         parsed_predicates = (
-            self._series.from_iterable("", p, backend=impl) if is_list_of(p, bool) else p
-            for p in predicates
+            into_series(p) if is_list_of(p, bool) else p for p in predicates
         )
         return super().filter(*parsed_predicates, **constraints)
 

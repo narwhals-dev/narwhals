@@ -4,6 +4,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
@@ -29,7 +30,7 @@ def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str])
 def test_drop_strict(
     request: pytest.FixtureRequest, constructor: Constructor, *, strict: bool
 ) -> None:
-    if "polars_lazy" in str(constructor) and POLARS_VERSION < (1, 0, 0) and strict:
+    if "polars_lazy" in str(constructor) and POLARS_VERSION < PkgVersion("1") and strict:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}

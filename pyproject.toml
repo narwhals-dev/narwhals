@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.27.0"
+version = "2.28.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -76,6 +76,7 @@ tests = [
   "pytest-randomly",
   "pytest-xdist",
   "hypothesis>=6.0.0",
+  "packaging>=21.3",
 ]
 # NOTE: `plugins` is deliberately NOT included within `tests`.
 # `test-plugin` is a workspace member, so pulling it into `tests` makes the group unresolvable
@@ -322,6 +323,7 @@ extend-ignore-names = [
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
   "PLR0917", # too-many-positional-arguments
+  "SIM300",  # yoda-conditions (flips `PANDAS_VERSION < PkgVersion("2.2")`)
 ]
 
 "tpch/tests/*" = ["S101"]
@@ -367,6 +369,9 @@ filterwarnings = [
   # Deprecation raised by DuckDB
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:sqlframe',
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:ibis',
+
+  # Deprecation raised by pandas>=3.1, ibis reads the option on every `execute`
+  'ignore:.*future.infer_string. option is deprecated:DeprecationWarning:ibis',
 
   # https://discuss.python.org/t/types-uniontype-was-merged-with-wrong-class-not-even-a-class/102275/31
   "ignore:.*'_UnionGenericAlias' is deprecated:DeprecationWarning",
@@ -458,7 +463,8 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',  # src: tuple comparisons
+  'PANDAS_VERSION < PkgVersion\(',  # tests: packaging.version.Version comparisons
 ]
 
 [tool.mypy]

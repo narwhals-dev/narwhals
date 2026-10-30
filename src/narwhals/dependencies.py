@@ -1,6 +1,6 @@
 # pandas / Polars / etc. : if a user passes a dataframe from one of these
 # libraries, it means they must already have imported the given module.
-# So, we can just check sys.modules.
+# So, we can just check sys.modules (once the module has finished importing).
 from __future__ import annotations
 
 import sys
@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._exceptions import issue_warning
 
 if TYPE_CHECKING:
+    from types import ModuleType
     from typing import TypeGuard
 
     import cudf
@@ -43,89 +44,102 @@ if TYPE_CHECKING:
 # We silently allow these but - given that they claim
 # to be drop-in replacements for pandas - testing is
 # their responsibility.
-IMPORT_HOOKS = frozenset(["fireducks"])
+IMPORT_HOOKS = frozenset(["fireducks.pandas"])
+
+
+def _get_imported_module(name: str, /) -> ModuleType | None:
+    """Get module `name` if it has finished importing, else return None."""
+    module = sys.modules.get(name)
+    # A module enters `sys.modules` before its body runs, so another thread can see it
+    # half-built (#4067). Same check CPython's import system makes, see
+    # `importlib._bootstrap._find_and_load`.
+    if module is not None and getattr(
+        getattr(module, "__spec__", None), "_initializing", False
+    ):
+        return None
+    return module
 
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
-    return sys.modules.get("polars", None)
+    return _get_imported_module("polars")
 
 
 def get_pandas() -> Any:
     """Get pandas module (if already imported - else return None)."""
-    return sys.modules.get("pandas", None)
+    return _get_imported_module("pandas")
 
 
 def get_modin() -> Any:  # pragma: no cover
     """Get modin.pandas module (if already imported - else return None)."""
-    return sys.modules.get("modin.pandas", None)
+    return _get_imported_module("modin.pandas")
 
 
 def get_cudf() -> Any:
     """Get cudf module (if already imported - else return None)."""
-    return sys.modules.get("cudf", None)
+    return _get_imported_module("cudf")
 
 
 def get_cupy() -> Any:
     """Get cupy module (if already imported - else return None)."""
-    return sys.modules.get("cupy", None)
+    return _get_imported_module("cupy")
 
 
 def get_pyarrow() -> Any:  # pragma: no cover
     """Get pyarrow module (if already imported - else return None)."""
-    return sys.modules.get("pyarrow", None)
+    return _get_imported_module("pyarrow")
 
 
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
-    return sys.modules.get("numpy", None)
+    return _get_imported_module("numpy")
 
 
 def get_dask() -> Any:  # pragma: no cover
     """Get dask (if already imported - else return None)."""
-    return sys.modules.get("dask", None)
+    return _get_imported_module("dask")
 
 
 def get_dask_dataframe() -> Any:
     """Get dask.dataframe module (if already imported - else return None)."""
-    return sys.modules.get("dask.dataframe", None)
+    return _get_imported_module("dask.dataframe")
 
 
 def get_duckdb() -> Any:
     """Get duckdb module (if already imported - else return None)."""
-    return sys.modules.get("duckdb", None)
+    return _get_imported_module("duckdb")
 
 
 def get_ibis() -> Any:
     """Get ibis module (if already imported - else return None)."""
-    return sys.modules.get("ibis", None)
+    return _get_imported_module("ibis")
 
 
 def get_dask_expr() -> Any:  # pragma: no cover
     """Get dask_expr module (if already imported - else return None)."""
     if (dd := get_dask_dataframe()) is not None and hasattr(dd, "dask_expr"):
         return dd.dask_expr
-    return sys.modules.get("dask_expr", None)
+    return _get_imported_module("dask_expr")
 
 
 def get_pyspark() -> Any:  # pragma: no cover
     """Get pyspark module (if already imported - else return None)."""
-    return sys.modules.get("pyspark", None)
+    return _get_imported_module("pyspark")
 
 
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
-    return sys.modules.get("pyspark.sql", None)
+    return _get_imported_module("pyspark.sql")
 
 
 def get_pyspark_connect() -> Any:
     """Get pyspark.sql.connect module (if already imported - else return None)."""
-    return sys.modules.get("pyspark.sql.connect", None)
+    return _get_imported_module("pyspark.sql.connect")
 
 
 def get_sqlframe() -> Any:
     """Get sqlframe module (if already imported - else return None)."""
-    return sys.modules.get("sqlframe", None)
+    return _get_imported_module("sqlframe")
 
 
 def _warn_if_narwhals_df_or_lf(frame: Any, /) -> None:
@@ -157,8 +171,8 @@ def _warn_if_narwhals_series(ser: Any, /) -> None:
 def _is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
-        (mod := sys.modules.get(module_name, None)) is not None
-        and isinstance(df, mod.pandas.DataFrame)
+        (mod := _get_imported_module(module_name)) is not None
+        and isinstance(df, mod.DataFrame)
         for module_name in IMPORT_HOOKS
     )
 
@@ -176,8 +190,8 @@ def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
 def _is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
-        (mod := sys.modules.get(module_name, None)) is not None
-        and isinstance(ser, mod.pandas.Series)
+        (mod := _get_imported_module(module_name)) is not None
+        and isinstance(ser, mod.Series)
         for module_name in IMPORT_HOOKS
     )
 
@@ -195,8 +209,8 @@ def is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
 def is_pandas_index(index: Any) -> TypeIs[pd.Index[Any]]:
     """Check whether `index` is a pandas Index without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or any(
-        (mod := sys.modules.get(module_name, None)) is not None
-        and isinstance(index, mod.pandas.Index)
+        (mod := _get_imported_module(module_name)) is not None
+        and isinstance(index, mod.Index)
         for module_name in IMPORT_HOOKS
     )
 
@@ -446,13 +460,9 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
 
 def _is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
-    if get_pyspark_connect() is not None:  # pragma: no cover
-        try:
-            from pyspark.sql.connect.dataframe import DataFrame
-        except ImportError:
-            return False
-        return isinstance(df, DataFrame)
-    return False
+    return (
+        connect_dataframe := _get_imported_module("pyspark.sql.connect.dataframe")
+    ) is not None and isinstance(df, connect_dataframe.DataFrame)
 
 
 def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
@@ -467,11 +477,9 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
 
 def _is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
     """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
-    if get_sqlframe() is not None:
-        from sqlframe.base.dataframe import BaseDataFrame
-
-        return isinstance(df, BaseDataFrame)
-    return False  # pragma: no cover
+    return (
+        sqlframe_dataframe := _get_imported_module("sqlframe.base.dataframe")
+    ) is not None and isinstance(df, sqlframe_dataframe.BaseDataFrame)
 
 
 def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:

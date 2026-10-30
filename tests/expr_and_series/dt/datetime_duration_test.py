@@ -4,12 +4,16 @@ from datetime import timedelta
 from typing import Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {
-    "a": [None, timedelta(minutes=1, seconds=1, milliseconds=1, microseconds=1)],
+    "a": [
+        None,
+        timedelta(days=1, hours=1, minutes=1, seconds=1, milliseconds=1, microseconds=1),
+    ],
     "b": [timedelta(milliseconds=2), timedelta(milliseconds=1, microseconds=300)],
 }
 
@@ -17,11 +21,11 @@ data = {
 @pytest.mark.parametrize(
     ("attribute", "expected_a", "expected_b"),
     [
-        ("total_minutes", [0, 1], [0, 0]),
-        ("total_seconds", [0, 61], [0, 0]),
-        ("total_milliseconds", [0, 61001], [2, 1]),
-        ("total_microseconds", [0, 61001001], [2000, 1300]),
-        ("total_nanoseconds", [0, 61001001000], [2000000, 1300000]),
+        ("total_minutes", [0, 1501], [0, 0]),
+        ("total_seconds", [0, 90061], [0, 0]),
+        ("total_milliseconds", [0, 90061001], [2, 1]),
+        ("total_microseconds", [0, 90061001001], [2000, 1300]),
+        ("total_nanoseconds", [0, 90061001001000], [2000000, 1300000]),
     ],
 )
 def test_duration_attributes(
@@ -31,7 +35,7 @@ def test_duration_attributes(
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor):
         pytest.skip()
     if "pyspark" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -63,7 +67,7 @@ def test_duration_attributes_nano(
     attribute: str,
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor):
         pytest.skip()
     if "pyspark" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -83,11 +87,11 @@ def test_duration_attributes_nano(
 @pytest.mark.parametrize(
     ("attribute", "expected_a", "expected_b"),
     [
-        ("total_minutes", [0, 1], [0, 0]),
-        ("total_seconds", [0, 61], [0, 0]),
-        ("total_milliseconds", [0, 61001], [2, 1]),
-        ("total_microseconds", [0, 61001001], [2000, 1300]),
-        ("total_nanoseconds", [0, 61001001000], [2000000, 1300000]),
+        ("total_minutes", [0, 1501], [0, 0]),
+        ("total_seconds", [0, 90061], [0, 0]),
+        ("total_milliseconds", [0, 90061001], [2, 1]),
+        ("total_microseconds", [0, 90061001001], [2000, 1300]),
+        ("total_nanoseconds", [0, 90061001001000], [2000000, 1300000]),
     ],
 )
 def test_duration_attributes_series(
@@ -97,7 +101,7 @@ def test_duration_attributes_series(
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -125,7 +129,7 @@ def test_duration_attributes_series_nano(
     attribute: str,
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < PkgVersion("2.2") and "pandas_pyarrow" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("numpy")

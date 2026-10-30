@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -141,7 +142,7 @@ def test_offset_by(
     by: str,
     expected: list[datetime],
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     if any(x in by for x in ("y", "q", "mo")) and any(
         x in str(constructor) for x in ("dask", "pyarrow")
@@ -174,8 +175,8 @@ def test_offset_by_tz(
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")):
@@ -208,8 +209,8 @@ def test_offset_by_dst(
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis")):
@@ -244,7 +245,7 @@ def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_offset_by_invalid_interval(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
@@ -252,7 +253,9 @@ def test_offset_by_invalid_interval(constructor: Constructor) -> None:
         df.select(nw.col("a").dt.offset_by("1r"))
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="too old for pyarrow date type")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow date type"
+)
 def test_offset_by_date_pandas() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
@@ -291,8 +294,10 @@ def test_offset_by_tz_aware_ibis(by: str, context: Any) -> None:  # pragma: no c
     con = ibis.duckdb.connect()
     tbl = con.create_table(
         "offset_by_tz",
-        pl.LazyFrame({"a": [datetime(2020, 10, 25)]}).with_columns(
-            pl.col("a").dt.replace_time_zone("Europe/Amsterdam")
+        ibis.memtable(
+            pl.LazyFrame({"a": [datetime(2020, 10, 25)]}).with_columns(
+                pl.col("a").dt.replace_time_zone("Europe/Amsterdam")
+            )
         ),
     )
     df = nw.from_native(tbl)
@@ -303,7 +308,7 @@ def test_offset_by_tz_aware_ibis(by: str, context: Any) -> None:  # pragma: no c
 def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     date_nw = nw.from_native(constructor({"date": [date(2026, 1, 31)]}))
 

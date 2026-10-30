@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, ConstructorEager, assert_equal_data
@@ -322,7 +323,8 @@ def test_slice_with_series(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
+            "pandas_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("3"),
             reason="https://github.com/pandas-dev/pandas/issues/61311",
         )
     )
@@ -349,7 +351,8 @@ def test_horizontal_slice_with_series_2(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
+            "pandas_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("3"),
             reason="https://github.com/pandas-dev/pandas/issues/61311",
         )
     )

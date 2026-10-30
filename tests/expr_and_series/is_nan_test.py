@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.conftest import (
@@ -40,7 +41,7 @@ def test_nan(constructor: Constructor) -> None:
             "float": [False, False, True],
             "float_na": [True, False, True],
         }
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
         # NaN values are coerced into NA for nullable datatypes by default
         expected = {
             "int": [False, False, None],
@@ -77,7 +78,7 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
             "float": [False, False, True],
             "float_na": [True, False, True],
         }
-    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= PkgVersion("3"):
         # NaN values are coerced into NA for nullable datatypes by default
         expected = {
             "int": [False, False, None],

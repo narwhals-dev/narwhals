@@ -2,14 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._constants import (
-    MS_PER_MINUTE,
-    MS_PER_SECOND,
-    NS_PER_SECOND,
-    SECONDS_PER_MINUTE,
-    US_PER_MINUTE,
-    US_PER_SECOND,
-)
+from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_MINUTE, US_PER_SECOND
 from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit, sql_expression
 from narwhals._duration import Interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
@@ -53,32 +46,19 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
     def total_minutes(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: F("datepart", lit("minute"), expr)
+            lambda expr: F("epoch_us", expr) // lit(US_PER_MINUTE)
         )
 
     def total_seconds(self) -> DuckDBExpr:
         return self.compliant._with_elementwise(
-            lambda expr: (
-                lit(SECONDS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-                + F("datepart", lit("second"), expr)
-            )
+            lambda expr: F("epoch_us", expr) // lit(US_PER_SECOND)
         )
 
     def total_milliseconds(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: (
-                lit(MS_PER_MINUTE) * F("datepart", lit("minute"), expr)
-                + F("datepart", lit("millisecond"), expr)
-            )
-        )
+        return self.compliant._with_elementwise(lambda expr: F("epoch_ms", expr))
 
     def total_microseconds(self) -> DuckDBExpr:
-        return self.compliant._with_elementwise(
-            lambda expr: (
-                lit(US_PER_MINUTE) * F("datepart", lit("minute"), expr)
-                + F("datepart", lit("microsecond"), expr)
-            )
-        )
+        return self.compliant._with_elementwise(lambda expr: F("epoch_us", expr))
 
     def truncate(self, every: str) -> DuckDBExpr:
         interval = Interval.parse(every)

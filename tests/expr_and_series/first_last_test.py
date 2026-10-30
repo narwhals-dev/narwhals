@@ -4,6 +4,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -95,9 +96,9 @@ def test_first_expr_with_columns(
 def test_first_last_expr_over_order_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     if any(x in str(constructor) for x in ("pyspark", "dask")):
@@ -152,11 +153,11 @@ def test_first_last_expr_over_order_by(
 def test_first_expr_over_order_by_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     if any(x in str(constructor) for x in ("pyspark", "dask")):
@@ -194,9 +195,9 @@ def test_first_expr_in_group_by(
     if any(x in str(constructor) for x in ("spark", "dask")):
         # ibis: https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip()
     data = {
         "grp": [1, 1, 1, 2],
@@ -205,13 +206,14 @@ def test_first_expr_in_group_by(
         "c": [9, None, 10, 8],
         "idx": [9, None, None, 7],
         "idx2": [9, 8, 7, 7],
+        "idx_unique": [9, None, 8, 7],
     }
     df = nw.from_native(constructor(data))
     result = (
         df.group_by("grp")
         .agg(
-            nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first"),
-            nw.col("a", "b", "c").last(order_by="idx").name.suffix("_last"),
+            nw.col("a", "b", "c").first(order_by="idx_unique").name.suffix("_first"),
+            nw.col("a", "b", "c").last(order_by="idx_unique").name.suffix("_last"),
         )
         .sort("grp")
     )
@@ -250,7 +252,7 @@ def test_first_expr_broadcasting(
 ) -> None:
     if any(x in str(constructor) for x in ("spark", "dask")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     data = {
@@ -309,14 +311,14 @@ def test_first_expr_invalid(
 def test_first_last_different_orders(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     context = (

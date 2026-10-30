@@ -4,6 +4,7 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("pyarrow")
 import pyarrow as pa
@@ -50,7 +51,7 @@ def test_dataframe_from_arrow_table(
     assert is_native(result.to_native(), eager_backend)
 
 
-@pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
+@pytest.mark.xfail(PYARROW_VERSION < PkgVersion("14"), reason="too old")
 def test_dataframe_from_arrow_pycapsule(
     eager_backend: EagerAllowed, table: pa.Table, data: dict[str, Any]
 ) -> None:
@@ -66,7 +67,7 @@ def test_dataframe_from_arrow_to_polars_no_pandas(
 ) -> None:
     pytest.importorskip("polars")
     monkeypatch.delitem(sys.modules, "pandas", raising=False)
-    if PYARROW_VERSION < (14,):  # pragma: no cover
+    if PYARROW_VERSION < PkgVersion("14"):  # pragma: no cover
         result = nw.DataFrame.from_arrow(table, backend="polars")
     else:
         supports_arrow_c_stream = nw.from_native(table)

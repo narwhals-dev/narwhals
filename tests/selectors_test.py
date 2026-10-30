@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.selectors as ncs
@@ -63,8 +64,8 @@ def test_string(constructor: Constructor) -> None:
 
 
 def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
-        15,
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < PkgVersion(
+        "15"
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
     if (
@@ -93,7 +94,7 @@ def test_enum(
         for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.6"):
         reason = "Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6."
         pytest.skip(reason=reason)
 
@@ -132,7 +133,7 @@ def test_enum_distinct_from_categorical(
         for backend in ("pyarrow_table", "duckdb", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.6"):
         # Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6.
         pytest.skip()
 
@@ -158,11 +159,11 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or "ibis" in str(constructor)
         # https://github.com/pola-rs/polars/issues/23767
         # TODO(FBruzzesi): Manage polars version
-        or ("polars" in str(constructor) and POLARS_VERSION >= (1, 32, 0))
+        or ("polars" in str(constructor) and POLARS_VERSION >= PkgVersion("1.32"))
     ):
         request.applymarker(pytest.mark.xfail)
     if ("pyarrow" in str(constructor) and is_windows()) or (
-        "pandas" in str(constructor) and PANDAS_VERSION < (2,)
+        "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip()
     if "modin" in str(constructor):
@@ -271,9 +272,13 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
     ("selector", "expected"),
     [
         (ncs.numeric() | ncs.boolean(), ["a", "c", "d"]),
+        (ncs.boolean() | ncs.numeric(), ["a", "c", "d"]),
         (ncs.numeric() & ncs.boolean(), []),
         (ncs.numeric() & ncs.by_dtype(nw.Int64), ["a"]),
         (ncs.numeric() | ncs.by_dtype(nw.Int64), ["a", "c"]),
+        (ncs.numeric() - ncs.by_dtype(nw.Int64), ["c"]),
+        (ncs.all() - ncs.numeric(), ["b", "d"]),
+        ((ncs.boolean() | ncs.numeric()) - ncs.by_dtype(nw.Int64), ["c", "d"]),
         (~ncs.numeric(), ["b", "d"]),
         (ncs.boolean() & True, ["d"]),
         (ncs.boolean() | True, ["d"]),
@@ -295,11 +300,11 @@ def test_set_ops(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
-    assert sorted(result) == expected
+    assert result == expected
 
 
 def test_subtract_expr(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 27):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.27"):
         # In old Polars versions, cs.numeric() - col('a')
         # would exclude column 'a' from the result, as opposed to
         # subtracting it.
@@ -328,7 +333,7 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
 
 @pytest.mark.skipif(is_windows(), reason="windows is what it is")
 def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 19):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.19"):
         # bug in old polars
         pytest.skip()
     if (

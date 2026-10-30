@@ -706,6 +706,36 @@ def test_from_native_lazyframe_exhaustive() -> None:  # noqa: PLR0914, PLR0915
         assert isinstance(ldf, nw.LazyFrame)
 
 
+def test_from_native_sized_lazyframe() -> None:
+    # Both natives also match `IntoDataFrame` (`__len__`, `drop`), so the lazy
+    # overload must be tried first.
+    pytest.importorskip("dask")
+    pytest.importorskip("duckdb")
+    pytest.importorskip("typing_extensions")
+
+    import dask.dataframe as dd
+    import duckdb
+    from typing_extensions import assert_type
+
+    import narwhals.stable.v2 as nw_v2
+
+    rel = duckdb.sql("select 1 as a")
+    assert rel is not None
+    dask_df = cast("dd.DataFrame", dd.from_dict(data, npartitions=1))
+
+    nw_rel = nw.from_native(rel)
+    nw_v2_rel = nw_v2.from_native(rel)
+    nw_dask = nw.from_native(dask_df)
+    nw_v2_dask = nw_v2.from_native(dask_df)
+
+    assert_type(nw_rel, nw.LazyFrame[duckdb.DuckDBPyRelation])
+    assert_type(nw_v2_rel, nw_v2.LazyFrame[duckdb.DuckDBPyRelation])
+    assert_type(nw_dask, nw.LazyFrame[dd.DataFrame])
+    assert_type(nw_v2_dask, nw_v2.LazyFrame[dd.DataFrame])
+    for frame in (nw_rel, nw_v2_rel, nw_dask, nw_v2_dask):
+        assert isinstance(frame, nw.LazyFrame)
+
+
 def test_from_native_series_exhaustive() -> None:  # noqa: PLR0914, PLR0915
     pytest.importorskip("polars")
     pytest.importorskip("pandas")
