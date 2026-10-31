@@ -1433,6 +1433,12 @@ def deprecate_native_namespace(
     return decorate
 
 
+def validate_quantile(quantile: float, /) -> None:
+    if not 0 <= quantile <= 1:
+        msg = f"`quantile` must be between 0.0 and 1.0, got: {quantile}"
+        raise ValueError(msg)
+
+
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:

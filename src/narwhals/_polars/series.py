@@ -399,7 +399,7 @@ class PolarsSeries:
     def approx_quantile(self, quantile: float) -> float:
         if BACKEND_VERSION < (2,):  # pragma: no cover
             return self.native.quantile(quantile, "linear")  # type: ignore[return-value]
-        return self.native.cast(pl.Float64).approx_quantile(quantile)  # type: ignore[return-value]
+        return self.native.approx_quantile(quantile)  # type: ignore[return-value]
 
     def median(self) -> Any:
         from narwhals.exceptions import InvalidOperationError

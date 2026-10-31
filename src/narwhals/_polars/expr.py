@@ -108,7 +108,7 @@ class PolarsExpr:
     def approx_quantile(self, quantile: float) -> Self:
         if BACKEND_VERSION < (2,):  # pragma: no cover
             return self._with_native(self.native.quantile(quantile, "linear"))
-        return self._with_native(self.native.cast(pl.Float64).approx_quantile(quantile))
+        return self._with_native(self.native.approx_quantile(quantile))
 
     def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)

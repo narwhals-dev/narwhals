@@ -72,9 +72,8 @@ def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _Na
         return methodcaller(name, dropna=False)
     if name == "quantile":
         assert "quantile" in kwds  # noqa: S101
-        # `approx_quantile` has no `interpolation`, and it falls back to the exact quantile.
-        interpolation = kwds.get("interpolation", "linear")
-        return methodcaller(name, q=kwds["quantile"], interpolation=interpolation)
+        assert "interpolation" in kwds  # noqa: S101
+        return methodcaller(name, q=kwds["quantile"], interpolation=kwds["interpolation"])
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
@@ -214,6 +213,8 @@ class AggExpr:
                 )
                 raise NotImplementedError(msg)
             return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
+        if self.leaf_name == "approx_quantile":
+            return _native_agg(native_name, interpolation="linear", **last_node.kwargs)
         return _native_agg(native_name, **last_node.kwargs)
 
 

@@ -89,7 +89,9 @@ def window_kwargs_to_pandas_equivalent(  # noqa: C901
         assert "quantile" in kwargs  # noqa: S101
         pandas_kwargs = {
             "q": kwargs["quantile"],
-            "interpolation": kwargs.get("interpolation", "linear"),
+            "interpolation": (
+                kwargs["interpolation"] if function_name == "quantile" else "linear"
+            ),
         }
     elif function_name.startswith("ewm_"):
         assert "com" in kwargs  # noqa: S101

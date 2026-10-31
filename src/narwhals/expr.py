@@ -13,6 +13,7 @@ from narwhals._utils import (
     ensure_type,
     flatten,
     unstable,
+    validate_quantile,
 )
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -1508,8 +1509,13 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_last_distinct"))
 
+    @unstable
     def approx_quantile(self, quantile: float) -> Self:
         r"""Get an approximate quantile value.
+
+        Warning:
+            This functionality is considered **unstable**, as it is in Polars.
+            It may be changed at any point without it being considered a breaking change.
 
         Null values are ignored. If there are no non-null elements, the result is null.
 
@@ -1522,7 +1528,14 @@ class Expr:
         Note:
             - pandas-like backends, and Polars before version 2.0, have no approximate
                 method. They compute the exact quantile with linear interpolation.
-            - Dask is limited to a single partition, the same as `Expr.quantile`.
+                Ibis before version 9.4 also uses its exact quantile.
+            - Outside of `over`, Dask is limited to a single partition, the same as
+                `Expr.quantile`, because its approximate method can be very inaccurate
+                with multiple partitions.
+            - The result dtype follows the backend. For integer input, Polars and
+                DuckDB return integers, whereas pandas and PyArrow return floats.
+            - NaN values are not treated the same way by all backends. For example,
+                Polars counts them as values, whereas pandas and PyArrow ignore them.
 
         Examples:
             >>> import pandas as pd
@@ -1539,6 +1552,7 @@ class Expr:
             |  0  24.5  74.5   |
             └──────────────────┘
         """
+        validate_quantile(quantile)
         return self._append_node(
             ExprNode(ExprKind.AGGREGATION, "approx_quantile", quantile=quantile)
         )

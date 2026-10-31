@@ -448,7 +448,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def approx_quantile(self, quantile: float) -> Self:
         def _approx_quantile(expr: Column) -> Column:
-            return self._F.percentile_approx(expr.cast("double"), quantile)
+            return self._F.percentile_approx(expr, quantile)
 
         return self._with_callable(_approx_quantile)
 

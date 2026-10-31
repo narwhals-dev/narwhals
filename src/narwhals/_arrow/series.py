@@ -23,7 +23,6 @@ from narwhals._arrow.utils import (
     nulls_like,
     pad_series,
     sortable,
-    tdigest_options,
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
@@ -845,9 +844,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def approx_quantile(
         self, quantile: float, *, _return_py_scalar: bool = True
     ) -> float:
+        native = self.native
+        if pa.types.is_null(native.type):
+            native = native.cast(pa.float64())
         return maybe_extract_py_scalar(
-            pc.tdigest(self.native, options=tdigest_options(quantile))[0],
-            _return_py_scalar,
+            pc.tdigest(native, q=quantile)[0], _return_py_scalar
         )
 
     def quantile(

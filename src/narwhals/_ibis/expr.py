@@ -237,7 +237,9 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def approx_quantile(self, quantile: float) -> Self:
         def func(expr: ir.Value) -> ir.Value:
-            numeric_expr = cast("ir.NumericColumn", expr.cast("float64"))
+            numeric_expr = cast("ir.NumericColumn", expr)
+            if self._backend_version < (9, 4):  # pragma: no cover
+                return numeric_expr.quantile(quantile)
             return numeric_expr.approx_quantile(quantile)
 
         return self._with_callable(func)
