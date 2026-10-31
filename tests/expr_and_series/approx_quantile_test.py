@@ -170,7 +170,8 @@ def test_approx_quantile_pyarrow_null_type() -> None:
 
     table = pa.table({"g": [1, 1], "a": pa.nulls(2)})
     df = nw.from_native(table)
-    assert_equal_data(df.select(nw.col("a").approx_quantile(0.5)), {"a": [None]})
+    # `assert_equal_data` also accepts NaN, so compare with `to_list`.
+    assert df.select(nw.col("a").approx_quantile(0.5))["a"].to_list() == [None]
     assert df["a"].approx_quantile(0.5) is None
     result = df.group_by("g").agg(nw.col("a").approx_quantile(0.5))
-    assert_equal_data(result, {"g": [1], "a": [None]})
+    assert result["a"].to_list() == [None]
