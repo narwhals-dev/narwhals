@@ -13,6 +13,7 @@
         - all
         - any
         - any_value
+        - approx_quantile
         - arg_max
         - arg_min
         - arg_true

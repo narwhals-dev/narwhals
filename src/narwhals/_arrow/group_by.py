@@ -10,6 +10,7 @@ from narwhals._arrow.utils import (
     BACKEND_VERSION,
     cast_to_comparable_string_types,
     extract_py_scalar,
+    tdigest_options,
 )
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
@@ -25,6 +26,17 @@ if TYPE_CHECKING:
     from narwhals.typing import UniqueKeepStrategy
 
 
+def _unnest_tdigest(
+    table: pa.Table, aggs: Sequence[tuple[str, Aggregation, AggregateOptions | None]]
+) -> pa.Table:
+    """`tdigest` returns one list per group, with one value per `q`."""
+    names = {f"{name}_tdigest" for name, agg, _ in aggs if agg == "tdigest"}
+    for i, name in enumerate(table.column_names):
+        if name in names:
+            table = table.set_column(i, name, pc.list_element(table.column(i), 0))
+    return table
+
+
 class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Aggregation]] = {
         "sum": "sum",
@@ -37,6 +49,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+        "approx_quantile": "tdigest",
         "all": "all",
         "any": "any",
         "first": "first",
@@ -91,6 +104,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         elif function_name in self._OPTION_ORDERED:
             ignore_nulls = kwargs.get("ignore_nulls", False)
             option = pc.ScalarAggregateOptions(skip_nulls=ignore_nulls)
+        elif function_name == "approx_quantile":
+            option = tdigest_options(kwargs["quantile"])
         return self._remap_expr_name(function_name), option
 
     def _configure_grouped(self, *exprs: ArrowExpr) -> pa.TableGroupBy:
@@ -161,6 +176,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             )
 
         result_simple = grouped.aggregate(aggs)
+        result_simple = _unnest_tdigest(result_simple, aggs)
 
         # Rename columns, being very careful
         expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)

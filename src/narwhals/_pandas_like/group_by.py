@@ -72,8 +72,9 @@ def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _Na
         return methodcaller(name, dropna=False)
     if name == "quantile":
         assert "quantile" in kwds  # noqa: S101
-        assert "interpolation" in kwds  # noqa: S101
-        return methodcaller(name, q=kwds["quantile"], interpolation=kwds["interpolation"])
+        # `approx_quantile` has no `interpolation`, and it falls back to the exact quantile.
+        interpolation = kwds.get("interpolation", "linear")
+        return methodcaller(name, q=kwds["quantile"], interpolation=interpolation)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)
@@ -232,6 +233,7 @@ class PandasLikeGroupBy(
         "n_unique": "nunique",
         "count": "count",
         "quantile": "quantile",
+        "approx_quantile": "quantile",
         "all": "all",
         "any": "any",
         "first": "nth",

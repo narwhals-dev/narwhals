@@ -1508,6 +1508,41 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_last_distinct"))
 
+    def approx_quantile(self, quantile: float) -> Self:
+        r"""Get an approximate quantile value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
+
+        Approximate quantiles trade accuracy for speed and memory use, so results
+        can differ between backends and between runs.
+
+        Arguments:
+            quantile: Quantile between 0.0 and 1.0.
+
+        Note:
+            - pandas-like backends, and Polars before version 2.0, have no approximate
+                method. They compute the exact quantile with linear interpolation.
+            - Dask is limited to a single partition, the same as `Expr.quantile`.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame(
+            ...     {"a": list(range(50)), "b": list(range(50, 100))}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").approx_quantile(0.5))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a     b   |
+            |  0  24.5  74.5   |
+            └──────────────────┘
+        """
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "approx_quantile", quantile=quantile)
+        )
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:

@@ -1993,6 +1993,32 @@ class Series(Generic[IntoSeriesT]):
             level=self._level,
         )
 
+    def approx_quantile(self, quantile: float) -> float:
+        """Get an approximate quantile value of the series.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
+
+        Approximate quantiles trade accuracy for speed and memory use, so results
+        can differ between backends and between runs.
+
+        Note:
+            pandas-like backends, and Polars before version 2.0, have no approximate
+            method. They compute the exact quantile with linear interpolation.
+
+        Arguments:
+            quantile: Quantile between 0.0 and 1.0.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1, 2, 3])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.approx_quantile(0.5)
+            2.0
+        """
+        return self._compliant_series.approx_quantile(quantile=quantile)
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:

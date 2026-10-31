@@ -730,3 +730,11 @@ def list_sort(
         [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]
     )
     return pa.concat_tables([imploded_by_idx, pass_through]).sort_by(idx).column(v)
+
+
+def tdigest_options(quantile: float) -> pc.TDigestOptions:
+    # `tdigest` returns NaN for an out-of-range `q`, where other backends raise.
+    if not 0 <= quantile <= 1:
+        msg = f"`quantile` must be between 0.0 and 1.0, got: {quantile}"
+        raise ValueError(msg)
+    return pc.TDigestOptions(q=quantile)

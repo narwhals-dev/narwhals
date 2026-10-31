@@ -480,6 +480,10 @@ class DaskExpr(
     def len(self) -> Self:
         return self._with_callable(lambda expr: expr.size.to_series())
 
+    def approx_quantile(self, quantile: float) -> Self:
+        # `method="dask"` is already approximate.
+        return self.quantile(quantile, interpolation="linear")
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:

@@ -105,6 +105,11 @@ class PolarsExpr:
         name = "min_periods" if self._backend_version < (1, 21, 0) else "min_samples"
         return {name: min_samples}
 
+    def approx_quantile(self, quantile: float) -> Self:
+        if BACKEND_VERSION < (2,):  # pragma: no cover
+            return self._with_native(self.native.quantile(quantile, "linear"))
+        return self._with_native(self.native.cast(pl.Float64).approx_quantile(quantile))
+
     def cast(self, dtype: IntoDType) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(self.native.cast(dtype_pl))
