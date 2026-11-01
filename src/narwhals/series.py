@@ -406,6 +406,31 @@ class Series(Generic[IntoSeriesT]):
         ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
 
+    def __arrow_c_array__(
+        self, requested_schema: object | None = None
+    ) -> tuple[object, object]:
+        """Export a Series as a single array via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here: it calls `to_arrow` and then
+        defers to PyArrow's implementation.
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+        """
+        native_series = self._compliant_series.native
+        try:
+            pa_version = Implementation.PYARROW._backend_version()
+        except ModuleNotFoundError as exc:
+            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg) from exc
+        if pa_version < (14, 0):  # pragma: no cover
+            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {type(native_series)}"
+            raise ModuleNotFoundError(msg)
+        result: tuple[object, object] = self.to_arrow().__arrow_c_array__(
+            requested_schema=requested_schema
+        )
+        return result
+
     def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
 
