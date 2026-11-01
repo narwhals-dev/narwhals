@@ -42,6 +42,21 @@ def test_series_from_arrow_native(
     assert_equal_series(result, DATA, NAME)
 
 
+@pytest.mark.parametrize(
+    "values", [pa.array(DATA), pa.chunked_array([DATA[:2], DATA[2:]])], ids=type
+)
+def test_series_from_arrow_native_without_pycapsule(
+    eager_backend: EagerAllowed,
+    values: pa.Array[Any] | pa.ChunkedArray[Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Simulate `pyarrow<14`, where native arrays don't have the PyCapsule methods
+    monkeypatch.setattr("narwhals.series.supports_arrow_c_array", lambda _: False)
+    monkeypatch.setattr("narwhals.series.supports_arrow_c_stream", lambda _: False)
+    result = nw.Series.from_arrow(NAME, values, backend=eager_backend)
+    assert_equal_series(result, DATA, NAME)
+
+
 @pytest.mark.skipif(PYARROW_VERSION < PkgVersion("14"), reason="too old")
 def test_series_from_arrow_c_array(eager_backend: EagerAllowed) -> None:
     values = ArrayOnly(pa.array(DATA))

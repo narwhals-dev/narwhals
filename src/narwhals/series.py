@@ -22,7 +22,13 @@ from narwhals._utils import (
     supports_arrow_c_stream,
     unstable,
 )
-from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
+from narwhals.dependencies import (
+    _is_pyarrow_array,
+    _is_pyarrow_chunked_array,
+    is_numpy_array,
+    is_numpy_array_1d,
+    is_numpy_scalar,
+)
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr import Expr
@@ -215,7 +221,13 @@ class Series(Generic[IntoSeriesT]):
             |]                  |
             └───────────────────┘
         """
-        if not (supports_arrow_c_array(values) or supports_arrow_c_stream(values)):
+        # NOTE: Native pyarrow arrays only gained the PyCapsule methods in `pyarrow>=14`
+        if not (
+            supports_arrow_c_array(values)
+            or supports_arrow_c_stream(values)
+            or _is_pyarrow_array(values)
+            or _is_pyarrow_chunked_array(values)
+        ):
             msg = f"Given object of type {type(values)} does not support PyCapsule interface"
             raise TypeError(msg)
         ns = eager_namespace(
