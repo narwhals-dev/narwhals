@@ -55,3 +55,47 @@ def test_str_split_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["s"].str.split(by=by)
     assert_equal_data({"s": result_series}, expected)
+
+
+@pytest.mark.parametrize(
+    "by",
+    [
+        pytest.param("||", id="double-pipe"),
+        pytest.param("..", id="double-dot"),
+        pytest.param("[.]", id="brackets"),
+        pytest.param("\\", id="backslash"),
+        pytest.param("::", id="double-colon"),
+    ],
+)
+def test_str_split_literal(constructor: Constructor, by: str) -> None:
+    if (
+        constructor.__name__.startswith("pandas")
+        and "pyarrow" not in constructor.__name__
+    ):
+        pytest.skip("String splitting requires pyarrow-backed pandas columns")
+    data = {
+        "s": [
+            f"left{by}right",
+            f"{by}left{by}",
+            f"left{by}{by}right",
+            f"左{by}右",
+            "unchanged",
+            "",
+            None,
+        ]
+    }
+    expected = {
+        "s": [
+            ["left", "right"],
+            ["", "left", ""],
+            ["left", "", "right"],
+            ["左", "右"],
+            ["unchanged"],
+            [""],
+            None,
+        ]
+    }
+    df = nw.from_native(constructor(data))
+    assert_equal_data(df.select(nw.col("s").str.split(by)), expected)
+    if isinstance(df, nw.DataFrame):
+        assert_equal_data({"s": df["s"].str.split(by)}, expected)
