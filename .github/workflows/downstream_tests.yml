@@ -99,6 +99,10 @@ jobs:
         run: |
           cd marimo
           uv add ../ --editable
+          # Temporary pins to get CI green: marimo is not yet compatible with DuckDB 2.0
+          # (`rel.fetchone()` was removed) nor with bokeh 3.10 (`from_panel.py` imports
+          # `curstate` from `bokeh.io.notebook`, which no longer exposes it).
+          uv add --group test-optional "duckdb<2" "bokeh<3.10"
       - name: show-deps
         run: |
           cd marimo
@@ -251,7 +255,9 @@ jobs:
           uv sync --group test
           # Temporary pin, same as pointblank: sqlglot>=30.18.0 breaks ibis's
           # in-memory `create_table` (ibis-project/ibis#12124).
-          uv pip install "sqlglot<30.18.0"
+          # Temporary pin: ibis 12.0's DuckDB backend calls
+          # `DuckDBPyConnection.fetch_record_batch`, which DuckDB 2.0 removed.
+          uv pip install "sqlglot<30.18.0" "duckdb<2"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
