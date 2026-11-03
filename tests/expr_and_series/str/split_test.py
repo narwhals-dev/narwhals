@@ -6,7 +6,12 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    Constructor,
+    ConstructorEager,
+    _to_comparable_list,
+    assert_equal_data,
+)
 
 data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
 
@@ -96,6 +101,47 @@ def test_str_split_literal(constructor: Constructor, by: str) -> None:
         ]
     }
     df = nw.from_native(constructor(data))
-    assert_equal_data(df.select(nw.col("s").str.split(by)), expected)
+    result = df.select(nw.col("s").str.split(by))
+    if isinstance(result, nw.LazyFrame):
+        result = result.collect()
+    assert_equal_data(result, expected)
+    expected_lengths = [2, 3, 3, 2, 1, 1, None]
+    assert [
+        len(value) if isinstance(value, list) else None
+        for value in _to_comparable_list(result["s"])
+    ] == expected_lengths
     if isinstance(df, nw.DataFrame):
-        assert_equal_data({"s": df["s"].str.split(by)}, expected)
+        series = df["s"].str.split(by)
+        assert_equal_data({"s": series}, expected)
+        assert [
+            len(value) if isinstance(value, list) else None
+            for value in _to_comparable_list(series)
+        ] == expected_lengths
+
+
+@pytest.mark.parametrize("dialect", ["bigquery", "snowflake"])
+@pytest.mark.parametrize("by", ["||", "[.]", "\\", " ", "-", "::"])
+def test_str_split_sqlframe_literal_dialects(
+    dialect: str, by: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("sqlframe")
+    from sqlframe.base.session import _BaseSession
+    from sqlframe.bigquery import BigQuerySession
+    from sqlframe.snowflake import SnowflakeSession
+    from sqlglot import exp, parse_one
+
+    session_types: dict[str, type[BigQuerySession | SnowflakeSession]] = {
+        "bigquery": BigQuerySession,
+        "snowflake": SnowflakeSession,
+    }
+    session_type = session_types[dialect]
+    # Compile SQL without opening cloud connections or loading credentials.
+    monkeypatch.setattr(_BaseSession, "_instance", None)
+    monkeypatch.setattr(session_type, "__init__", _BaseSession.__init__)
+    session = session_type.Builder().getOrCreate()
+    native = session.createDataFrame([(f"left{by}right",)], schema=["s"])
+    result = nw.from_native(native).select(nw.col("s").str.split(by))
+    query = result.to_native().sql(dialect=dialect, pretty=False)
+    split = parse_one(query, read=dialect).find(exp.Split)
+    assert split is not None
+    assert split.expression == exp.Literal.string(by)
