@@ -54,7 +54,7 @@ All of the following are safe to share between threads:
 | --- | --- | --- |
 | Polars | Safe | Operations return new objects, though immutability is [not enforced][polars-immutable] |
 | PyArrow | Safe | [Arrow data is immutable][arrow-immutable] |
-| pandas | Safe | **Not safe**: `from_native` keeps the same object, so an in-place write (`df.loc[...] = ...`,<br/>or into the NumPy buffer of `.values` / `.to_numpy()`) changes it under every reader, and can<br/>[race with them][numpy-thread-safety]. [Copy-on-write] (the default since pandas 3.0) only protects *other* objects sharing the data |
+| pandas | Safe, except pandas < 3.2 on the [free-threaded] build:<br/>concurrent reads of one frame can crash inside pandas | **Not safe**: `from_native` keeps the same object, so an in-place write (`df.loc[...] = ...`,<br/>or into the NumPy buffer of `.values` / `.to_numpy()`) changes it under every reader, and can<br/>[race with them][numpy-thread-safety]. [Copy-on-write] (the default since pandas 3.0) only protects *other* objects sharing the data |
 | DuckDB | One connection per thread, see below | N/A |
 | PySpark, SQLFrame, Ibis, Dask | Delegated to the session / scheduler | Consult the backend's own docs |
 

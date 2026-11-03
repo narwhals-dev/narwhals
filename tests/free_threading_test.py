@@ -12,6 +12,7 @@ most effective on a free-threaded build, where threads run in parallel.
 
 from __future__ import annotations
 
+import sys
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -21,7 +22,7 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, PYARROW_VERSION, assert_equal_data
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -198,6 +199,13 @@ def test_shared_group_by_agg(constructor_eager: ConstructorEager) -> None:
 
 def test_shared_dataframe_read_only(constructor_eager: ConstructorEager) -> None:
     """Reading from a shared `DataFrame` is safe: no method may mutate it, or its input."""
+    if (
+        "pandas" in str(constructor_eager)
+        and PANDAS_VERSION < PkgVersion("3.2")
+        and not getattr(sys, "_is_gil_enabled", lambda: True)()
+    ):
+        # Upstream: views of one frame race in pandas' copy-on-write reference tracking.
+        pytest.skip("pandas<3.2 can segfault on concurrent reads without the GIL")
     native = constructor_eager(DATA)
     df = nw.from_native(native, eager_only=True)
     native_before = repr(native)
