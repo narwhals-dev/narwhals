@@ -682,6 +682,19 @@ def test_duckdb_file_backed_keeps_no_view(
         assert con.sql("select * from duckdb_views() where not internal").fetchall() == []
 
 
+def test_joinasof_duckdb_table_named_rhs() -> None:
+    # The right frame is found by replacement scan, which a same-named table would shadow.
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    con.sql("create table rhs as select 1 as a, -1 as c")
+    lhs = nw.from_native(con.sql("select * from (values (1, 'x'), (5, 'y')) v(a, b)"))
+    rhs = nw.from_native(con.sql("select * from (values (1, 10), (4, 40)) v(a, c)"))
+    result = lhs.join_asof(rhs, on="a").sort("a")
+    assert_equal_data(result, {"a": [1, 5], "b": ["x", "y"], "c": [10, 40]})
+
+
 def test_joinasof_suffix(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:

@@ -399,7 +399,9 @@ class DuckDBLazyFrame(
             else f'rhs."{name}"'
             for name in keep_cols
         )
-        # `rhs` is resolved via replacement scan.
+        # Found by replacement scan, which a table or view of the same name on the
+        # connection would shadow: hence a name no user table should have.
+        _narwhals_asof_rhs = rhs
         # `rel.query` registers a view on the relation's connection, with the caveats
         # described in `temporary_view_name`. Unavoidable until the relational API
         # gains ASOF join support.
@@ -409,7 +411,7 @@ class DuckDBLazyFrame(
             f"""
             SELECT {",".join(rhs_select)}
             FROM {view} AS lhs
-            ASOF LEFT JOIN rhs
+            ASOF LEFT JOIN _narwhals_asof_rhs AS rhs
             ON {condition}
             """,  # noqa: S608
         )
