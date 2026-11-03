@@ -17,6 +17,9 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
     from narwhals.typing import IntoDataFrame, IntoLazyFrameT, JoinStrategy
 
 
@@ -647,6 +650,36 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
     }
     assert_equal_data(result.sort(by="antananarivo"), expected)
     assert_equal_data(result_by.sort(by="antananarivo"), expected)
+
+
+@pytest.mark.parametrize("read_only", [False, True])
+@pytest.mark.parametrize(
+    "method",
+    [lambda lf: lf.join_asof(lf, on="a"), lambda lf: lf.unpivot(index="a")],
+    ids=["join_asof", "unpivot"],
+)
+def test_duckdb_file_backed_keeps_no_view(
+    tmp_path: Path,
+    method: Callable[[nw.LazyFrame[Any]], nw.LazyFrame[Any]],
+    *,
+    read_only: bool,
+) -> None:
+    # Both run through a temporary view, which must never be written to the database.
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    path = str(tmp_path / "file.db")
+    with duckdb.connect(path) as con:
+        con.sql("create table t as select 1 as a, 2 as b")
+    with duckdb.connect(path, read_only=read_only) as con:
+        lf = nw.from_native(con.table("t"))
+        if DUCKDB_VERSION < PkgVersion("1.5.4"):  # pragma: no cover
+            with pytest.raises(NotImplementedError, match=r"'duckdb>=1\.5\.4'"):
+                method(lf)
+        else:
+            assert method(lf).collect().shape == (1, 3)
+    with duckdb.connect(path) as con:
+        assert con.sql("select * from duckdb_views() where not internal").fetchall() == []
 
 
 def test_joinasof_suffix(

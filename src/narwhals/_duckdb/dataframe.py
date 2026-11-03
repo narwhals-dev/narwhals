@@ -403,7 +403,7 @@ class DuckDBLazyFrame(
         # `rel.query` registers a view on the relation's connection, with the caveats
         # described in `temporary_view_name`. Unavoidable until the relational API
         # gains ASOF join support.
-        view = temporary_view_name()
+        view = temporary_view_name(lhs)
         joined = lhs.query(
             view,
             f"""
@@ -562,7 +562,7 @@ class DuckDBLazyFrame(
         # `rel.query` registers a view on the relation's connection, with the caveats
         # described in `temporary_view_name`. Replace with the Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
-        view = temporary_view_name()
+        view = temporary_view_name(self.native)
         unpivoted = self.native.query(
             view,
             f"""

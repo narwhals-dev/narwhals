@@ -351,30 +351,30 @@ def test_struct(
 @pytest.mark.parametrize(
     ("l_vals", "r_vals", "check_exact", "context"),
     [
-        ([[("a", 0.0)], [], None], [[("a", 1e-10)], [], None], False, does_not_raise()),
+        ([[("a", 0.0)], [], None], [[("a", 1e-10)], [], None], False, does_not_raise),
         (
             [[("a", 0.0)], [], None],
             [[("a", 1e-10)], [], None],
             True,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
         ),
         (
             [[("a", 0.0)]],
             [[("b", 0.0)]],
             False,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
         ),
         (
             [[("a", 0.0), ("b", 1.0)]],
             [[("b", 1.0), ("a", 0.0)]],
             False,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
         ),
         (
             [[("a", 0.0)]],
             [[("a", 0.0), ("b", 1.0)]],
             False,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
         ),
     ],
 )
@@ -384,7 +384,7 @@ def test_map(
     r_vals: list[Any],
     *,
     check_exact: bool,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
 ) -> None:
     pa = pytest.importorskip("pyarrow")
     if backend == "polars" and POLARS_VERSION < PkgVersion("2"):  # pragma: no cover
@@ -404,7 +404,7 @@ def test_map(
             return series_from_native(pd.Series(native, dtype=pd.ArrowDtype(native.type)))
         return series_from_native(native)
 
-    with context:
+    with context():
         assert_series_equal(to_series(l_vals), to_series(r_vals), check_exact=check_exact)
 
 

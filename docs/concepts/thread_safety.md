@@ -54,7 +54,7 @@ All of the following are safe to share between threads:
 | --- | --- | --- |
 | Polars | Safe | Operations return new objects, though immutability is [not enforced][polars-immutable] |
 | PyArrow | Safe | [Arrow data is immutable][arrow-immutable] |
-| pandas | Safe | **Not safe**: `from_native` keeps the same object, so an in-place write (`df.loc[...] = ...`,<br/>or through the NumPy buffer of `.values` / `.to_numpy()`, which [races][numpy-thread-safety]) changes it<br/>under every reader. [Copy-on-write] (the default since pandas 3.0) only protects *other* objects sharing the data |
+| pandas | Safe | **Not safe**: `from_native` keeps the same object, so an in-place write (`df.loc[...] = ...`,<br/>or into the NumPy buffer of `.values` / `.to_numpy()`) changes it under every reader, and can<br/>[race with them][numpy-thread-safety]. [Copy-on-write] (the default since pandas 3.0) only protects *other* objects sharing the data |
 | DuckDB | One connection per thread, see below | N/A |
 | PySpark, SQLFrame, Ibis, Dask | Delegated to the session / scheduler | Consult the backend's own docs |
 
@@ -86,18 +86,15 @@ def worker(con: duckdb.DuckDBPyConnection) -> None:
    *implicitly*, and it serializes that query against its own calls only, so do not run
    your own queries on that connection meanwhile. Explicit execution (`collect`,
    `to_arrow`, ...) runs on the connection you gave it and follows DuckDB's rules.
-4. **`join_asof`, `unpivot` and `concat(how="diagonal")` leave a view behind on
-   duckdb-python < 1.5.4**: DuckDB has no relational-API equivalent for ASOF joins,
-   `UNPIVOT` ([duckdb#16980]) or `UNION ALL BY NAME` ([duckdb#16996]), so Narwhals runs
-   them through [`DuckDBPyRelation.query`][relational-api], which registers a
-   uniquely-named view on the relation's own connection. Since [duckdb-python 1.5.4]
-   that view goes to the `temp` catalog: it is scoped to the cursor and released when
-   the cursor is closed. On **older versions it goes to the relation's catalog
-   instead**, which means it is written to disk for a file-backed database and is still
-   there when you reopen it, and these methods fail outright on a read-only database.
-   Narwhals cannot clean the view up, because the frame it hands back is lazy and
-   re-resolves the view by name on every execution. If this matters to you, upgrade to
-   duckdb-python >= 1.5.4.
+4. **`join_asof` and `unpivot` on a file-backed or read-only database need
+   duckdb-python >= 1.5.4**: DuckDB has no relational-API equivalent for ASOF joins or
+   `UNPIVOT` ([duckdb#16980]), so Narwhals runs them through
+   [`DuckDBPyRelation.query`][relational-api], which registers a uniquely-named view on
+   the relation's own connection. Since [duckdb-python 1.5.4] that view goes to the
+   `temp` catalog: it is scoped to the cursor and released when the cursor is closed.
+   **Older versions put it in the connection's current database**, which a file-backed
+   database would keep on disk and a read-only one rejects, so Narwhals raises
+   `NotImplementedError` there instead. In-memory databases work on every version.
 
 [`scan_csv`](../api-reference/narwhals.md#narwhals.scan_csv) and
 [`scan_parquet`](../api-reference/narwhals.md#narwhals.scan_parquet) read through DuckDB's
@@ -130,7 +127,6 @@ reproduces it, ideally on a free-threaded build or with `sys.setswitchinterval(1
 [duckdb-config]: https://duckdb.org/docs/stable/configuration/overview
 [duckdb-python 1.5.4]: https://github.com/duckdb/duckdb-python/pull/471
 [duckdb#16980]: https://github.com/duckdb/duckdb/discussions/16980
-[duckdb#16996]: https://github.com/duckdb/duckdb/discussions/16996
 [duckdb-join-relation]: https://github.com/duckdb/duckdb/blob/fabf1d60bb0565032ad7d48e64f689fdbf616719/src/main/relation/join_relation.cpp#L25-L26
 [free-threaded]: https://docs.python.org/3/howto/free-threading-python.html
 [loading]: https://docs.python.org/3/reference/import.html#loading

@@ -14,6 +14,7 @@ from narwhals._utils import (
     extend_bool,
     generate_temporary_column_name,
     isinstance_or_issubclass,
+    requires,
 )
 from narwhals.exceptions import ColumnNotFoundError
 
@@ -381,8 +382,8 @@ def join_column_names(*names: str) -> str:
     return ", ".join(str(col(name)) for name in names)
 
 
-def temporary_view_name() -> str:
-    """Unique name for `DuckDBPyRelation.query`'s `virtual_table_name`.
+def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
+    """Unique name for `rel.query`'s `virtual_table_name`.
 
     `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
     `rel`'s own connection (see [relational api]). We prefer it to `duckdb.sql(statement)`,
@@ -401,9 +402,10 @@ def temporary_view_name() -> str:
 
     * duckdb-python >= 1.5.4 ([#471]) puts it in the `temp` catalog, so it is scoped to
       the cursor and released when that cursor is closed.
-    * Older versions put it in the relation's own catalog. It then fails outright on a
-      read-only database (#3567), and on a file-backed one it is written to disk and
-      survives reopening. See [thread safety] for the user-facing note.
+    * Older versions put it in the connection's current database. That is harmless in
+      memory, but a file-backed database would keep it on disk after reopening, and a
+      read-only one rejects it (#3567), so we raise for both instead. See
+      [thread safety] for the user-facing note.
 
     [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
     [using connections in parallel pythonprograms]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
@@ -411,6 +413,16 @@ def temporary_view_name() -> str:
     [#471]: https://github.com/duckdb/duckdb-python/pull/471
     [thread safety]: https://narwhals-dev.github.io/narwhals/concepts/thread_safety/
     """
+    if BACKEND_VERSION < (1, 5, 4):
+        on_disk = "(select path is not null or readonly from duckdb_databases() where database_name = current_database())"
+        # `count(*)` forces one row out of the empty `limit(0)`, which avoids a scan.
+        if rel.limit(0).aggregate(f"{on_disk}, count(*)").fetchall()[0][0]:
+            msg = (
+                "`join_asof` and `unpivot` on a file-backed or read-only database require "
+                f"'duckdb>=1.5.4', found version {requires._unparse_version(BACKEND_VERSION)!r}: "
+                "older versions would write a view into the database itself."
+            )
+            raise NotImplementedError(msg)
     return generate_temporary_column_name(8, [], prefix="_narwhals_")
 
 
