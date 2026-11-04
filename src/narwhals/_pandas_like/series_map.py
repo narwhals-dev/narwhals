@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING
+
+import pandas as pd
 
 from narwhals._compliant.any_namespace import MapNamespace
 from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
@@ -17,7 +18,10 @@ class PandasLikeSeriesMapNamespace(
     def get(self, key: NonNestedLiteral) -> PandasLikeSeries:
         from narwhals._arrow.utils import map_get
 
-        result_native = self.compliant._apply_pyarrow_compute_func(
-            self.native, partial(map_get, key=key)
+        native = self.native
+        result = map_get(native.array._pa_array, key)
+        # A round trip through narwhals dtypes would garble dictionary value types.
+        result_native = type(native)(
+            result, dtype=pd.ArrowDtype(result.type), index=native.index, name=native.name
         )
         return self.with_native(result_native)

@@ -1133,6 +1133,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     @property
     def map(self) -> ArrowSeriesMapNamespace:
+        if not pa.types.is_map(self.native.type):
+            msg = "Series must be of PyArrow Map type to support map namespace."
+            raise TypeError(msg)
         return ArrowSeriesMapNamespace(self)
 
     @property
