@@ -397,21 +397,15 @@ class PandasLikeDataFrame(
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
 
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
-        if self._implementation is Implementation.PANDAS and (
-            not named or len(self.native.columns) > 0
-        ):
-            return cast(
-                "list[tuple[Any, ...]] | list[dict[str, Any]]",
-                list(self.iter_rows(named=named, buffer_size=512)),
-            )
-
         if not named:
             # cuDF does not support itertuples. But it does support to_dict!
             if self._implementation is Implementation.CUDF:
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
-            return list(self.native.itertuples(index=False, name=None))
+            # Not `itertuples`: it yields NumPy scalars for nullable dtypes.
+            columns = (s.tolist() for _, s in self.native.items())  # noqa: PERF102
+            return list(zip(*columns, strict=True))
 
         return self.native.to_dict(orient="records")
 
@@ -424,46 +418,16 @@ class PandasLikeDataFrame(
     def iter_rows(
         self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        if self._implementation is Implementation.PANDAS:
-            # Convert each batch column-wise to preserve Python-native values
-            # without materializing the entire DataFrame in memory.
-            names = self.native.columns
-            batch_size = max(buffer_size, 1)
-            for start in range(0, len(self.native), batch_size):
-                batch = self.native.iloc[start : start + batch_size]
-                columns = []
-                for _, series in batch.items():  # noqa: PERF102
-                    # Keep IEEE NaN in regular NumPy float columns: downstream
-                    # consumers distinguish it from pandas nullable missingness.
-                    # Extension Float32/Float64 missing values still become None.
-                    if isinstance(series.dtype, np.dtype) and series.dtype.kind == "f":
-                        values = series.to_numpy(dtype=object).tolist()
-                    else:
-                        values = series.to_numpy(dtype=object, na_value=None).tolist()
-                    # Pandas can leave NaT unchanged in naive datetime/timedelta
-                    # arrays even with na_value=None (e.g. pandas 2.2).
-                    if series.dtype.kind in {"M", "m"} and series.hasnans:
-                        missing = series.isna().to_numpy()
-                        values = [
-                            None if is_missing else value
-                            for value, is_missing in zip(values, missing, strict=True)
-                        ]
-                    columns.append(values)
-                rows = (
-                    zip(*columns, strict=True)
-                    if columns
-                    else (() for _ in range(len(batch)))
-                )
-                if named:
-                    for row in rows:
-                        yield dict(zip(names, row, strict=False))
-                else:
-                    yield from rows
-        elif not named:
-            yield from self.native.itertuples(index=False, name=None)
+        # The param ``buffer_size`` is only here for compatibility with the Polars API
+        # and has no effect on the output.
+        # Not `itertuples`: it yields NumPy scalars for nullable dtypes.
+        columns = (s.tolist() for _, s in self.native.items())  # noqa: PERF102
+        rows = zip(*columns, strict=True)
+        if not named:
+            yield from rows
         else:
             col_names = self.native.columns
-            for row in self.native.itertuples(index=False):
+            for row in rows:
                 yield dict(zip(col_names, row, strict=False))
 
     @property
