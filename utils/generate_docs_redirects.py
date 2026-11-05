@@ -49,13 +49,15 @@ def main() -> int:
             print(f"Redirect target {new}/ does not exist in {SITE}.")
             return 1
         stub = SITE / old / "index.html"
-        if stub.is_file():
+        # Relative to the stub, so the site works under any deploy prefix.
+        target = f"{'../' * (old.count('/') + 1)}{new}/"
+        content = TEMPLATE.format(target=target)
+        # A stub from a previous run is rewritten, anything else is a real page.
+        if stub.is_file() and stub.read_text("utf-8") != content:
             print(f"{old}/ is still a real page: drop it from REDIRECTS or move it.")
             return 1
         stub.parent.mkdir(parents=True, exist_ok=True)
-        # Relative to the stub, so the site works under any deploy prefix.
-        target = f"{'../' * (old.count('/') + 1)}{new}/"
-        stub.write_text(TEMPLATE.format(target=target), "utf-8")
+        stub.write_text(content, "utf-8")
         print(f"{old}/ -> {new}/")
 
     return 0

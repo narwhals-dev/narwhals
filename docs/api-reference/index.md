@@ -7,6 +7,8 @@
     [`main` vs `stable.v1` differences](../backcompat.md#main-vs-stablev1-differences).
     To move between them, see
     [Upgrading from `stable.v1` to `stable.v2`](../how-to/upgrading_to_stable_v2.md).
+    `narwhals.plugins`, `narwhals.sql`, `narwhals.testing`, and `narwhals.utils` exist only
+    in the main namespace.
 
 - [Top-level functions](narwhals.md)
 - [narwhals.DataFrame](dataframe.md)

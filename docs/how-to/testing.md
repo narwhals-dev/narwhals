@@ -129,10 +129,15 @@ The test body then never mentions a specific library:
 # test_with_total.py
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import narwhals as nw
 from narwhals.testing import assert_frame_equal
 
 from my_library import with_total
+
+if TYPE_CHECKING:
+    from conftest import Constructor
 
 data = {"price": [1.5, 2.0], "quantity": [2, 3]}
 
