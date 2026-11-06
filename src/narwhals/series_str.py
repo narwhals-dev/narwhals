@@ -354,6 +354,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
             the string. For example, if `n = -3`, then all characters except the first three are returned.
             2. If the length of the string has fewer than `n` characters, the full string is returned.
+            3. If `n` is zero, an empty string is returned for each non-null value.
 
         Examples:
             >>> import pyarrow as pa
@@ -371,7 +372,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
+            self._narwhals_series._compliant_series.str.slice(
+                offset=-n, length=0 if n == 0 else None
+            )
         )
 
     def to_uppercase(self) -> SeriesT:
