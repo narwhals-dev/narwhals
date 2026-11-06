@@ -115,6 +115,13 @@ jobs:
           cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
       - name: Run tests with full dependencies
         if: ${{ matrix.dependencies == 'core,optional' }}
+        env:
+          # Temporary deselect to get CI green: these tests expect `mime_type=None` for `.parquet`,
+          # but on ubuntu-26.04 `/etc/mime.types` maps it, and marimo's `guess_mime_type` falls
+          # back to stdlib `mimetypes`. Remove once marimo makes the mapping platform-independent.
+          PYTEST_ADDOPTS: >-
+            --deselect tests/_data/_external_storage/test_huggingface.py::TestHuggingfaceApi::test_list_bucket_entries
+            --deselect tests/_data/_external_storage/test_huggingface.py::TestHuggingfaceApi::test_get_bucket_entry_file
         run: |
           cd marimo
           uv run --python ${{ matrix.python-version }} python -c "import narwhals; print(narwhals.__file__)"
@@ -367,6 +374,9 @@ jobs:
           cd plotly.py
           . .venv/bin/activate
           uv pip freeze
+      - name: install-tzdata-legacy
+        # ubuntu-26.04 moved legacy aliases (e.g. CET) out of tzdata, the tests rely on them
+        run: sudo apt-get update && sudo apt-get install -y tzdata-legacy
       - name: Run pytest on plotly express
         run: |
           cd plotly.py
@@ -624,6 +634,9 @@ jobs:
           uv pip install -e ".[polars, pyarrow]"
       - name: show-deps
         run: uv pip freeze
+      - name: install-tzdata-legacy
+        # ubuntu-26.04 moved legacy aliases (e.g. CET) out of tzdata, the tests rely on them
+        run: sudo apt-get update && sudo apt-get install -y tzdata-legacy
       - name: Run tests
         run: |
           cd darts
