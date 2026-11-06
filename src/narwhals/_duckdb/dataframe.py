@@ -17,6 +17,7 @@ from narwhals._duckdb.utils import (
     lit,
     native_to_narwhals_dtype,
     qualified_col,
+    when,
     window_expression,
 )
 from narwhals._sql.dataframe import SQLLazyFrame
@@ -56,6 +57,17 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+
+
+def _nan_matching_eq(left: Expression, right: Expression) -> Expression:
+    # DuckDB<2.0 pushes join filters into Arrow scans that drop `NaN`, so inner and
+    # semi joins lose `NaN` matches. Comparing `isnan(x)` and `x` (with `NaN`
+    # replaced) avoids that, keeps `null != null` and, unlike an `OR`, keeps both
+    # terms usable as hash-join keys.
+    left_nan, right_nan = F("isnan", left), F("isnan", right)
+    left_value = when(left_nan, lit(0.0)).otherwise(left)
+    right_value = when(right_nan, lit(0.0)).otherwise(right)
+    return (left_nan == right_nan) & (left_value == right_value)
 
 
 class DuckDBLazyFrame(
@@ -311,8 +323,14 @@ class DuckDBLazyFrame(
             # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
+            lhs_floats = {name for name, dtype in self.schema.items() if dtype.is_float()}
+            rhs_floats = {
+                name for name, dtype in other.schema.items() if dtype.is_float()
+            }
             it = (
-                qualified_col("lhs", left) == qualified_col("rhs", right)
+                _nan_matching_eq(qualified_col("lhs", left), qualified_col("rhs", right))
+                if left in lhs_floats and right in rhs_floats
+                else qualified_col("lhs", left) == qualified_col("rhs", right)
                 for left, right in zip(left_on, right_on, strict=True)
             )
             condition: Expression = reduce(and_, it)
