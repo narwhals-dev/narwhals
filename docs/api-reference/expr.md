@@ -9,6 +9,7 @@
         - all
         - any
         - any_value
+        - approx_quantile
         - cast
         - ceil
         - clip

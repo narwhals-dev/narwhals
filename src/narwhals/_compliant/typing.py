@@ -190,6 +190,7 @@ NarwhalsAggregation: TypeAlias = Literal[
     "n_unique",
     "count",
     "quantile",
+    "approx_quantile",
     "all",
     "any",
     "first",

@@ -221,6 +221,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def kurtosis(self) -> Self:
         return self._with_callable(lambda expr: F("kurtosis_pop", expr))
 
+    def approx_quantile(self, quantile: float) -> Self:
+        # DuckDB only accepts `FLOAT` for the quantile.
+        return self._with_callable(
+            lambda expr: F("approx_quantile", expr, lit(quantile).cast("float"))
+        )
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
