@@ -1,0 +1,57 @@
+name: Benchmark Narwhals vs pandas overhead
+
+on:
+  pull_request:
+    paths:
+      - "src/narwhals/**.py"
+      - .github/workflows/benchmark_overhead.yml
+      - pyproject.toml
+      - uv.lock
+
+env:
+  PY_COLORS: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
+
+permissions:
+  contents: read
+
+jobs:
+  overhead:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+        pandas: ["latest", "pandas2"]
+        include:
+          - pandas: "latest"
+            pandas-constraint: ""
+          - pandas: "pandas2"
+            pandas-constraint: "pandas>=2.2,<3"
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: "true"
+          cache-suffix: benchmark-${{ matrix.python-version }}-${{ matrix.pandas }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: generate-data
+        run: make run-ci DEPS="--extra pandas --group core-tests" CMD="--module tpch.generate_data --debug"
+      - name: overhead-tests
+        env:
+          PANDAS_CONSTRAINT: ${{ matrix.pandas-constraint }}
+        run: |
+          RUN_ONLY=""
+          if [ -n "$PANDAS_CONSTRAINT" ]; then
+            RUN_ONLY="--with '$PANDAS_CONSTRAINT'"
+          fi
+          make run-ci DEPS="--extra pandas --group core-tests" \
+            RUN_ONLY="$RUN_ONLY" \
+            CMD="pytest tpch/tests/overhead_test.py -s"
