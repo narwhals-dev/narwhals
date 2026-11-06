@@ -163,6 +163,16 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.native, implementation=self._implementation, version=version
         )
 
+    def _from_scalar(self, value: Any, *, dtype: IntoDType | None = None) -> Self:
+        if dtype is None:
+            return super()._from_scalar(value)
+        backend = get_dtype_backend(self.native.dtype, self._implementation)
+        native_dtype = narwhals_to_native_dtype(
+            dtype, backend, self._implementation, self._version
+        )
+        ns = self._implementation.to_native_namespace()
+        return self._with_native(ns.Series([value], name=self.name, dtype=native_dtype))
+
     def _with_native(self, series: Any, *, preserve_broadcast: bool = False) -> Self:
         result = self.__class__(
             series, implementation=self._implementation, version=self._version

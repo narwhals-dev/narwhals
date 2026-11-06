@@ -359,23 +359,34 @@ class PandasLikeGroupBy(
         """
         warn_complex_group_by()
         impl = self.compliant._implementation
-        func = self._apply_exprs_function(exprs)
+        # A single row cannot carry one dtype per aggregation, so each is recorded
+        # as it is computed and restored below. `None` marks a column whose groups
+        # disagreed, which is left to pandas' own inference.
+        dtypes: dict[str, Any] = {}
+        func = self._apply_exprs_function(exprs, dtypes)
         apply = grouped.apply
+        result: pd.DataFrame
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)  # type: ignore[call-overload]
-        return apply(func)  # type: ignore[return-value]  # pragma: no cover
+            result = apply(func, include_groups=False)  # type: ignore[call-overload]
+        else:  # pragma: no cover
+            result = apply(func)  # type: ignore[assignment]
+        return result.astype({k: v for k, v in dtypes.items() if v is not None})
 
-    def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
+    def _apply_exprs_function(
+        self, exprs: Iterable[PandasLikeExpr], dtypes: dict[str, Any], /
+    ) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
         into_series = ns._series.from_iterable
 
         def fn(df: pd.DataFrame) -> pd.Series[Any]:
             compliant = self.compliant._with_native(df)
-            results = [
-                (keys.native.iloc[0], keys.name)
-                for expr in exprs
-                for keys in expr(compliant)
-            ]
+            results: list[tuple[Any, str]] = []
+            for expr in exprs:
+                for keys in expr(compliant):
+                    dtype = keys.native.dtype
+                    if dtypes.setdefault(keys.name, dtype) != dtype:
+                        dtypes[keys.name] = None
+                    results.append((keys.native.iloc[0], keys.name))
             out_group, out_names = zip(*results, strict=True) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 
