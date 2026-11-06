@@ -10,6 +10,7 @@ from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import make_group_by_kwargs
+from narwhals._utils import generate_temporary_column_name
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -262,6 +263,7 @@ class PandasLikeGroupBy(
         /,
         *,
         drop_null_keys: bool,
+        maintain_order: bool = False,
     ) -> None:
         self._original_columns = tuple(df.columns)
         self._drop_null_keys = drop_null_keys
@@ -270,6 +272,11 @@ class PandasLikeGroupBy(
         )
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
         self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
+        self._row_index = (
+            generate_temporary_column_name(n_bytes=8, columns=self.compliant.columns)
+            if maintain_order
+            else None
+        )
 
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
@@ -277,7 +284,7 @@ class PandasLikeGroupBy(
         if set(self._native.index.names).intersection(self.compliant.columns):
             self._native = self._native.reset_index(drop=True)
 
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0912
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True
         agg_exprs: list[AggExpr] = []
         order_by = ()
@@ -292,13 +299,7 @@ class PandasLikeGroupBy(
                     raise NotImplementedError(msg)
                 order_by = _current_order_by
 
-        if order_by:
-            grouped: NativeGroupBy = self._native.sort_values(
-                list(order_by), na_position="first"
-            ).groupby(self._keys.copy(), **self._group_by_kwargs)
-        else:
-            grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
-        self._grouped = grouped
+        grouped = self._grouped = self._configure_grouped(order_by)
 
         if all_aggs_are_simple:
             result: pd.DataFrame
@@ -314,6 +315,9 @@ class PandasLikeGroupBy(
         else:
             result = self._apply_aggs(grouped, exprs)
 
+        if order_by and self._row_index is not None:
+            result = self._restore_order(result, grouped, self._row_index)
+
         impl = self.compliant._implementation
         backend_version = impl._backend_version()
         if impl.is_pandas() and backend_version < (3, 0):  # pragma: no cover
@@ -323,6 +327,32 @@ class PandasLikeGroupBy(
             result = result.reset_index()
 
         return self._select_results(result, agg_exprs)
+
+    def _configure_grouped(self, order_by: Sequence[str]) -> NativeGroupBy:
+        if not order_by:
+            return self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
+        native = self._native
+        if self._row_index is not None:
+            # With `sort=False`, pandas returns groups in order of first appearance,
+            # but sorting by `order_by` changes which rows appear first.
+            native = (
+                self.compliant._with_native(native, validate_column_names=False)
+                .with_row_index(self._row_index, order_by=None)
+                .native
+            )
+        return native.sort_values(list(order_by), na_position="first").groupby(
+            self._keys.copy(), **self._group_by_kwargs
+        )
+
+    def _restore_order(
+        self, result: pd.DataFrame, grouped: NativeGroupBy, row_index: str
+    ) -> pd.DataFrame:
+        # Align on the group keys rather than position: e.g. `last` returns its
+        # rows in order of last appearance.
+        ns = self.compliant.__narwhals_namespace__()
+        first_seen = grouped[row_index].min()
+        columns = list(result.columns)
+        return ns._concat_by_index([result, first_seen]).sort_values(row_index)[columns]
 
     def _select_results(
         self, df: pd.DataFrame, /, agg_exprs: Sequence[AggExpr]
