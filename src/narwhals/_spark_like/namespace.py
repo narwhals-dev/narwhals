@@ -215,7 +215,7 @@ class SparkLikeNamespace(
                 operator.add,
                 (col.isNotNull().cast(self._native_dtypes.IntegerType()) for col in cols),
             )
-            return true_divide(F, numerator, denominator)
+            return F.when(denominator > F.lit(0), true_divide(F, numerator, denominator))
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

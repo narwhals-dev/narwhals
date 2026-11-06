@@ -164,7 +164,11 @@ class ArrowNamespace(
             expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
             series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
             non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
-            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
+            count = reduce(operator.add, non_na)
+            mean = reduce(operator.add, series) / count
+            # A row where every input is null has a count of 0: return null, not 0/0 = NaN.
+            native = pc.if_else((count == 0).native, None, mean.native)
+            return [mean._with_native(native, preserve_broadcast=True)]
 
         return self._expr._from_callable(
             func=func,

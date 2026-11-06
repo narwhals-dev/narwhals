@@ -29,3 +29,13 @@ def test_meanh_all(constructor: Constructor) -> None:
     result = df.select(c=nw.mean_horizontal(nw.all()))
     expected = {"c": [6, 12, 18]}
     assert_equal_data(result, expected)
+
+
+def test_meanh_all_null_row_is_null(constructor: Constructor) -> None:
+    data = {"a": [1.0, None], "b": [3.0, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(mean=nw.mean_horizontal("a", "b")).select(
+        nw.col("mean"), is_null=nw.col("mean").is_null()
+    )
+    expected = {"mean": [2.0, None], "is_null": [False, True]}
+    assert_equal_data(result, expected)
