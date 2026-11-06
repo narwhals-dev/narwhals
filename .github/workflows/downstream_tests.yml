@@ -101,9 +101,8 @@ jobs:
           uv add ../ --editable
           # Temporary pins to get CI green: marimo is not yet compatible with DuckDB 2.0
           # (`rel.fetchone()` was removed) nor with bokeh 3.10 (`from_panel.py` imports
-          # `curstate` from `bokeh.io.notebook`, which no longer exposes it), and its
-          # huggingface tests expect `mime_type=None`, which huggingface-hub 2.4.0 now populates.
-          uv add --group test-optional "duckdb<2" "bokeh<3.10" "huggingface-hub<2.4"
+          # `curstate` from `bokeh.io.notebook`, which no longer exposes it).
+          uv add --group test-optional "duckdb<2" "bokeh<3.10"
       - name: show-deps
         run: |
           cd marimo
@@ -116,6 +115,13 @@ jobs:
           cp marimo/frontend/public/favicon.ico marimo/marimo/_static/favicon.ico
       - name: Run tests with full dependencies
         if: ${{ matrix.dependencies == 'core,optional' }}
+        env:
+          # Temporary deselect to get CI green: these tests expect `mime_type=None` for `.parquet`,
+          # but on ubuntu-26.04 `/etc/mime.types` maps it, and marimo's `guess_mime_type` falls
+          # back to stdlib `mimetypes`. Remove once marimo makes the mapping platform-independent.
+          PYTEST_ADDOPTS: >-
+            --deselect tests/_data/_external_storage/test_huggingface.py::TestHuggingfaceApi::test_list_bucket_entries
+            --deselect tests/_data/_external_storage/test_huggingface.py::TestHuggingfaceApi::test_get_bucket_entry_file
         run: |
           cd marimo
           uv run --python ${{ matrix.python-version }} python -c "import narwhals; print(narwhals.__file__)"
