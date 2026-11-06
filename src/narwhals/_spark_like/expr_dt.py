@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._constants import US_PER_SECOND
-from narwhals._duration import Interval
+from narwhals._duration import PATTERN_INTERVAL_SQL, Interval
 from narwhals._spark_like.utils import (
     UNITS_DICT,
     fetch_session_time_zone,
@@ -99,7 +99,9 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
 
         return self.compliant._with_elementwise(_truncate)
 
-    def offset_by(self, by: str) -> SparkLikeExpr:
+    def offset_by(self, by: str | SparkLikeExpr) -> SparkLikeExpr:
+        if not isinstance(by, str):
+            return self._offset_by_expr(by)
         interval = Interval.parse_no_constraints(by)
         multiple, unit = interval.multiple, interval.unit
         if unit == "ns":  # pragma: no cover
@@ -120,6 +122,29 @@ class SparkLikeExprDateTimeNamespace(SQLExprDateTimeNamesSpace["SparkLikeExpr"])
             )
 
         return self.compliant._with_elementwise(_offset_by)
+
+    def _offset_by_expr(self, by: SparkLikeExpr) -> SparkLikeExpr:
+        if is_pyspark_pre_4(self.compliant._implementation):  # pragma: no cover
+            msg = "`dt.offset_by` with an expression requires PySpark 4.0 or later."
+            raise NotImplementedError(msg)
+        F = self.compliant._F
+
+        def _offset_by(expr: Column, by: Column) -> Column:
+            multiple = F.nullif(
+                F.regexp_extract(by, PATTERN_INTERVAL_SQL, 1), F.lit("")
+            ).cast("bigint")
+            unit = F.regexp_extract(by, PATTERN_INTERVAL_SQL, 2)
+
+            def add(unit_: str) -> Column:
+                return F.timestamp_add(UNITS_DICT[unit_], multiple, expr)  # pyright: ignore[reportAttributeAccessIssue]
+
+            first, *rest = (u for u in UNITS_DICT if u != "ns")
+            result = F.when(unit == first, add(first))
+            for unit_ in rest:
+                result = result.when(unit == unit_, add(unit_))
+            return result
+
+        return self.compliant._with_elementwise(_offset_by, expression_args={"by": by})
 
     def _no_op_time_zone(self, time_zone: str) -> SparkLikeExpr:  # pragma: no cover
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:

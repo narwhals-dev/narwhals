@@ -3,8 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_MINUTE, US_PER_SECOND
-from narwhals._duckdb.utils import UNITS_DICT, F, fetch_rel_time_zone, lit, sql_expression
-from narwhals._duration import Interval
+from narwhals._duckdb.utils import (
+    UNITS_DICT,
+    F,
+    fetch_rel_time_zone,
+    lit,
+    sql_expression,
+    when,
+)
+from narwhals._duration import PATTERN_INTERVAL_SQL, Interval
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented, requires
 
@@ -78,7 +85,11 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
         return self.compliant._with_elementwise(_truncate)
 
     @requires.backend_version((1, 3))
-    def offset_by(self, by: str) -> DuckDBExpr:
+    def offset_by(self, by: str | DuckDBExpr) -> DuckDBExpr:
+        if not isinstance(by, str):
+            return self.compliant._with_elementwise(
+                lambda expr, by: expr + _parse_interval(by), expression_args={"by": by}
+            )
         interval = Interval.parse_no_constraints(by)
         format = lit(f"{interval.multiple!s} {UNITS_DICT[interval.unit]}")
 
@@ -116,3 +127,28 @@ class DuckDBExprDateTimeNamespace(SQLExprDateTimeNamesSpace["DuckDBExpr"]):
 
     total_nanoseconds = not_implemented()
     timestamp = not_implemented()
+
+
+def _parse_interval(by: Expression) -> Expression:
+    """Turn each `<multiple><unit>` string into an interval, or null if it isn't one."""
+    pattern = lit(PATTERN_INTERVAL_SQL)
+    multiple = F("nullif", F("regexp_extract", by, pattern, lit(1)), lit("")).cast(
+        "bigint"
+    )
+    unit = F("regexp_extract", by, pattern, lit(2))
+    interval = when(unit == lit("q"), F("to_months", multiple * lit(3)))
+    for unit_, function in _UNIT_TO_INTERVAL.items():
+        interval = interval.when(unit == lit(unit_), F(function, multiple))
+    return interval
+
+
+_UNIT_TO_INTERVAL = {
+    "us": "to_microseconds",
+    "ms": "to_milliseconds",
+    "s": "to_seconds",
+    "m": "to_minutes",
+    "h": "to_hours",
+    "d": "to_days",
+    "mo": "to_months",
+    "y": "to_years",
+}
