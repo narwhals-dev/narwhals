@@ -79,6 +79,7 @@ SERIES_ONLY_METHODS = {
     "arg_max",
     "arg_min",
     "arg_true",
+    "equals",
     "dtype",
     "from_iterable",
     "from_numpy",
