@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import datetime as dt
 import math
+from decimal import Decimal
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -12,7 +14,7 @@ from narwhals._utils import Implementation, Version, isinstance_or_issubclass
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
     from typing import Literal, TypeAlias
 
     from typing_extensions import TypeIs
@@ -573,6 +575,56 @@ def list_agg(
             )
         ]
     )
+
+
+def map_get(array: ChunkedArrayAny, key: NonNestedLiteral) -> ChunkedArrayAny:
+    """The value for `key` in each map.
+
+    An exception is raised if the Python type of the key doesn't match the `Map` column's key type.
+    """
+    map_type = cast("pa.MapType[Any, Any]", array.type)
+    if key is None:
+        return pa.chunked_array([pa.nulls(len(array), type=map_type.item_type)])
+    # Like Polars, reject keys of another kind: `pa.scalar(1.5, pa.int64())` is 1.
+    if not _key_matches(key, map_type.key_type):
+        msg = f"Cannot look up a {type(key).__name__} key in a map with {map_type.key_type} keys."
+        raise InvalidOperationError(msg)
+    try:
+        fits = pa.scalar(key, type=map_type.key_type).as_py() == key
+    except (pa.ArrowInvalid, OverflowError):
+        fits = False
+    if not fits:
+        # Like Polars, a key the key type can't hold exactly (out of range, rounded) is absent.
+        return pa.chunked_array([pa.nulls(len(array), type=map_type.item_type)])
+    # PyArrow maps can repeat a key; Polars keeps the last value when it builds a map.
+    return pc.map_lookup(array, pa.scalar(key, type=map_type.key_type), "last")
+
+
+_KEY_KINDS: dict[type, Callable[[pa.DataType], bool]] = {
+    bool: pa.types.is_boolean,
+    int: pa.types.is_integer,
+    float: pa.types.is_floating,
+    str: lambda tp: pa.types.is_string(tp) or pa.types.is_large_string(tp),
+    bytes: lambda tp: (
+        pa.types.is_binary(tp)
+        or pa.types.is_large_binary(tp)
+        or pa.types.is_fixed_size_binary(tp)
+    ),
+    dt.date: pa.types.is_date,
+    dt.time: pa.types.is_time,
+    dt.timedelta: pa.types.is_duration,
+    Decimal: pa.types.is_decimal,
+}
+
+
+def _key_matches(key: NonNestedLiteral, key_type: pa.DataType) -> bool:
+    if isinstance(key, dt.datetime):
+        # PyArrow reads a naive key as UTC; Polars rejects mixing naive and aware.
+        return pa.types.is_timestamp(key_type) and (key.tzinfo is None) == (
+            key_type.tz is None
+        )
+    kind = _KEY_KINDS.get(type(key))
+    return kind is not None and kind(key_type)
 
 
 _LIST_BLOCK_VALUES = 1 << 21

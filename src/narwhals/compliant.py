@@ -18,6 +18,7 @@ from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
     ListNamespace,
+    MapNamespace,
     StringNamespace,
     StructNamespace,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "EagerNamespace",
     "EagerSeries",
     "ListNamespace",
+    "MapNamespace",
     "StringNamespace",
     "StructNamespace",
 ]

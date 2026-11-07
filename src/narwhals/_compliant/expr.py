@@ -9,6 +9,7 @@ from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
     ListNamespace,
+    MapNamespace,
     NameNamespace,
     StringNamespace,
     StructNamespace,
@@ -395,7 +396,7 @@ class EagerExpr(
 
     def _reuse_series_namespace(
         self,
-        series_namespace: Literal["cat", "dt", "list", "name", "str", "struct"],
+        series_namespace: Literal["cat", "dt", "list", "map", "name", "str", "struct"],
         method_name: str,
         **expressifiable_args: Any,
     ) -> Self:
@@ -908,6 +909,10 @@ class EagerExpr(
         return EagerExprListNamespace(self)
 
     @property
+    def map(self) -> EagerExprMapNamespace[Self]:
+        return EagerExprMapNamespace(self)
+
+    @property
     def name(self) -> EagerExprNameNamespace[Self]:
         return EagerExprNameNamespace(self)
 
@@ -1225,6 +1230,13 @@ class EagerExprStringNamespace(
         return self.compliant._reuse_series_namespace(
             "str", "pad_end", length=length, fill_char=fill_char
         )
+
+
+class EagerExprMapNamespace(
+    EagerExprNamespace[EagerExprT], MapNamespace[EagerExprT], Generic[EagerExprT]
+):
+    def get(self, key: NonNestedLiteral) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("map", "get", key=key)
 
 
 class EagerExprStructNamespace(
