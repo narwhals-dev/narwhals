@@ -79,7 +79,6 @@ INHERITED_METHODS = frozenset(
         "clone",
         "drop_nulls",
         "estimated_size",
-        "explode",
         "filter",
         "gather_every",
         "head",
@@ -248,12 +247,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             )
         )
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        if self._backend_version < (1, 36):
-            return self._with_native(self.native.explode(columns))
-        res = self.native.explode(columns, empty_as_null=True, keep_nulls=True)
-        return self._with_native(res)
-
     def top_k(
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
     ) -> Self:
@@ -308,6 +301,49 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             result = frame.select(
                 pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
+
+        return self._with_native(result)
+
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        try:
+            if self._backend_version < (1, 36):
+                # On old versions the native explode behaves as `empty_as_null=True,
+                # keep_nulls=True`, so backport the flags by dropping rows that no
+                # exploded column keeps. Polars>=1.36 raises on a row that some columns
+                # keep and others drop (e.g. `null` next to `[]` under mixed flags), so
+                # give two of its cells different lengths for the native check to fail.
+                frame = self.native
+                if not (empty_as_null and keep_nulls):
+                    keep = [
+                        pl.all_horizontal(
+                            (col.list.len() != 0) | col.is_null() | empty_as_null,
+                            col.is_not_null() | keep_nulls,
+                        )
+                        for col in map(pl.col, columns)
+                    ]
+                    frame = frame.filter(pl.any_horizontal(keep))
+                    if len(columns) > 1:
+                        mixed = ~pl.all_horizontal(keep)
+                        first, second = map(pl.col, columns[:2])
+                        frame = frame.with_columns(
+                            pl.when(mixed)
+                            .then(first.list.head(0))
+                            .otherwise(first)
+                            .alias(columns[0]),
+                            pl.when(mixed)
+                            .then(second.list.first().repeat_by(1))
+                            .otherwise(second)
+                            .alias(columns[1]),
+                        )
+                result = frame.explode(columns)
+            else:
+                result = self.native.explode(
+                    columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+                )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
 
         return self._with_native(result)
 

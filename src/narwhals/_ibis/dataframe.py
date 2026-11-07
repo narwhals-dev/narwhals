@@ -25,7 +25,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     to_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -382,27 +381,21 @@ class IbisLazyFrame(
         subset_ = subset if subset is not None else self.columns
         return self._with_native(self.native.drop_null(subset_))
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = self._version.dtypes
-        schema = self.collect_schema()
-        for col in columns:
-            dtype = schema[col]
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        # `unnest(..., keep_empty=True)` emits a single null row for both empty and null
+        # lists, so drop the rows the flags exclude up front.
+        name = self._validate_explode_columns(columns)
+        native = self.native
+        column = cast("ir.ArrayColumn", native[name])
+        if not empty_as_null:
+            # `length()` is null for null lists; keep them here (via `keep_nulls`).
+            native = native.filter(column.length().fill_null(lit(1)) > lit(0))
+        if not keep_nulls:
+            native = native.drop_null([name])
 
-            if dtype != dtypes.List:
-                msg = (
-                    f"`explode` operation not supported for dtype `{dtype}`, "
-                    "expected List type"
-                )
-                raise InvalidOperationError(msg)
-
-        if len(columns) != 1:
-            msg = (
-                "Exploding on multiple columns is not supported with Ibis backend since "
-                "we cannot guarantee that the exploded columns have matching element counts."
-            )
-            raise NotImplementedError(msg)
-
-        return self._with_native(self.native.unnest(columns[0], keep_empty=True))
+        return self._with_native(native.unnest(name, keep_empty=True))
 
     def unpivot(
         self,
