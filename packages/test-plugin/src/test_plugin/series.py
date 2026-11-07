@@ -43,6 +43,12 @@ class DictSeries:
     def from_numpy(cls, data: Any, /, *, context: _LimitedContext) -> Self:
         return cls(data.tolist(), version=context._version)
 
+    @classmethod
+    def from_arrow(cls, data: Any, /, *, context: _LimitedContext) -> Self:
+        import pyarrow as pa
+
+        return cls(pa.chunked_array(data).to_pylist(), version=context._version)
+
     def __narwhals_series__(self) -> Self:
         return self
 

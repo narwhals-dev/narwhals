@@ -90,7 +90,13 @@ if TYPE_CHECKING:
         NativePySparkConnect,
         NativeSQLFrame,
     )
-    from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals._translate import (
+        ArrowArrayExportable,
+        ArrowStreamExportable,
+        IntoArrowSeries,
+        IntoArrowTable,
+        ToNarwhalsT_co,
+    )
     from narwhals._typing import (
         Backend,
         IntoBackend,
@@ -1711,6 +1717,7 @@ EagerFunctionName: TypeAlias = Literal[
     "DataFrame.from_dict",
     "DataFrame.from_dicts",
     "DataFrame.from_numpy",
+    "Series.from_arrow",
     "Series.from_iterable",
     "Series.from_numpy",
 ]
@@ -1726,6 +1733,7 @@ EAGER_HINT_EXAMPLES: Mapping[EagerFunctionName, str] = {
     "DataFrame.from_dict": "nw.DataFrame.from_dict({'a': [1, 2]}, backend='pyarrow')",
     "DataFrame.from_dicts": "nw.DataFrame.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
     "DataFrame.from_numpy": "nw.DataFrame.from_numpy(arr, backend='pyarrow')",
+    "Series.from_arrow": "nw.Series.from_arrow('a', arr, backend='pyarrow').to_frame()",
     "Series.from_iterable": "nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
     "Series.from_numpy": "nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
 }
@@ -1792,6 +1800,10 @@ def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
 
 
+def supports_arrow_c_array(obj: Any) -> TypeIs[ArrowArrayExportable]:
+    return _hasattr_static(obj, "__arrow_c_array__")
+
+
 def _remap_full_join_keys(
     left_on: Collection[str], right_on: Collection[str], suffix: str
 ) -> dict[str, str]:
@@ -1825,6 +1837,22 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
         ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._dataframe.from_arrow(data, context=ns).native
     msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
+    raise ModuleNotFoundError(msg)  # pragma: no cover
+
+
+def _into_arrow_chunked_array(
+    data: IntoArrowSeries, context: _LimitedContext, /
+) -> pa.ChunkedArray[Any]:
+    """Guards `ArrowSeries.from_arrow` w/ safer imports.
+
+    Arguments:
+        data: Object which implements `__arrow_c_array__` or `__arrow_c_stream__`.
+        context: Initialized compliant object.
+    """
+    if find_spec("pyarrow"):
+        ns = context._version.namespace.from_backend("pyarrow").compliant
+        return ns._series.from_arrow(data, context=ns).native
+    msg = f"'pyarrow>=14.0.0' is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
     raise ModuleNotFoundError(msg)  # pragma: no cover
 
 

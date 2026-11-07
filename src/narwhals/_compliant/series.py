@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._translate import IntoArrowSeries
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -112,6 +113,10 @@ class CompliantSeries(
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self: ...
+    @classmethod
+    def from_arrow(
+        cls, data: IntoArrowSeries, /, *, context: _LimitedContext
+    ) -> Self: ...
     @classmethod
     def from_iterable(
         cls,
