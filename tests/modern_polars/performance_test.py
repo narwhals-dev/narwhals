@@ -11,7 +11,7 @@ expected = {"weight_kg": [89, 38, 79, 68, 78, 33, 86]}
 
 
 def test_parse_weight(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "ibis", "duckdb")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
 
