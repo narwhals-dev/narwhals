@@ -14,6 +14,10 @@ from tests.utils import NUMPY_VERSION, ConstructorEager
 pytestmark = pytest.mark.skipif(
     NUMPY_VERSION < PkgVersion("1.23"), reason="`np.from_dlpack` needs numpy>=1.23"
 )
+# numpy<1.24 raises `TypeError` instead of `BufferError` for dtypes DLPack can't hold.
+UNSUPPORTED_DTYPE_ERROR = (
+    BufferError if NUMPY_VERSION >= PkgVersion("1.24") else TypeError
+)
 
 
 class LegacyConsumerView:
@@ -46,13 +50,13 @@ def test_dlpack(
 ) -> None:
     if expected.dtype == bool and NUMPY_VERSION < PkgVersion("1.25"):  # pragma: no cover
         # numpy<1.25 can't export booleans via DLPack.
-        request.applymarker(pytest.mark.xfail(raises=BufferError))
+        request.applymarker(pytest.mark.xfail(raises=UNSUPPORTED_DTYPE_ERROR))
     if expected.dtype == bool and any(
         name in str(constructor_eager) for name in ("nullable", "_pyarrow_constructor")
     ):
         # `DataFrame.to_numpy` returns `object` for pandas `boolean` and `bool[pyarrow]`
         # columns, unlike `Series.to_numpy`.
-        request.applymarker(pytest.mark.xfail(raises=BufferError))
+        request.applymarker(pytest.mark.xfail(raises=UNSUPPORTED_DTYPE_ERROR))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     assert df.__dlpack_device__() == (1, 0)
     result = np.from_dlpack(df)
@@ -69,7 +73,7 @@ def test_dlpack_legacy_consumer(constructor_eager: ConstructorEager) -> None:
 def test_dlpack_unsupported_dtype(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2], "b": ["x", "y"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    with pytest.raises(BufferError):
+    with pytest.raises(UNSUPPORTED_DTYPE_ERROR):
         np.from_dlpack(df)
 
 
