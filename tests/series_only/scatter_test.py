@@ -68,3 +68,12 @@ def test_scatter_2862(constructor_eager: ConstructorEager) -> None:
     assert_equal_series(s.scatter(1, 999), [1, 999, 3], "a")
     assert_equal_series(s.scatter([0, 2], [999, 888]), [999, 2, 888], "a")
     assert_equal_series(s.scatter([2, 0], [999, 888]), [888, 2, 999], "a")
+
+
+def test_scatter_scalar_broadcast(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    assert_equal_series(s.scatter([0, 2], 999), [999, 2, 999, 4], "a")
+    assert_equal_series(s.scatter([0, 2], [999]), [999, 2, 999, 4], "a")
+    assert_equal_series(
+        s.scatter([0, 2], series(constructor_eager, "v", [999])), [999, 2, 999, 4], "a"
+    )
