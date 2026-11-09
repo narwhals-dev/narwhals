@@ -461,6 +461,7 @@ exclude_also = [
   '.*._backend_version\(\) <',
   'BACKEND_VERSION <',
   'if ".*" in str\(constructor',
+  'is_polars_gpu\(constructor\)',  # cudf-polars markers, only active on a GPU
   'pytest.skip\(',
   'assert_never\(',
   'PANDAS_VERSION < \(',  # src: tuple comparisons
