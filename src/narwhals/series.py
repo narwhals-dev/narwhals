@@ -12,7 +12,6 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     _validate_rolling_arguments,
-    dlpack_kwargs,
     eager_namespace,
     ensure_type,
     generate_repr,
@@ -21,6 +20,7 @@ from narwhals._utils import (
     qualified_type_name,
     supports_arrow_c_stream,
     supports_dlpack,
+    to_dlpack,
     unstable,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
@@ -372,7 +372,9 @@ class Series(Generic[IntoSeriesT]):
         Narwhals doesn't implement anything itself here:
 
         - if the underlying series implements the protocol (e.g. cuDF), it'll return that
-        - else, it'll call `to_numpy` and then defer to NumPy's implementation
+        - else, it'll call `to_numpy` and then defer to NumPy's implementation, copying
+          read-only arrays for consumers on unversioned DLPack (`max_version` < 1.0),
+          which can't flag a buffer as read-only
 
         DLPack can only represent fixed-width numeric and boolean data: other dtypes
         (e.g. strings, datetimes) raise. In the NumPy fallback, nulls follow the
@@ -401,11 +403,13 @@ class Series(Generic[IntoSeriesT]):
             array([1, 2, 3])
         """
         native_series = self._compliant_series.native
-        producer = native_series if supports_dlpack(native_series) else self.to_numpy()
-        return producer.__dlpack__(
-            **dlpack_kwargs(
-                stream=stream, max_version=max_version, dl_device=dl_device, copy=copy
-            )
+        return to_dlpack(
+            native_series,
+            self.to_numpy,
+            stream=stream,
+            max_version=max_version,
+            dl_device=dl_device,
+            copy=copy,
         )
 
     def __dlpack_device__(self) -> tuple[int, int]:

@@ -32,7 +32,6 @@ from narwhals._utils import (
     can_lazyframe_collect,
     check_column_names_are_unique,
     check_columns_exist,
-    dlpack_kwargs,
     eager_namespace,
     flatten,
     generate_repr,
@@ -49,6 +48,7 @@ from narwhals._utils import (
     qualified_type_name,
     supports_arrow_c_stream,
     supports_dlpack,
+    to_dlpack,
     validate_bool_flags,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
@@ -808,7 +808,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         Narwhals doesn't implement anything itself here:
 
         - if the underlying dataframe implements the protocol, it'll return that
-        - else, it'll call `to_numpy` and then defer to NumPy's implementation
+        - else, it'll call `to_numpy` and then defer to NumPy's implementation, copying
+          read-only arrays for consumers on unversioned DLPack (`max_version` < 1.0),
+          which can't flag a buffer as read-only
 
         Columns are cast to a common dtype by `to_numpy` (e.g. integers and floats
         become floats). DLPack can only represent fixed-width numeric and boolean data,
@@ -839,11 +841,13 @@ class DataFrame(BaseFrame[DataFrameT]):
                    [2, 4]])
         """
         native_frame = self._compliant_frame.native
-        producer = native_frame if supports_dlpack(native_frame) else self.to_numpy()
-        return producer.__dlpack__(
-            **dlpack_kwargs(
-                stream=stream, max_version=max_version, dl_device=dl_device, copy=copy
-            )
+        return to_dlpack(
+            native_frame,
+            self.to_numpy,
+            stream=stream,
+            max_version=max_version,
+            dl_device=dl_device,
+            copy=copy,
         )
 
     def __dlpack_device__(self) -> tuple[int, int]:
