@@ -43,7 +43,10 @@ def test_fill_null_scalar_receiver(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if is_polars_gpu(constructor):
-        reason = "cudf-polars raises `Column size mismatch`"
+        reason = (
+            "cudf-polars raises `Column size mismatch`: "
+            "https://github.com/NVIDIA/cudf/issues/24864"
+        )
         request.applymarker(pytest.mark.xfail(reason=reason))
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow_table")):
         reason = (

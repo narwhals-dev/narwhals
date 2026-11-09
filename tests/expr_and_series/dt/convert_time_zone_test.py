@@ -27,8 +27,8 @@ def test_convert_time_zone(
 ) -> None:
     if is_polars_gpu(constructor):
         reason = (
-            "cudf-polars `dt.to_string` ignores the time zone: "
-            "https://github.com/NVIDIA/cudf/issues/23935"
+            "cudf-polars reads tz-aware datetimes as UTC: "
+            "https://github.com/NVIDIA/cudf/issues/25117"
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
     if (
@@ -93,8 +93,8 @@ def test_convert_time_zone_from_none(
 ) -> None:
     if is_polars_gpu(constructor):
         reason = (
-            "cudf-polars `dt.to_string` ignores the time zone: "
-            "https://github.com/NVIDIA/cudf/issues/23935"
+            "cudf-polars reads tz-aware datetimes as UTC: "
+            "https://github.com/NVIDIA/cudf/issues/25117"
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
     if (
@@ -159,6 +159,7 @@ def test_convert_time_zone_to_connection_tz_duckdb() -> None:
 
     duckdb.sql("set timezone = 'Asia/Kolkata'")
     rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    assert rel is not None
     result = nw.from_native(rel).with_columns(
         nw.col("a").dt.convert_time_zone("Asia/Kolkata")
     )

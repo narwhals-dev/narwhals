@@ -215,6 +215,7 @@ def test_truncate_tz_aware_duckdb() -> None:
 
     duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
     rel = duckdb.sql("""select * from values (timestamptz '2020-10-25') df(a)""")
+    assert rel is not None
     result = nw.from_native(rel).with_columns(a_truncated=nw.col("a").dt.truncate("1mo"))
     expected = {
         "a": [datetime(2020, 10, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))],

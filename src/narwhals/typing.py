@@ -91,6 +91,8 @@ if TYPE_CHECKING:
         @property
         def List(self) -> type[dtypes.List]: ...
         @property
+        def Map(self) -> type[dtypes.Map]: ...
+        @property
         def Array(self) -> type[dtypes.Array]: ...
         @property
         def Unknown(self) -> type[dtypes.Unknown]: ...
@@ -422,6 +424,7 @@ __all__ = [
     "CompliantSeries",
     "DataFrameT",
     "EagerAllowed",
+    "FileSource",
     "Frame",
     "FrameT",
     "IntoBackend",
@@ -435,4 +438,6 @@ __all__ = [
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",
+    "NormalizedPath",
+    "NormalizedSource",
 ]

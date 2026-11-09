@@ -19,6 +19,7 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_column_names_are_unique,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -249,6 +250,7 @@ class IbisLazyFrame(
         def _rename(col: str) -> str:
             return mapping.get(col, col)
 
+        check_column_names_are_unique([_rename(c) for c in self.native.columns])
         return self._with_native(self.native.rename(_rename))
 
     @staticmethod

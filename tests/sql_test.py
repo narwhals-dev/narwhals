@@ -21,20 +21,32 @@ def test_sql() -> None:
             "symbol", order_by="date"
         )
     )
-    # DuckDB 2.0 qualifies table names with the catalog.
-    table_name = (
-        "memory.main.assets" if DUCKDB_VERSION >= PkgVersion("2") else "main.assets"
-    )
-    expected = f"""SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM {table_name}"""  # noqa: S608
+    # DuckDB 2.0 renders the relation's own SQL instead of the parsed query.
+    if DUCKDB_VERSION >= PkgVersion("2"):  # pragma: no cover
+        expected = (
+            'SELECT "date", "price", "symbol", ("price" / (\n'
+            'lag("price", 1) over (partition by "symbol" order by "date" asc nulls first )\n'
+            ')) AS "returns" FROM "assets"'
+        )
+        expected_pretty = (
+            'SELECT "date",\n'
+            '       "price",\n'
+            '       "symbol",\n'
+            '       ("price" / (lag("price", 1) OVER (PARTITION BY "symbol"\n'
+            '                                         ORDER BY "date" ASC NULLS FIRST))) AS "returns"\n'
+            'FROM "assets"'
+        )
+    else:  # pragma: no cover
+        expected = """SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM main.assets"""
+        expected_pretty = (
+            "SELECT date, price,\n"
+            "             symbol,\n"
+            "             (price / lag(price, 1) OVER (PARTITION BY symbol\n"
+            '                                          ORDER BY date ASC NULLS FIRST)) AS "returns"\n'
+            "FROM main.assets"
+        )
     assert result.to_sql() == expected
-    expected = (
-        "SELECT date, price,\n"
-        "             symbol,\n"
-        "             (price / lag(price, 1) OVER (PARTITION BY symbol\n"
-        '                                          ORDER BY date ASC NULLS FIRST)) AS "returns"\n'
-        f"FROM {table_name}"
-    )
-    assert result.to_sql(pretty=True) == expected
+    assert result.to_sql(pretty=True) == expected_pretty
 
 
 def test_sql_table_schema_pairs() -> None:

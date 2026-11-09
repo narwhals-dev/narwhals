@@ -126,7 +126,10 @@ def test_expr_is_in_with_only_null_in_other(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if is_polars_gpu(constructor):
-        reason = "cudf-polars raises `Invalid type_id` for a null-only list"
+        reason = (
+            "cudf-polars raises `Invalid type_id` for a null-only list: "
+            "https://github.com/NVIDIA/cudf/issues/24863"
+        )
         request.applymarker(pytest.mark.xfail(reason=reason))
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}

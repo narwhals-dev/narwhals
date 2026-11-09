@@ -537,6 +537,7 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
             dtypes.Struct,
             dtypes.Array,
             dtypes.List,
+            dtypes.Map,
             dtypes.Time,
             dtypes.Binary,
             dtypes.Decimal,

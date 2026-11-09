@@ -190,7 +190,9 @@ def duckdb_lazy_constructor(obj: dict[str, Any]) -> NativeDuckDB:
     duckdb.sql("""set timezone = 'UTC'""")
 
     _df = pa.table(obj)
-    return duckdb.sql("select * from _df")
+    rel = duckdb.sql("select * from _df")
+    assert rel is not None
+    return rel
 
 
 def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no cover

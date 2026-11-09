@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import dask.dataframe as dd
@@ -15,7 +14,6 @@ if TYPE_CHECKING:
 
     import dask_expr as dx
     import pandas as pd
-    from dask.dataframe.api import GroupBy as _DaskGroupBy
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
 
     from narwhals._compliant.typing import NarwhalsAggregation
@@ -24,13 +22,6 @@ if TYPE_CHECKING:
 
     PandasSeriesGroupBy: TypeAlias = _PandasSeriesGroupBy[Any, Any]
     _AggFn: TypeAlias = Callable[..., Any]
-
-else:
-    try:
-        import dask.dataframe.dask_expr as dx
-    except ModuleNotFoundError:
-        import dask_expr as dx
-    _DaskGroupBy = dx._groupby.GroupBy
 
 Aggregation: TypeAlias = "str | _AggFn"
 """The name of an aggregation function, or the function itself."""
@@ -66,12 +57,33 @@ def _any() -> dd.Aggregation:
     return dd.Aggregation(name="any", chunk=chunk, agg=agg)
 
 
-def var(ddof: int) -> _AggFn:
-    return partial(_DaskGroupBy.var, ddof=ddof)
+def _var_or_std(ddof: int, *, sqrt: bool) -> dd.Aggregation:
+    # Dask's `GroupBy.var` gives `inf` instead of null when N < ddof, and `GroupBy.std`
+    # can round a constant group's variance below zero, giving NaN.
+    def chunk(s: PandasSeriesGroupBy) -> tuple[pd.Series[Any], ...]:
+        n, mean = s.count(), s.mean()
+        return n, mean * n, (s.var(ddof=0) + mean * mean) * n
+
+    def agg(*chunks: PandasSeriesGroupBy) -> tuple[pd.Series[Any], ...]:
+        return tuple(c.sum() for c in chunks)
+
+    def finalize(
+        n: pd.Series[Any], total: pd.Series[Any], sum_squares: pd.Series[Any]
+    ) -> pd.Series[Any]:
+        m2 = (sum_squares - total * total / n).clip(lower=0)
+        result = (m2 / (n - ddof)).where(n > ddof)
+        return result**0.5 if sqrt else result
+
+    name = f"{'std' if sqrt else 'var'}_ddof{ddof}"
+    return dd.Aggregation(name=name, chunk=chunk, agg=agg, finalize=finalize)
 
 
-def std(ddof: int) -> _AggFn:
-    return partial(_DaskGroupBy.std, ddof=ddof)
+def var(ddof: int) -> dd.Aggregation:
+    return _var_or_std(ddof, sqrt=False)
+
+
+def std(ddof: int) -> dd.Aggregation:
+    return _var_or_std(ddof, sqrt=True)
 
 
 class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregation]):

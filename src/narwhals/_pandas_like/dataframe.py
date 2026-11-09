@@ -522,6 +522,9 @@ class PandasLikeDataFrame(
         return self._with_native(df, validate_column_names=False)
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
+        if self._implementation.is_cudf():
+            # cuDF raises its own `ValueError` on duplicates before our check runs.
+            check_column_names_are_unique([mapping.get(c, c) for c in self.columns])
         return self._with_native(
             rename(self.native, columns=mapping, implementation=self._implementation)
         )

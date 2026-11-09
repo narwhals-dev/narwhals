@@ -353,7 +353,7 @@ def test_generate_temporary_column_name_pr_3118_example() -> None:
 
     df = nw.from_native(conn.table("df"))
     sql = df.unique("b", keep="any").select("a").to_native().sql_query()
-    assert "AS row_index_" in sql
+    assert re.search(r'AS "?row_index_', sql)
 
 
 @pytest.mark.parametrize(

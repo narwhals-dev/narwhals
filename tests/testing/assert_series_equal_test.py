@@ -349,6 +349,67 @@ def test_struct(
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
 
 
+@pytest.mark.parametrize("backend", ["pyarrow", "polars", "pandas"])
+@pytest.mark.parametrize(
+    ("l_vals", "r_vals", "check_exact", "context"),
+    [
+        ([[("a", 0.0)], [], None], [[("a", 1e-10)], [], None], False, does_not_raise()),
+        (
+            [[("a", 0.0)], [], None],
+            [[("a", 1e-10)], [], None],
+            True,
+            _assertion_error("nested value mismatch"),
+        ),
+        (
+            [[("a", 0.0)]],
+            [[("b", 0.0)]],
+            False,
+            _assertion_error("nested value mismatch"),
+        ),
+        (
+            [[("a", 0.0), ("b", 1.0)]],
+            [[("b", 1.0), ("a", 0.0)]],
+            False,
+            _assertion_error("nested value mismatch"),
+        ),
+        (
+            [[("a", 0.0)]],
+            [[("a", 0.0), ("b", 1.0)]],
+            False,
+            _assertion_error("nested value mismatch"),
+        ),
+    ],
+)
+def test_map(
+    backend: str,
+    l_vals: list[Any],
+    r_vals: list[Any],
+    *,
+    check_exact: bool,
+    context: AbstractContextManager[Any],
+) -> None:
+    pa = pytest.importorskip("pyarrow")
+    if backend == "polars" and POLARS_VERSION < PkgVersion("2"):  # pragma: no cover
+        pytest.skip(reason="native Map dtype requires Polars 2.0.0")
+    if backend == "pandas" and PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
+        pytest.skip(reason="Pandas too old for nested dtypes")
+
+    def to_series(values: list[Any]) -> nw.Series[Any]:
+        native = pa.chunked_array([values], type=pa.map_(pa.string(), pa.float64()))
+        if backend == "polars":
+            import polars as pl
+
+            return series_from_native(pl.Series(native))
+        if backend == "pandas":
+            import pandas as pd
+
+            return series_from_native(pd.Series(native, dtype=pd.ArrowDtype(native.type)))
+        return series_from_native(native)
+
+    with context:
+        assert_series_equal(to_series(l_vals), to_series(r_vals), check_exact=check_exact)
+
+
 def test_non_nw_series() -> None:
     pytest.importorskip("pandas")
 
@@ -383,8 +444,9 @@ def test_categorical_as_str(
     categorical_as_str: bool,
     context: AbstractContextManager[Any],
 ) -> None:
+    name = str(constructor_eager)
     if (
-        "polars" in str(constructor_eager)
+        "polars" in name
         and POLARS_VERSION >= PkgVersion("1.32")
         and not categorical_as_str
     ):
@@ -392,11 +454,11 @@ def test_categorical_as_str(
         # exists but it does nothing in python.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and not categorical_as_str:
+    if "pyarrow_table" in name and not categorical_as_str:
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+    if "pyarrow_table" in name and PYARROW_VERSION < PkgVersion(
         "15.0"
     ):  # pragma: no cover
         reason = (
@@ -417,3 +479,23 @@ def test_categorical_as_str(
         assert_series_equal(
             left, right, check_names=False, categorical_as_str=categorical_as_str
         )
+
+
+def test_categorical_as_str_value_mismatch(constructor_eager: ConstructorEager) -> None:
+    name = str(constructor_eager)
+    if "pyarrow_table" in name and PYARROW_VERSION < PkgVersion(
+        "15.0"
+    ):  # pragma: no cover
+        reason = (
+            "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
+            "dictionary using function cast_dictionary"
+        )
+        pytest.skip(reason=reason)
+
+    data = {"a": ["beluga", "orca", "orca", "beluga"]}
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    s = frame["a"].cast(nw.Categorical())
+    left, right = s[:2], s[2:]
+
+    with _assertion_error("exact value mismatch"):
+        assert_series_equal(left, right)

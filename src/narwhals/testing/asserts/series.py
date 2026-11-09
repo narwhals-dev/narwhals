@@ -5,18 +5,26 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import is_narwhals_series
-from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
-from narwhals.functions import new_series
+from narwhals.dtypes import Array, Categorical, List, Map, String, Struct
 from narwhals.testing.asserts.utils import raise_series_assertion_error
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
     from typing import TypeAlias
 
     from narwhals.series import Series
-    from narwhals.typing import IntoSeriesT, SeriesT
+    from narwhals.typing import IntoDType, IntoSeriesT, SeriesT
 
     CheckFn: TypeAlias = Callable[[Series[Any], Series[Any]], None]
+
+
+def _series_like(
+    reference: SeriesT, values: Iterable[Any], dtype: IntoDType | None
+) -> SeriesT:
+    """Build a Series from `values` using `reference`'s own backend."""
+    source = reference._compliant_series
+    compliant = type(source).from_iterable(values, name="", context=source, dtype=dtype)
+    return reference._with_compliant(compliant)
 
 
 def assert_series_equal(
@@ -161,7 +169,6 @@ def _check_exact_values(
     categorical_as_str: bool,
 ) -> None:
     """Check exact value equality for various data types."""
-    left_impl = left.implementation
     left_dtype, right_dtype = left.dtype, right.dtype
 
     is_not_equal_mask: Series[Any]
@@ -182,9 +189,9 @@ def _check_exact_values(
             abs_tol=abs_tol,
             categorical_as_str=categorical_as_str,
         )
+        # `_check_list_like` raises on the first mismatch; reaching here means equal.
         _check_list_like(left, right, left_dtype, right_dtype, check_fn=check_fn)
-        # If `_check_list_like` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)
+        return
     elif isinstance(left_dtype, Struct) and isinstance(right_dtype, Struct):
         check_fn = partial(
             assert_series_equal,
@@ -196,18 +203,29 @@ def _check_exact_values(
             abs_tol=abs_tol,
             categorical_as_str=categorical_as_str,
         )
+        # `_check_struct` raises on the first mismatch; reaching here means equal.
         _check_struct(left, right, left_dtype, right_dtype, check_fn=check_fn)
-        # If `_check_struct` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)
+        return
+    elif isinstance(left_dtype, Map) and isinstance(right_dtype, Map):
+        check_fn = partial(
+            assert_series_equal,
+            check_dtypes=check_dtypes,
+            check_names=False,
+            check_order=True,
+            check_exact=check_exact,
+            rel_tol=rel_tol,
+            abs_tol=abs_tol,
+            categorical_as_str=categorical_as_str,
+        )
+        # `_check_map` raises on the first mismatch; reaching here means equal.
+        _check_map(left, right, left_dtype, right_dtype, check_fn=check_fn)
+        return
     elif isinstance(left_dtype, Categorical) and isinstance(right_dtype, Categorical):
-        # If `_check_categorical` didn't raise, then the categories sources/encodings are
-        # the same, and we can use equality
-        _not_equal = _check_categorical(
-            left, right, categorical_as_str=categorical_as_str
-        )
-        is_not_equal_mask = new_series(
-            "", [_not_equal], dtype=Boolean(), backend=left_impl
-        )
+        # A raise from `_check_categorical` means the categories sources/encodings
+        # differ; otherwise it returns whether any element differs.
+        if _check_categorical(left, right, categorical_as_str=categorical_as_str):
+            raise_series_assertion_error("exact value mismatch", left, right)
+        return
     else:
         is_not_equal_mask = left != right
 
@@ -241,15 +259,12 @@ def _check_list_like(
     # Check row by row after transforming each array/list into a new series.
     # Notice that order within the array/list must be the same, regardless of
     # `check_order` value at the top level.
-    impl = left_vals.implementation
     try:
         # `to_list`, as cuDF series can't be iterated over.
-        for left_val, right_val in zip(
-            left_vals.to_list(), right_vals.to_list(), strict=True
-        ):
+        for lv, rv in zip(left_vals.to_list(), right_vals.to_list(), strict=True):
             check_fn(
-                new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),
-                new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),
+                _series_like(reference=left_vals, values=lv, dtype=left_dtype.inner),
+                _series_like(reference=right_vals, values=rv, dtype=right_dtype.inner),
             )
     except AssertionError:
         raise_series_assertion_error("nested value mismatch", left_vals, right_vals)
@@ -277,6 +292,31 @@ def _check_struct(
             )
     except AssertionError:
         raise_series_assertion_error("exact value mismatch", left_vals, right_vals)
+
+
+def _check_map(
+    left_vals: SeriesT,
+    right_vals: SeriesT,
+    left_dtype: Map,
+    right_dtype: Map,
+    check_fn: CheckFn,
+) -> None:
+    # Check row by row, comparing keys and values as separate series. Entry order
+    # must match, as in Polars. Rows are dicts in Polars and lists of tuples elsewhere.
+    try:
+        for lv, rv in zip(left_vals, right_vals, strict=True):
+            left_items = list(lv.items() if isinstance(lv, dict) else lv)
+            right_items = list(rv.items() if isinstance(rv, dict) else rv)
+            check_fn(
+                _series_like(left_vals, (k for k, _ in left_items), left_dtype.key),
+                _series_like(right_vals, (k for k, _ in right_items), right_dtype.key),
+            )
+            check_fn(
+                _series_like(left_vals, (v for _, v in left_items), left_dtype.value),
+                _series_like(right_vals, (v for _, v in right_items), right_dtype.value),
+            )
+    except AssertionError:
+        raise_series_assertion_error("nested value mismatch", left_vals, right_vals)
 
 
 def _check_categorical(

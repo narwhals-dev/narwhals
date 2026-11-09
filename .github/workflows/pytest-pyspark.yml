@@ -37,12 +37,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          # ubuntu-26.04 ships a newer default JDK that drops `Subject.getSubject`, which Spark needs
+          distribution: temurin
+          java-version: "17"
       - name: Run pytest
         run: make run-ci DEPS="--group core-tests --extra pyspark --extra pandas" CMD="pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors=pyspark"
 
@@ -58,12 +63,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          # ubuntu-26.04 ships a newer default JDK that drops `Subject.getSubject`, which Spark needs
+          distribution: temurin
+          java-version: "17"
       - name: Run pytest
         run: make run-ci DEPS="--group min-pyspark-version --extra pandas" CMD="pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors=pyspark"
 
@@ -90,7 +100,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: "true"

@@ -8,6 +8,7 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    CUDF_POLARS_VERSION,
     CUDF_VERSION,
     DASK_VERSION,
     NOT_INSTALLED,
@@ -132,8 +133,8 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_null_list_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if is_polars_gpu(constructor):
-        reason = "cudf-polars raises `Invalid type_id` for a null list"
+    if is_polars_gpu(constructor) and CUDF_POLARS_VERSION < PkgVersion("26.12"):
+        reason = "cudf-polars<26.12 raises for a null list literal"
         request.applymarker(pytest.mark.xfail(reason=reason))
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11637
@@ -201,8 +202,12 @@ def test_nested_structures(
     if "dask" in str(constructor):
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
-    if is_polars_gpu(constructor) and isinstance(value, (list, tuple)):
-        reason = "cudf-polars does not broadcast list literals"
+    if (
+        is_polars_gpu(constructor)
+        and CUDF_POLARS_VERSION < PkgVersion("26.12")
+        and isinstance(value, (list, tuple))
+    ):
+        reason = "cudf-polars<26.12 does not broadcast list literals"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if any(x in str(constructor) for x in ("pandas", "modin")) and (

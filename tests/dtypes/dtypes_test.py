@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import re
 from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
@@ -98,6 +99,31 @@ def test_array_valid() -> None:
 
     with pytest.raises(TypeError, match="invalid input for shape"):
         nw.Array(nw.Int64(), shape="invalid_type")  # type: ignore[arg-type]
+
+
+def test_map_valid() -> None:
+    dtype = nw.Map(nw.Int64, nw.String)
+    assert dtype == nw.Map(nw.Int64, nw.String)
+    assert dtype == nw.Map
+    assert dtype != nw.Map(nw.Int64, nw.Int64)
+    assert dtype != nw.Duration
+    assert repr(dtype) == "Map(Int64, String)"
+    assert_equal_hash(dtype, nw.Map(nw.Int64, nw.String))
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "match"),
+    [
+        (nw.Object, nw.Int64, "`Object` is not allowed as a `Map` key dtype."),
+        (nw.Object(), nw.Int64, "`Object` is not allowed as a `Map` key dtype."),
+        (nw.List, nw.Int64, "'nw.List' is not valid in this context."),
+        (nw.String, nw.Struct, "'nw.Struct' is not valid in this context."),
+        ("str", nw.Int64, "Expected Narwhals dtype, got: 'str'."),
+    ],
+)
+def test_map_invalid(key: Any, value: Any, match: str) -> None:
+    with pytest.raises(TypeError, match=re.escape(match)):
+        nw.Map(key, value)
 
 
 def test_struct_valid() -> None:
@@ -322,6 +348,7 @@ def test_huge_int() -> None:
         select cast(a as int128) as a
         from df
                      """)
+    assert rel is not None
     with pytest.warns(PerformanceWarning):
         result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
@@ -330,6 +357,7 @@ def test_huge_int() -> None:
         select cast(a as uint128) as a
         from df
                      """)
+    assert rel is not None
     result = from_native_collect_schema(rel)
     assert result["a"] == nw.UInt128
 
@@ -403,6 +431,7 @@ def test_decimal() -> None:
         select *
         from df
                      """)
+    assert rel is not None
     result = nw.from_native(rel).collect_schema()
     assert result["a"] == nw.Decimal
     result = nw.from_native(
@@ -490,6 +519,7 @@ def test_huge_int_to_native() -> None:
         select cast(a as int64) as a
         from df
                      """)
+    assert rel is not None
     result = (
         nw.from_native(rel)
         .with_columns(
@@ -676,23 +706,29 @@ def test_datetime_w_tz_duckdb() -> None:
     import duckdb
 
     duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
-    df = nw.from_native(
-        duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
-    )
+    rel = duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
+    assert rel is not None
+    df = nw.from_native(rel)
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Europe/Amsterdam")
     duckdb.sql("""set timezone = 'Asia/Kathmandu'""")
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
 
-    df = nw.from_native(
-        duckdb.sql(
-            """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
-        )
+    rel = duckdb.sql(
+        """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
     )
+    assert rel is not None
+    df = nw.from_native(rel)
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
     assert result["b"] == nw.List(nw.List(nw.Datetime("us", "Asia/Kathmandu")))
+
+    con = duckdb.connect()
+    con.sql("""set timezone = 'Asia/Kolkata'""")
+    rel = con.sql("""select timestamptz '2020-01-01' as a where false""")
+    result = nw.from_native(rel).collect_schema()
+    assert result["a"] == nw.Datetime("us", "Asia/Kolkata")
 
 
 @pytest.mark.slow

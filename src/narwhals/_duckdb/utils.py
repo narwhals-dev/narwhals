@@ -63,6 +63,12 @@ F = duckdb.FunctionExpression
 """Alias for `duckdb.FunctionExpression`."""
 
 
+def qualified_col(table: str, name: str) -> Expression:
+    """Column `name` of the relation aliased as `table`."""
+    # DuckDB>=2.0 no longer splits `'table."name"'`; the multi-part form needs DuckDB>=1.2.
+    return col(f'{table}."{name}"') if BACKEND_VERSION < (1, 2) else col(table, name)
+
+
 def lambda_expr(
     params: str | Expression | tuple[Expression, ...], expr: Expression, /
 ) -> Expression:
@@ -168,6 +174,15 @@ def native_to_narwhals_dtype(
             ]
         )
 
+    if duckdb_dtype_id == "map":
+        key_type: Incomplete
+        value_type: Incomplete
+        (_, key_type), (_, value_type) = duckdb_dtype.children
+        return dtypes.Map(
+            native_to_narwhals_dtype(key_type, version, deferred_time_zone),
+            native_to_narwhals_dtype(value_type, version, deferred_time_zone),
+        )
+
     if duckdb_dtype_id == "array":
         child: Incomplete
         size: Incomplete
@@ -200,15 +215,10 @@ def native_to_narwhals_dtype(
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
-    result = (
-        rel.query(
-            "duckdb_settings()",
-            "select value from duckdb_settings() where name = 'TimeZone'",
-        )
-        .limit(1)
-        .fetchall()
-    )
-    return result[0][0]  # type: ignore[no-any-return]
+    # Not `rel.query`: on DuckDB>=2.0 its temporary catalog entry makes every relation
+    # on the connection rebind. `count()` keeps one row when `rel` is empty.
+    time_zone = F("current_setting", lit("TimeZone"))
+    return rel.limit(0).aggregate([time_zone, F("count")]).fetchall()[0][0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
@@ -304,6 +314,11 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version, deferred_time_zone)
         return duckdb.list_type(inner)
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        return duckdb.map_type(
+            narwhals_to_native_dtype(dtype.key, version, deferred_time_zone),
+            narwhals_to_native_dtype(dtype.value, version, deferred_time_zone),
+        )
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         fields = {
             field.name: narwhals_to_native_dtype(field.dtype, version, deferred_time_zone)

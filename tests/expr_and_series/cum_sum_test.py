@@ -230,7 +230,8 @@ def test_cum_sum_does_not_overflow(
     ):
         reason = "Spark has no unsigned integer types"
         pytest.skip(reason=reason)
-    # The GPU engine widens to Int64 inside `over(order_by=...)`, so it doesn't wrap.
+    # The GPU engine widens to Int64 inside `over(order_by=...)`, so it doesn't wrap:
+    # https://github.com/NVIDIA/cudf/issues/25118
     if (
         "polars" in str(constructor)
         and not is_polars_gpu(constructor)
