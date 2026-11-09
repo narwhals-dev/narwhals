@@ -12,8 +12,18 @@ import narwhals as nw
 from tests.utils import NUMPY_VERSION, ConstructorEager
 
 pytestmark = pytest.mark.skipif(
-    NUMPY_VERSION < PkgVersion("1.22"), reason="`ndarray.__dlpack__` needs numpy>=1.22"
+    NUMPY_VERSION < PkgVersion("1.23"), reason="`np.from_dlpack` needs numpy>=1.23"
 )
+
+
+class LegacyConsumerView:
+    """Expose only the unversioned DLPack signature, like pre-1.0 consumers do."""
+
+    def __init__(self, obj: Any) -> None:
+        self._obj = obj
+
+    def __dlpack__(self, *, stream: Any = None) -> Any:
+        return self._obj.__dlpack__(stream=stream)
 
 
 @pytest.mark.parametrize(
@@ -34,15 +44,26 @@ def test_dlpack(
     data: dict[str, Any],
     expected: np.ndarray[Any, Any],
 ) -> None:
-    if expected.dtype == bool and "_pyarrow_constructor" in str(constructor_eager):
-        # `DataFrame.to_numpy` returns `object` for pandas `bool[pyarrow]` columns,
-        # unlike `Series.to_numpy`.
+    if expected.dtype == bool and NUMPY_VERSION < PkgVersion("1.25"):  # pragma: no cover
+        # numpy<1.25 can't export booleans via DLPack.
+        request.applymarker(pytest.mark.xfail(raises=BufferError))
+    if expected.dtype == bool and any(
+        name in str(constructor_eager) for name in ("nullable", "_pyarrow_constructor")
+    ):
+        # `DataFrame.to_numpy` returns `object` for pandas `boolean` and `bool[pyarrow]`
+        # columns, unlike `Series.to_numpy`.
         request.applymarker(pytest.mark.xfail(raises=BufferError))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     assert df.__dlpack_device__() == (1, 0)
     result = np.from_dlpack(df)
     assert result.dtype == expected.dtype
     np.testing.assert_array_equal(result, expected)
+
+
+def test_dlpack_legacy_consumer(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2], "b": [3, 4]}), eager_only=True)
+    result = np.from_dlpack(LegacyConsumerView(df))
+    np.testing.assert_array_equal(result, np.array([[1, 3], [2, 4]]))
 
 
 def test_dlpack_unsupported_dtype(constructor_eager: ConstructorEager) -> None:

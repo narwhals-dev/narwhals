@@ -12,8 +12,18 @@ import narwhals as nw
 from tests.utils import NUMPY_VERSION, ConstructorEager
 
 pytestmark = pytest.mark.skipif(
-    NUMPY_VERSION < PkgVersion("1.22"), reason="`ndarray.__dlpack__` needs numpy>=1.22"
+    NUMPY_VERSION < PkgVersion("1.23"), reason="`np.from_dlpack` needs numpy>=1.23"
 )
+
+
+class LegacyConsumerView:
+    """Expose only the unversioned DLPack signature, like pre-1.0 consumers do."""
+
+    def __init__(self, obj: Any) -> None:
+        self._obj = obj
+
+    def __dlpack__(self, *, stream: Any = None) -> Any:
+        return self._obj.__dlpack__(stream=stream)
 
 
 @pytest.mark.parametrize(
@@ -26,11 +36,23 @@ pytestmark = pytest.mark.skipif(
     ],
 )
 def test_dlpack(
-    constructor_eager: ConstructorEager, data: list[Any], expected: np.ndarray[Any, Any]
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    data: list[Any],
+    expected: np.ndarray[Any, Any],
 ) -> None:
+    if expected.dtype == bool and NUMPY_VERSION < PkgVersion("1.25"):  # pragma: no cover
+        # numpy<1.25 can't export booleans via DLPack.
+        request.applymarker(pytest.mark.xfail(raises=BufferError))
     s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
     assert s.__dlpack_device__() == (1, 0)
     np.testing.assert_array_equal(np.from_dlpack(s), expected)
+
+
+def test_dlpack_legacy_consumer(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
+    result = np.from_dlpack(LegacyConsumerView(s))
+    np.testing.assert_array_equal(result, np.array([1, 2, 3]))
 
 
 def test_dlpack_unsupported_dtype(constructor_eager: ConstructorEager) -> None:
