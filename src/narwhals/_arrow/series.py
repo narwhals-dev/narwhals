@@ -22,6 +22,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    repeat,
     sortable,
     zeros,
 )
@@ -477,8 +478,19 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def scatter(self, indices: Self, values: Self) -> Self:
         mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
-        sorted_indices = pc.sort_indices(indices.native)
-        replacements = values.native.take(sorted_indices).combine_chunks()
+        if len(values) != len(indices):
+            if len(values) == 1:
+                replacements = repeat(
+                    values.native[0], len(indices), dtype=values.native.type
+                )
+            else:
+                msg = (
+                    f"Expected object of length {len(indices)}, got length: {len(values)}"
+                )
+                raise ShapeError(msg)
+        else:
+            sorted_indices = pc.sort_indices(indices.native)
+            replacements = values.native.take(sorted_indices).combine_chunks()
         return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def to_list(self) -> list[Any]:
