@@ -166,10 +166,17 @@ def test_namespace_from_native_object(constructor: Constructor) -> None:
     assert namespace.implementation == nw_frame.implementation
 
 
+def test_namespace_from_native_object_plugin() -> None:
+    pytest.importorskip("test_plugin")
+    namespace = Namespace.from_native_object({"a": [1]})  # type: ignore[call-overload]
+    assert namespace.implementation is nw.Implementation.UNKNOWN
+    expected = Namespace.from_backend(PluginName("test-plugin")).compliant
+    assert namespace.compliant is expected
+
+
 def test_namespace_from_native_object_invalid() -> None:
-    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    with pytest.raises(TypeError, match=r"dict"):
-        Namespace.from_native_object(data)  # type: ignore[call-overload]
+    with pytest.raises(TypeError, match=r"Unsupported type: 'int'"):
+        Namespace.from_native_object(1)  # type: ignore[call-overload]
 
 
 @eager_allowed

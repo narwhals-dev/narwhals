@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -263,6 +264,20 @@ def test_cast_raises_for_unknown_dtype(
         df.select(nw.col("a").cast(Banana))  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("dtype", [nw.List, nw.Array, nw.Struct, nw.Map])
+def test_cast_uninstantiated_nested_dtype(
+    constructor_eager: ConstructorEager, dtype: type[nw.dtypes.NestedType]
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [1]}), eager_only=True)
+    msg = f"'nw.{dtype.__name__}' is not valid in this context."
+    with pytest.raises(TypeError, match=re.escape(msg)):
+        df.select(nw.col("a").cast(dtype))  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=re.escape(msg)):
+        df["a"].cast(dtype)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=re.escape(msg)):
+        df.cast({"a": dtype})  # type: ignore[dict-item]
+
+
 def test_cast_datetime_tz_aware(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
@@ -297,10 +312,10 @@ def test_cast_datetime_tz_aware(
 def test_cast_datetime_utc(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if (
-        "dask" in str(constructor)
+    if "dask" in str(constructor) or (
         # https://github.com/eakmanrq/sqlframe/issues/406
-        or "sqlframe" in str(constructor)
+        "sqlframe" in str(constructor)
+        and nw.Implementation.SQLFRAME._backend_version() < (4, 7)
     ):
         request.applymarker(pytest.mark.xfail)
     if is_pyarrow_windows_no_tzdata(constructor):
@@ -430,11 +445,14 @@ def test_cast_typing_invalid() -> None:
     with pytest.raises(TypeError):
         df.select(a.cast(nw.Struct))  # type: ignore[arg-type]
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.List))  # type: ignore[arg-type]
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         df.select(a.cast(nw.Array))  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError):
+        df.select(a.cast(nw.Map))  # type: ignore[arg-type]
 
     with pytest.raises(ValueError):  # noqa: PT011
         df.select(a.cast(nw.Enum))  # type: ignore[arg-type]

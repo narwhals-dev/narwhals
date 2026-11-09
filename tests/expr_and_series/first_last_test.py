@@ -206,13 +206,14 @@ def test_first_expr_in_group_by(
         "c": [9, None, 10, 8],
         "idx": [9, None, None, 7],
         "idx2": [9, 8, 7, 7],
+        "idx_unique": [9, None, 8, 7],
     }
     df = nw.from_native(constructor(data))
     result = (
         df.group_by("grp")
         .agg(
-            nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first"),
-            nw.col("a", "b", "c").last(order_by="idx").name.suffix("_last"),
+            nw.col("a", "b", "c").first(order_by="idx_unique").name.suffix("_first"),
+            nw.col("a", "b", "c").last(order_by="idx_unique").name.suffix("_last"),
         )
         .sort("grp")
     )
