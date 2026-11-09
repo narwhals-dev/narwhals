@@ -90,7 +90,13 @@ if TYPE_CHECKING:
         NativePySparkConnect,
         NativeSQLFrame,
     )
-    from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals._translate import (
+        ArrowStreamExportable,
+        DLPackExportable,
+        DLPackKwargs,
+        IntoArrowTable,
+        ToNarwhalsT_co,
+    )
     from narwhals._typing import (
         Backend,
         IntoBackend,
@@ -1790,6 +1796,29 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def supports_dlpack(obj: Any) -> TypeIs[DLPackExportable]:
+    return _hasattr_static(obj, "__dlpack__")
+
+
+def dlpack_kwargs(
+    *,
+    stream: int | Any | None,
+    max_version: tuple[int, int] | None,
+    dl_device: tuple[int, int] | None,
+    copy: bool | None,
+) -> DLPackKwargs:
+    # NOTE: Producers on an older DLPack version (e.g. numpy<2.1) reject keywords
+    # added later, so only forward what the consumer passed.
+    # Consumers retry on `TypeError`.
+    kwds = {
+        "stream": stream,
+        "max_version": max_version,
+        "dl_device": dl_device,
+        "copy": copy,
+    }
+    return cast("DLPackKwargs", {k: v for k, v in kwds.items() if v is not None})
 
 
 def _remap_full_join_keys(

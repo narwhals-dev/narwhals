@@ -72,11 +72,16 @@ if TYPE_CHECKING:
     from typing import TypeAlias
 
     import pyarrow as pa
-    from typing_extensions import Required, Self, TypedDict, TypeIs
+    from typing_extensions import CapsuleType, Required, Self, TypedDict, TypeIs, Unpack
 
 
 class ArrowStreamExportable(Protocol):
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object: ...
+
+
+class DLPackExportable(Protocol):
+    def __dlpack__(self, **kwds: Unpack[DLPackKwargs]) -> CapsuleType: ...
+    def __dlpack_device__(self) -> tuple[int, int]: ...
 
 
 ToNumpyT_co = TypeVar("ToNumpyT_co", covariant=True)
@@ -190,6 +195,12 @@ class ToNarwhals(Protocol[ToNarwhalsT_co]):
 
 
 if TYPE_CHECKING:
+
+    class DLPackKwargs(TypedDict, total=False):
+        stream: int | Any
+        max_version: tuple[int, int]
+        dl_device: tuple[int, int]
+        copy: bool
 
     class _ExcludeSeries(TypedDict, total=False, closed=False):
         eager_only: bool
