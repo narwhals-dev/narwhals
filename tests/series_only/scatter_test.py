@@ -89,7 +89,7 @@ def test_scatter_broadcast_nested(
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
     if "cudf" in str(constructor_eager):
-        reason = "cuDF ListColumn.__setitem__ rejects Series values."
+        reason = "cuDF ListColumn._cast_setitem_value rejects Series values."
         request.applymarker(pytest.mark.xfail(reason=reason))
     s = series(constructor_eager, "a", [[1], [2], [3]])
     assert_equal_series(s.scatter([0, 2], [[9, 9]]), [[9, 9], [2], [9, 9]], "a")
