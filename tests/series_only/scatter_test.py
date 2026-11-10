@@ -107,3 +107,11 @@ def test_scatter_length_mismatch(
     s = series(constructor_eager, "a", [1, 2, 3, 4])
     with pytest.raises(ShapeError, match="Expected object of length 2"):
         s.scatter([0, 2], [7, 8, 9])
+
+
+def test_scatter_casts_values(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1.0, 2.0, 3.0])
+    assert_equal_series(s.scatter([0, 2], 7), [7.0, 2.0, 7.0], "a")
+    assert_equal_series(s.scatter([0, 2], [7, 8]), [7.0, 2.0, 8.0], "a")
+    s = series(constructor_eager, "a", ["x", "y", "z"])
+    assert_equal_series(s.scatter([0, 2], None), [None, "y", None], "a")
