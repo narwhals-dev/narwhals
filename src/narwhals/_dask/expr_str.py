@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, cast
 
 import dask.dataframe as dd
@@ -97,7 +98,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         )
 
     def split(self, by: str) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.split(pat=by))
+        return self.compliant._with_callable(
+            lambda expr: expr.str.split(pat=re.escape(by))
+        )
 
     def to_datetime(self, format: str | None) -> DaskExpr:
         return self.compliant._with_callable(
