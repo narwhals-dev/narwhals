@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ShapeError
 from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
@@ -77,3 +78,32 @@ def test_scatter_scalar_broadcast(constructor_eager: ConstructorEager) -> None:
     assert_equal_series(
         s.scatter([0, 2], series(constructor_eager, "v", [999])), [999, 2, 999, 4], "a"
     )
+
+
+def test_scatter_broadcast_nested(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_eager) for x in ("polars", "pyarrow_table")):
+        reason = (
+            "Neither Polars' scatter nor pyarrow's replace_with_mask support list types."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    if "cudf" in str(constructor_eager):
+        reason = "cuDF ListColumn.__setitem__ rejects Series values."
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    s = series(constructor_eager, "a", [[1], [2], [3]])
+    assert_equal_series(s.scatter([0, 2], [[9, 9]]), [[9, 9], [2], [9, 9]], "a")
+
+
+def test_scatter_length_mismatch(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor_eager):
+        reason = (
+            "Polars silently ignores extra values instead of raising "
+            "(https://github.com/pola-rs/polars/issues/30713)."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    with pytest.raises(ShapeError, match="Expected object of length 2"):
+        s.scatter([0, 2], [7, 8, 9])

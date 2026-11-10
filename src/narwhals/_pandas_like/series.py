@@ -306,15 +306,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         impl = self._implementation
         native_series, indices_native = self.native, indices.native
         target_index = native_series.index[indices_native]
-        if len(values) == 1 and len(target_index) > 1:
-            values_native = broadcast_series_to_index(
-                values.native,
-                target_index,
-                is_nested=values.dtype.is_nested(),
-                series_class=type(native_series),
-            )
-        else:
-            values_native = set_index(values.native, target_index, implementation=impl)
+        values_native = values.native
+        if len(values_native) == 1 and len(target_index) > 1:
+            values_native = values_native.repeat(len(target_index))
+        values_native = set_index(values_native, target_index, implementation=impl)
         series = native_series if in_place else native_series.copy(deep=True)
 
         if impl.is_pandas() and in_place and NUMPY_VERSION < (2,):  # pragma: no cover
