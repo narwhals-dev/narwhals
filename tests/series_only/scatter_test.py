@@ -115,3 +115,24 @@ def test_scatter_casts_values(constructor_eager: ConstructorEager) -> None:
     assert_equal_series(s.scatter([0, 2], [7, 8]), [7.0, 2.0, 8.0], "a")
     s = series(constructor_eager, "a", ["x", "y", "z"])
     assert_equal_series(s.scatter([0, 2], None), [None, "y", None], "a")
+
+
+@pytest.mark.parametrize(
+    ("indices", "values", "expected"),
+    [
+        ([0, 2], 99, [99, 2, 99, 4]),
+        (0, 99, [99, 2, 3, 4]),
+        ([0, 2], [99, 88], [99, 2, 88, 4]),
+    ],
+    ids=["broadcast", "single", "equal-length"],
+)
+def test_scatter_scalar_narrow_int_pyarrow(
+    indices: int | list[int], values: int | list[int], expected: list[int]
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    s = nw.from_native(pa.chunked_array([[1, 2, 3, 4]], type=pa.int8()), series_only=True)
+    output = s.scatter(indices, values)
+    assert output.dtype == nw.Int8
+    assert_equal_series(output, expected, "")
