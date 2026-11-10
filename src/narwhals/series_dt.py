@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Generic, Literal
+from typing import TYPE_CHECKING, Generic
 
 from narwhals.typing import SeriesT
+
+if TYPE_CHECKING:
+    from narwhals.typing import TimeUnit
 
 
 class SeriesDateTimeNamespace(Generic[SeriesT]):
@@ -546,7 +549,7 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.dt.convert_time_zone(time_zone)
         )
 
-    def timestamp(self, time_unit: Literal["ns", "us", "ms"]) -> SeriesT:
+    def timestamp(self, time_unit: TimeUnit) -> SeriesT:
         """Return a timestamp in the given time unit.
 
         Arguments:
