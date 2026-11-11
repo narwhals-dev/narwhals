@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import LiteralString, ParamSpec, Self, TypeIs
+    from typing_extensions import CapsuleType, LiteralString, ParamSpec, Self, TypeIs
 
     from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
     from narwhals._compliant.any_namespace import NamespaceAccessor
@@ -90,7 +90,13 @@ if TYPE_CHECKING:
         NativePySparkConnect,
         NativeSQLFrame,
     )
-    from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals._translate import (
+        ArrowStreamExportable,
+        DLPackExportable,
+        DLPackKwargs,
+        IntoArrowTable,
+        ToNarwhalsT_co,
+    )
     from narwhals._typing import (
         Backend,
         IntoBackend,
@@ -132,6 +138,7 @@ if TYPE_CHECKING:
         SupportsNativeNamespace,
         TimeUnit,
         _1DArray,
+        _NDArray,
         _SliceIndex,
         _SliceName,
         _SliceNone,
@@ -1790,6 +1797,41 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def supports_dlpack(obj: Any) -> TypeIs[DLPackExportable]:
+    return _hasattr_static(obj, "__dlpack__")
+
+
+def to_dlpack(
+    native: Any,
+    to_numpy: Callable[[], _NDArray[Any]],
+    *,
+    stream: int | Any | None,
+    max_version: tuple[int, int] | None,
+    dl_device: tuple[int, int] | None,
+    copy: bool | None,
+) -> CapsuleType:
+    """Export `native` via DLPack if it supports it, else via `to_numpy()`."""
+    # NOTE: Producers on an older DLPack version (e.g. numpy<2.1) reject keywords
+    # added later, so only forward what the consumer passed.
+    kwds = {
+        "stream": stream,
+        "max_version": max_version,
+        "dl_device": dl_device,
+        "copy": copy,
+    }
+    kwargs = cast("DLPackKwargs", {k: v for k, v in kwds.items() if v is not None})
+    if supports_dlpack(native):
+        return native.__dlpack__(**kwargs)
+    arr = to_numpy()
+    # NOTE: Unversioned DLPack (`max_version` < 1.0) can't flag a buffer as read-only,
+    # so NumPy refuses to export read-only arrays (zero-copy Arrow memory, pandas
+    # copy-on-write) to such consumers. They may write to it, so hand them a copy.
+    legacy = max_version is None or max_version[0] < 1
+    if legacy and not arr.flags.writeable and copy is not False:
+        arr = arr.copy()
+    return arr.__dlpack__(**kwargs)
 
 
 def _remap_full_join_keys(

@@ -5,6 +5,8 @@
     options:
       members:
         - __arrow_c_stream__
+        - __dlpack__
+        - __dlpack_device__
         - __getitem__
         - cast
         - clone
