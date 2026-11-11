@@ -36,7 +36,7 @@ from narwhals._utils import (
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -477,22 +477,41 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.slice(start, stop - start))
 
     def scatter(self, indices: Self, values: Self) -> Self:
-        n_values, n_indices = len(values), len(indices)
+        n, n_values, n_indices = len(self), len(values), len(indices)
         if n_values not in {1, n_indices}:
             msg = f"Expected object of length {n_indices}, got length: {n_values}"
             raise ShapeError(msg)
-        target_type = self._type
-        values_native = (
-            values.native.cast(target_type)
-            if values.native.type != target_type
-            else values.native
-        )
+        values_native = values.native
+        if values_native.type != self._type:
+            values_native = values_native.cast(self._type)
+        idx = indices.native
+        positions = arange(start=0, end=n, step=1)
+        mask = pc.is_in(positions, idx)
+        if (n_set := mask.true_count) < n_indices:
+            # Null, negative, out-of-bounds or duplicate indices. Only checked here so
+            # that the common case (unique, valid indices) stays fast.
+            if idx.null_count:
+                msg = "Index values should not be null"
+                raise ComputeError(msg)
+            lowest, highest = (x.as_py() for x in pc.min_max(idx).values())
+            if lowest < -n or highest >= n:
+                msg = f"Indices out of bounds for Series of length {n}"
+                raise IndexError(msg)
+            if lowest < 0:
+                idx = pc.if_else(pc.less(idx, lit(0)), pc.add(idx, lit(n)), idx)
+                mask = pc.is_in(positions, idx)
+                n_set = mask.true_count
         if n_values == n_indices:
-            sorted_indices = pc.sort_indices(indices.native)
-            replacements = values_native.take(sorted_indices).combine_chunks()
+            order = pc.sort_indices(idx)
+            if n_set < n_indices:
+                # Last write wins on duplicate indices, as in Polars. `sort_indices` is
+                # stable, so the last of each run of equal indices is the one to keep.
+                sorted_idx = idx.take(order).combine_chunks()
+                is_last = pc.not_equal(sorted_idx[:-1], sorted_idx[1:])
+                order = order.filter(pa.concat_arrays([is_last, pa.array([True])]))
+            replacements = values_native.take(order).combine_chunks()
         else:
-            replacements = repeat(values_native[0], n_indices)
-        mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
+            replacements = repeat(values_native[0], n_set)
         return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def to_list(self) -> list[Any]:

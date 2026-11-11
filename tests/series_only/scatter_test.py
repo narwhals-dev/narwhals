@@ -136,3 +136,68 @@ def test_scatter_scalar_narrow_int_pyarrow(
     output = s.scatter(indices, values)
     assert output.dtype == nw.Int8
     assert_equal_series(output, expected, "")
+
+
+@pytest.mark.parametrize(
+    ("indices", "values", "expected"),
+    [
+        ([-1, 0], [7, 8], [8, 2, 3, 7]),
+        ([-4, -2], 9, [9, 2, 9, 4]),
+        ([1, -1], [7, 8], [1, 7, 3, 8]),
+    ],
+    ids=["mixed", "broadcast", "single-negative"],
+)
+def test_scatter_negative_indices(
+    indices: list[int],
+    values: int | list[int],
+    expected: list[int],
+    constructor_eager: ConstructorEager,
+) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    assert_equal_series(s.scatter(indices, values), expected, "a")
+
+
+@pytest.mark.parametrize(
+    ("indices", "values", "expected"),
+    [
+        ([0, 0, 2], [7, 8, 9], [8, 2, 9, 4]),
+        ([2, 0, 2, 2], [7, 8, 9, 10], [8, 2, 10, 4]),
+        ([-1, 3], [7, 8], [1, 2, 3, 8]),
+        ([1, 1], 9, [1, 9, 3, 4]),
+    ],
+    ids=["repeated", "unordered", "negative-and-positive", "broadcast"],
+)
+def test_scatter_duplicate_indices(
+    indices: list[int],
+    values: int | list[int],
+    expected: list[int],
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow")) and (
+        not isinstance(values, int)
+    ):
+        reason = (
+            "pandas' Arrow-backed setitem keeps the first value on duplicate indices "
+            "(https://github.com/pandas-dev/pandas/issues/53996)."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    assert_equal_series(s.scatter(indices, values), expected, "a")
+
+
+@pytest.mark.parametrize("indices", [[0, 4], [-5], [10, 1]])
+def test_scatter_out_of_bounds(
+    indices: list[int], constructor_eager: ConstructorEager
+) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    # Each backend raises its own exception type, so we can only match on the message.
+    with pytest.raises(Exception, match="out of bounds"):
+        s.scatter(indices, 9)
+
+
+def test_scatter_null_indices(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    # Polars and PyArrow raise ComputeError, pandas raises TypeError.
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        s.scatter([0, None], [7, 8])  # type: ignore[list-item]
