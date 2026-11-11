@@ -451,6 +451,9 @@ def narwhals_to_native_dtype(  # noqa: C901, PLR0912
         raise ValueError(msg)
     dtypes = version.dtypes
     base_type = dtype.base_type()
+    if implementation is Implementation.CUDF and issubclass(base_type, dtypes.Float16):
+        msg = "Converting to Float16 dtype is not supported for cuDF."
+        raise NotImplementedError(msg)
     if pd_type := NW_TO_PD_DTYPES_INVARIANT.get(base_type):
         return pd_type
     if into_pd_type := NW_TO_PD_DTYPES_BACKEND.get(base_type):
@@ -559,6 +562,21 @@ def narwhals_to_native_arrow_dtype(
         from narwhals._arrow.utils import narwhals_to_native_dtype as _to_arrow_dtype
 
         return pd.ArrowDtype(_to_arrow_dtype(dtype, version))
+    if implementation is Implementation.CUDF:
+        # cuDF has native decimal and nested dtypes, each buildable from an Arrow type.
+        ns = implementation.to_native_namespace()
+        dtypes = version.dtypes
+        for nw_cls, cudf_cls in (
+            (dtypes.Decimal, ns.Decimal128Dtype),
+            (dtypes.List, ns.ListDtype),
+            (dtypes.Struct, ns.StructDtype),
+        ):
+            if isinstance_or_issubclass(dtype, nw_cls):
+                from narwhals._arrow.utils import (
+                    narwhals_to_native_dtype as _to_arrow_dtype,
+                )
+
+                return cudf_cls.from_arrow(_to_arrow_dtype(dtype, version))
     msg = (  # pragma: no cover
         f"Converting to {dtype} dtype is not supported for implementation "
         f"{implementation} and version {version}."

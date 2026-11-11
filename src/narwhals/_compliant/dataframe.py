@@ -420,10 +420,12 @@ class EagerDataFrame(
             if isinstance(columns, Sized) and len(columns) == 0:
                 return compliant.select()
             if is_boolean_selector(columns):
+                # cuDF series can't be iterated over.
+                mask = columns.to_list() if is_compliant_series(columns) else columns
                 compliant = compliant.simple_select(
                     *(
                         col
-                        for col, select in zip(compliant.columns, columns, strict=False)
+                        for col, select in zip(compliant.columns, mask, strict=False)
                         if select
                     )
                 )

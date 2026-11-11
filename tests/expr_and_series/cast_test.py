@@ -171,7 +171,7 @@ def test_cast_series(
 
 # Backends with no half-precision (16-bit) floating point type: casting to `Float16`
 # raises for these instead of silently widening.
-FLOAT16_UNSUPPORTED = ("duckdb", "pyspark", "sqlframe")
+FLOAT16_UNSUPPORTED = ("cudf", "duckdb", "pyspark", "sqlframe")
 
 
 def test_cast_to_float16(constructor: Constructor) -> None:
@@ -284,7 +284,6 @@ def test_cast_datetime_tz_aware(
     if (
         "dask" in str(constructor)
         or "duckdb" in str(constructor)
-        or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or "pyspark" in str(constructor)
         or "ibis" in str(constructor)
     ):

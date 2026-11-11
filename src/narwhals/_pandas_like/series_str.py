@@ -20,6 +20,9 @@ class PandasLikeSeriesStringNamespace(
 ):
     def _with_native_bool(self, result: Any) -> PandasLikeSeries:
         # See https://narwhals-dev.github.io/narwhals/concepts/boolean/.
+        if self.implementation.is_cudf():
+            # cuDF string predicates return `False`, not null, for null input.
+            return self.with_native(result.mask(self.native.isna()))
         if (
             result.dtype == object
             and get_dtype_backend(self.native.dtype, self.implementation) is None
@@ -62,6 +65,9 @@ class PandasLikeSeriesStringNamespace(
         return self.replace(value, pattern, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
+        if characters == "":
+            # cuDF (and `cudf.pandas`) strip whitespace for `""`; polars strips nothing.
+            return self.compliant
         return self.with_native(self.native.str.strip(characters))
 
     def strip_chars_start(self, characters: str) -> PandasLikeSeries:

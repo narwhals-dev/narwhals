@@ -203,6 +203,9 @@ def test_corr_numerical_stability(
 def test_corr_group_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    if "cudf" in str(constructor):
+        reason = "cuDF `groupby.apply` pickles the function, which is a local lambda"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(
         constructor(
             {"g": [1, 1, 2, 2], "a": [1.0, 2.0, 1.0, 2.0], "b": [1.0, 2.0, 2.0, 1.0]}

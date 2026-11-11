@@ -104,9 +104,6 @@ def test_first_last_expr_over_order_by(
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
-        reason = "Need to pass dtype when passing pd.NA or None"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     frame = nw.from_native(
         constructor(
@@ -323,7 +320,7 @@ def test_first_last_different_orders(
 
     context = (
         pytest.raises(NotImplementedError, match="Only one `order_by` can")
-        if "pandas" in str(constructor) or "pyarrow" in str(constructor)
+        if any(x in str(constructor) for x in ("pandas", "pyarrow", "cudf"))
         else does_not_raise()
     )
     frame = nw.from_native(

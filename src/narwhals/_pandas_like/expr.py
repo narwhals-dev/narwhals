@@ -317,7 +317,10 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     df.simple_select(*columns)
                     .with_row_index(token, order_by=None)
                     .sort(
-                        *partition_by, *order_by, descending=reverse, nulls_last=reverse
+                        # cuDF rejects a key repeated across `partition_by` and `order_by`.
+                        *dict.fromkeys((*partition_by, *order_by)),
+                        descending=reverse,
+                        nulls_last=reverse,
                     )
                 )
                 sorting_indices = df.get_column(token)

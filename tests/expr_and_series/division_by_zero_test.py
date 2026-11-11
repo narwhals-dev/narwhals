@@ -53,15 +53,12 @@ def test_expr_truediv_by_zero(
 @pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
 def test_series_floordiv_by_zero(
     constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
     get_denominator: Callable[[nw.DataFrame[Any]], int | nw.Series[Any]],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
     if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
 
     denominator = get_denominator(df)
     result = {"result": df["int"] // denominator}
@@ -71,14 +68,12 @@ def test_series_floordiv_by_zero(
 
 @pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
 def test_expr_floordiv_by_zero(
-    constructor: Constructor, request: pytest.FixtureRequest, denominator: int | nw.Expr
+    constructor: Constructor, denominator: int | nw.Expr
 ) -> None:
     df = nw.from_native(constructor(data))
 
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
-    if "cudf" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     result = df.select(result=nw.col("int") // denominator)
     expected = {"result": expected_floordiv}
@@ -125,12 +120,10 @@ def test_expr_rtruediv_by_zero(
 
 @pytest.mark.parametrize("numerator", data["int"])
 def test_series_rfloordiv_by_zero(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, numerator: float
+    constructor_eager: ConstructorEager, numerator: float
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
-    if "cudf" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -139,13 +132,9 @@ def test_series_rfloordiv_by_zero(
 
 
 @pytest.mark.parametrize("numerator", data["int"])
-def test_expr_rfloordiv_by_zero(
-    constructor: Constructor, request: pytest.FixtureRequest, numerator: float
-) -> None:
+def test_expr_rfloordiv_by_zero(constructor: Constructor, numerator: float) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
-    if "cudf" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
 
@@ -154,15 +143,11 @@ def test_expr_rfloordiv_by_zero(
     assert_equal_data(result, expected)
 
 
-def test_floordiv_by_mixed_divisor(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_floordiv_by_mixed_divisor(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
-    if "cudf" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     data = {"i": [0, 1, 2, 3], "a": [7, 8, 7, None], "b": [0, 2, None, 0]}
     df = nw.from_native(constructor(data))
@@ -201,13 +186,9 @@ def test_floordiv_by_null_scalar(constructor: Constructor) -> None:
     assert_equal_data(result, {"a": [None, None]})
 
 
-def test_floordiv_by_zero_keeps_dtype(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_floordiv_by_zero_keeps_dtype(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
-    if "cudf" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [6.0, 7.0]}))
     a = nw.col("a").cast(nw.Float32)

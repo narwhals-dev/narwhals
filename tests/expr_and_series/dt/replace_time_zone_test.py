@@ -12,6 +12,7 @@ from tests.utils import (
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
+    is_polars_gpu,
     is_windows,
     pyspark_session,
 )
@@ -23,6 +24,12 @@ if TYPE_CHECKING:
 def test_replace_time_zone(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if is_polars_gpu(constructor):
+        reason = (
+            "cudf-polars reads tz-aware datetimes as UTC: "
+            "https://github.com/NVIDIA/cudf/issues/25117"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
@@ -30,7 +37,7 @@ def test_replace_time_zone(
     ):
         pytest.skip()
 
-    if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -73,9 +80,7 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_replace_time_zone_series(constructor_eager: ConstructorEager) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
         or (
@@ -87,8 +92,6 @@ def test_replace_time_zone_series(
         )
     ):
         pytest.skip()
-    if any(x in str(constructor_eager) for x in ("cudf",)):
-        request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
