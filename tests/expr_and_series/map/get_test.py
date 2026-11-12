@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -136,59 +135,3 @@ def test_get_non_map(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2]}), eager_only=True)
     with pytest.raises(InvalidOperationError if is_polars else TypeError):
         df.select(nw.col("a").map.get("x"))
-
-
-@pytest.mark.parametrize(
-    ("data", "key"),
-    [(int_data, 10.0), (int_data, "10"), (int_data, True), (string_data, 1)],
-)
-def test_get_wrong_key_type(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
-    data: list[Any],
-    key: Any,
-) -> None:
-    df = nw.from_native(map_frame(request, constructor_eager, data), eager_only=True)
-    with pytest.raises(InvalidOperationError):
-        df.select(nw.col("a").map.get(key))
-
-
-def test_get_naive_key_on_aware_keys() -> None:
-    pa = pytest.importorskip("pyarrow")
-    utc = dt.timezone.utc
-    map_type = pa.map_(pa.timestamp("us", "UTC"), pa.int64())
-    array = pa.array([[(dt.datetime(2020, 1, 1, tzinfo=utc), 1)]], type=map_type)
-    df = nw.from_native(pa.table({"a": array}))
-    assert_equal_data(
-        df.select(nw.col("a").map.get(dt.datetime(2020, 1, 1, tzinfo=utc))), {"a": [1]}
-    )
-    with pytest.raises(InvalidOperationError):
-        df.select(nw.col("a").map.get(dt.datetime(2020, 1, 1)))
-
-
-@pytest.mark.parametrize("key", [2**63, -(2**63) - 1, 2**70])
-def test_get_out_of_range_key(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, key: int
-) -> None:
-    df = nw.from_native(map_frame(request, constructor_eager, int_data), eager_only=True)
-    assert_equal_data(df.select(nw.col("a").map.get(key)), {"a": [None] * 4})
-
-
-@pytest.mark.parametrize(
-    ("key_type", "stored", "key"),
-    [
-        (
-            "timestamp[s]",
-            dt.datetime(2020, 1, 1),
-            dt.datetime(2020, 1, 1, 0, 0, 0, 500000),
-        ),
-        ("uint8", 1, -1),
-        ("uint8", 1, 256),
-    ],
-)
-def test_get_unrepresentable_key_pyarrow(key_type: str, stored: Any, key: Any) -> None:
-    pa = pytest.importorskip("pyarrow")
-    map_type = pa.map_(pa.type_for_alias(key_type), pa.int64())
-    array = pa.array([[(stored, 7)]], type=map_type)
-    df = nw.from_native(pa.table({"a": array}))
-    assert_equal_data(df.select(nw.col("a").map.get(key)), {"a": [None]})

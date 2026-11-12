@@ -21,7 +21,7 @@ class ExprMapNamespace(Generic[ExprT]):
         The result is null where the map is null or does not contain `key`.
 
         Arguments:
-            key: Key to look up.
+            key: Key to look up. Its type should match the map's key type.
 
         Examples:
             >>> import polars as pl
