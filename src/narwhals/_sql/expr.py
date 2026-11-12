@@ -520,6 +520,22 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def count(self) -> Self:
         return self._with_callable(lambda expr: self._function("count", expr))
 
+    def null_count(self) -> Self:
+        dtypes = self._version.dtypes
+        null_flags = self.is_null().cast(dtypes.Int32())
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            # Partitions are never empty, so unlike `sum` there is no NULL to coalesce.
+            return [
+                self._window_expression(self._function("sum", expr), inputs.partition_by)
+                for expr in null_flags(df)
+            ]
+
+        # DuckDB (also behind SQLFrame) widens integer `sum` to HUGEINT.
+        return null_flags.sum()._with_window_function(window_f).cast(dtypes.Int64())
+
     def sum(self) -> Self:
         def f(expr: NativeExprT) -> NativeExprT:
             return self._coalesce(self._function("sum", expr), self._lit(0))
