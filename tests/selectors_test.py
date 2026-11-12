@@ -335,7 +335,7 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         df.select(1 | ncs.numeric())
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & ncs.numeric())
-    with pytest.raises((NotImplementedError, TypeError, ValueError)):
+    with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 ^ ncs.numeric())
 
     with pytest.raises(
