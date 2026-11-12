@@ -8,6 +8,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
+from narwhals._arrow.series_map import ArrowSeriesMapNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
@@ -1143,6 +1144,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     @property
     def list(self) -> ArrowSeriesListNamespace:
         return ArrowSeriesListNamespace(self)
+
+    @property
+    def map(self) -> ArrowSeriesMapNamespace:
+        if not pa.types.is_map(self.native.type):
+            msg = "Series must be of PyArrow Map type to support map namespace."
+            raise TypeError(msg)
+        return ArrowSeriesMapNamespace(self)
 
     @property
     def struct(self) -> ArrowSeriesStructNamespace:
