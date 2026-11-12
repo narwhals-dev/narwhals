@@ -533,11 +533,9 @@ class PandasLikeNamespace(
                 [df._extract_comparand(a_series), df._extract_comparand(b_series)],
             )
             _df = self._concat_by_index(aligned)
-            corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
+            corr = _df.corr(method=method).iloc[0, 1]  # type: ignore[union-attr]
             return [
-                PandasLikeSeries(
-                    corr, implementation=self._implementation, version=self._version
-                )
+                PandasLikeSeries.from_iterable([corr], context=self, name=a_series.name)
             ]
 
         return self._expr._from_callable(
