@@ -210,3 +210,16 @@ def test_corr_group_by(constructor: Constructor, request: pytest.FixtureRequest)
     )
     result = df.group_by("g").agg(nw.corr("a", "b").alias("corr")).sort("g")
     assert_equal_data(result, {"g": [1, 2], "corr": [1.0, -1.0]})
+
+
+def test_corr_index(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]}))
+    result = df.select(nw.corr("a", "b"))
+    index = nw.maybe_get_index(result)
+    if index is not None:
+        assert index.tolist() == [0]
+
+    result_combined = df.select(nw.corr("a", "b"), nw.col("b").mean())
+    index_combined = nw.maybe_get_index(result_combined)
+    if index_combined is not None:
+        assert index_combined.tolist() == [0]
