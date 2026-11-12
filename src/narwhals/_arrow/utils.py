@@ -740,3 +740,71 @@ def list_sort(
         [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]
     )
     return pa.concat_tables([imploded_by_idx, pass_through]).sort_by(idx).column(v)
+
+
+def list_unique(array: ChunkedArrayAny) -> ChunkedArrayAny:
+    """Distinct elements of each list, in order of first occurrence.
+
+    Lists never span chunks, so each chunk is handled on its own.
+    """
+    chunks = [
+        _list_unique_chunk(chunk) for chunk in cast("list[ListArrayAny]", array.chunks)
+    ]
+    return pa.chunked_array(chunks, array.type)
+
+
+def _list_unique_chunk(chunk: ListArrayAny) -> ListArrayAny:
+    flat = pc.list_flatten(chunk)
+    is_first = _is_first_in_list(chunk, flat)
+    values = pc.filter(flat, is_first)
+    lengths = (
+        pa.Table.from_arrays(
+            [pc.filter(pc.list_parent_indices(chunk), is_first)], names=["parent"]
+        )
+        .group_by("parent")
+        .aggregate([("parent", "count")])
+        .sort_by("parent")
+        .column("parent_count")
+        .combine_chunks()
+        .cast(pa.int64())
+    )
+    # Every non-empty list keeps at least one element, so the counts sorted by parent
+    # line up with the non-empty lists.
+    is_non_empty = pc.fill_null(
+        pc.greater(pc.list_value_length(chunk), lit(0)), lit(False)
+    )
+    new_lengths = pc.replace_with_mask(
+        pa.repeat(lit(0, pa.int64()), len(chunk)),
+        cast("pa.BooleanArray", is_non_empty),
+        lengths,
+    )
+    starts = pc.subtract(pc.cumulative_sum(new_lengths), new_lengths)
+    is_large = pa.types.is_large_list(chunk.type)
+    offsets_type = pa.int64() if is_large else pa.int32()
+    offsets: Incomplete = pa.concat_arrays(
+        [
+            pc.if_else(pc.is_null(chunk), None, starts).cast(offsets_type),
+            pa.array([len(values)], offsets_type),
+        ]
+    )
+    list_cls = pa.LargeListArray if is_large else pa.ListArray
+    return list_cls.from_arrays(offsets, values, type=chunk.type)
+
+
+def _is_first_in_list(chunk: ListArrayAny, flat: ArrayAny) -> pa.BooleanArray:
+    """Mask over `flat` marking the first occurrence of each value within its list."""
+    position = arange(start=0, end=len(flat), step=1)
+    # `-0.0 + 0.0` is `0.0`, so that `-0.0` and `0.0` group together, as in Polars.
+    key = pc.add(flat, 0.0) if pa.types.is_floating(flat.type) else flat
+    # Null elements form their own group, so at most one null is kept per list.
+    first_positions = (
+        pa.Table.from_arrays(
+            [pc.list_parent_indices(chunk), key, position],
+            names=["parent", "values", "position"],
+        )
+        .group_by(["parent", "values"])
+        .aggregate([("position", "min")])
+        .column("position_min")
+        .combine_chunks()
+    )
+    return pc.is_in(position, value_set=first_positions)
