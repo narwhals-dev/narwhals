@@ -6,6 +6,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
+from narwhals._exceptions import issue_warning
 from narwhals._native import (
     NativeAny,
     NativeArrow,
@@ -70,6 +71,14 @@ if TYPE_CHECKING:
 
 __all__ = ["Namespace"]
 
+DASK_PLUGIN_NAME = "narwhals-dask"
+DASK_PLUGIN_WARNING = (
+    "Dask support is moving out of Narwhals and into the separate `narwhals-dask` "
+    "package. In a future release, using Dask with Narwhals will require "
+    "`narwhals-dask` to be installed.\n\n"
+    "Hint: install it (e.g. `pip install narwhals-dask`) to silence this warning."
+)
+
 
 # NOTE: Unbounded is safe, there are at most `len(Implementation) * len(Version)` keys.
 @cache
@@ -110,6 +119,17 @@ def _builtin_namespace(
         msg = "Not supported Implementation"
         raise AssertionError(msg)
     return ns
+
+
+def _dask_namespace(version: Version, /) -> CompliantNamespaceAny:
+    """Prefer `narwhals-dask` when installed, else warn and use the built-in backend."""
+    from narwhals.plugins import _find_plugin, _plugin_namespace
+
+    if (plugin := _find_plugin(DASK_PLUGIN_NAME)) is not None:
+        Implementation.DASK._backend_version()  # Raises if dask is missing or too old.
+        return _plugin_namespace(plugin, version=version)
+    issue_warning(DASK_PLUGIN_WARNING, FutureWarning)
+    return _builtin_namespace(Implementation.DASK, version)
 
 
 class Namespace(Generic[CompliantNamespaceT_co]):
@@ -199,6 +219,8 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             from narwhals.plugins import _plugin_namespace, _resolve_plugin
 
             return cls(_plugin_namespace(_resolve_plugin(backend), version=cls._version))
+        if impl is Implementation.DASK:
+            return cls(_dask_namespace(cls._version))
         return cls(_builtin_namespace(impl, cls._version))
 
     @overload

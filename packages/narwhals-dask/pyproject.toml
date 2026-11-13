@@ -1,0 +1,41 @@
+[build-system]
+requires = ["uv_build>=0.11.0,<0.13.0"]
+build-backend = "uv_build"
+
+[project]
+name = "narwhals-dask"
+version = "0.1.0"
+description = "Dask backend for Narwhals"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["dask[dataframe]>=2024.8", "narwhals>=2.28.0"]
+
+[project.urls]
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Repository = "https://github.com/narwhals-dev/narwhals"
+
+[project.entry-points.'narwhals.plugins']
+narwhals-dask = 'narwhals_dask'
+
+[dependency-groups]
+# For running Narwhals' own test suite against this plugin, see `run_tests.py`.
+tests = [
+  "covdefaults",
+  "hypothesis>=6.0.0",
+  "packaging>=21.3",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "pytest>=9.0.3",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-randomly",
+  "pytest-xdist",
+]
+
+[tool.uv]
+default-groups = ["tests"]
+
+[tool.uv.sources]
+narwhals = { path = "../..", editable = true }

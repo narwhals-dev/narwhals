@@ -1,0 +1,786 @@
+from __future__ import annotations
+
+import warnings
+from itertools import islice
+from typing import TYPE_CHECKING, Any, cast
+
+import pandas as pd
+
+from narwhals import Expr, Implementation, generate_temporary_column_name
+from narwhals.compliant import CompliantExpr, CompliantExprNameNamespace
+from narwhals.exceptions import InvalidOperationError
+from narwhals.utils import NO_DEFAULT
+from narwhals_dask._vendored import (
+    PANDAS_REMAP_AGGS,
+    ExprNamespace,
+    evaluate_output_names_and_aliases,
+    get_dtype_backend,
+    length_changing_hint,
+    make_group_by_kwargs,
+    not_implemented,
+    window_kwargs_to_pandas_equivalent,
+)
+from narwhals_dask.expr_dt import DaskExprDateTimeNamespace
+from narwhals_dask.expr_list import DaskExprListNamespace
+from narwhals_dask.expr_str import DaskExprStringNamespace
+from narwhals_dask.utils import (
+    add_row_index,
+    align_series_full_broadcast,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    import dask.dataframe.dask_expr as dx
+    from typing_extensions import Self
+
+    from narwhals.typing import (
+        FillNullStrategy,
+        IntoDType,
+        ModeKeepStrategy,
+        NoDefault,
+        RollingInterpolationMethod,
+    )
+    from narwhals.utils import Version
+    from narwhals_dask._vendored import (
+        AliasName,
+        AliasNames,
+        EvalNames,
+        EvalSeries,
+        NarwhalsAggregation,
+    )
+    from narwhals_dask.dataframe import DaskLazyFrame
+    from narwhals_dask.namespace import DaskNamespace
+
+
+def simple_aggregation(attr: str) -> Any:
+    # Translate an aggregation which differs from Dask in name only.
+    return lambda self, **kwargs: self._with_callable(
+        lambda expr: getattr(expr, attr)(**kwargs).to_series()
+    )
+
+
+def simple_method(attr: str) -> Any:
+    # Translate a method which differs from Dask in name only.
+    return lambda self, **kwargs: self._with_callable(
+        lambda expr: getattr(expr, attr)(**kwargs)
+    )
+
+
+def simple_binary(attr: str) -> Any:
+    # Translate a binary method which differs from Dask in name only.
+    return lambda self, other: self._binary_op(attr, other)
+
+
+def trivial_binary_right(op: Callable[..., dx.Series]) -> Any:
+    # Translate a (right) binary method which differs from Dask in name only.
+    return lambda self, other: self._reverse_binary_op(op, other)
+
+
+class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
+    _implementation: Implementation = Implementation.DASK
+
+    # Methods which are simple Narwhals->Dask translations.
+    # Keep this simple, resist the temptation to do anything complex or clever.
+    __add__ = simple_binary("__add__")
+    __sub__ = simple_binary("__sub__")
+    __mul__ = simple_binary("__mul__")
+    __truediv__ = simple_binary("__truediv__")
+    __pow__ = simple_binary("__pow__")
+    __mod__ = simple_binary("__mod__")
+    __eq__ = simple_binary("__eq__")
+    __ne__ = simple_binary("__ne__")
+    __gt__ = simple_binary("__gt__")
+    __ge__ = simple_binary("__ge__")
+    __lt__ = simple_binary("__lt__")
+    __le__ = simple_binary("__le__")
+    __and__ = simple_binary("__and__")
+    __or__ = simple_binary("__or__")
+    __rsub__ = trivial_binary_right(lambda x, y: x - y)
+    __rtruediv__ = trivial_binary_right(lambda x, y: x / y)
+    __rpow__ = trivial_binary_right(lambda x, y: x**y)
+    __rmod__ = trivial_binary_right(lambda x, y: x % y)
+    all = simple_aggregation("all")
+    any = simple_aggregation("any")
+    count = simple_aggregation("count")
+    kurtosis = simple_aggregation("kurtosis")
+    max = simple_aggregation("max")
+    mean = simple_aggregation("mean")
+    min = simple_aggregation("min")
+    skew = simple_aggregation("skew")
+    sum = simple_aggregation("sum")
+    __invert__ = simple_method("__invert__")
+    __neg__ = simple_method("__neg__")
+    abs = simple_method("abs")
+    diff = simple_method("diff")
+    drop_nulls = simple_method("dropna")
+    is_null = simple_method("isna")
+    round = simple_method("round")
+    unique = simple_method("unique")
+
+    def __init__(
+        self,
+        call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
+        *,
+        evaluate_output_names: EvalNames[DaskLazyFrame],
+        alias_output_names: AliasNames | None,
+        version: Version,
+    ) -> None:
+        self._call = call
+        self._evaluate_output_names = evaluate_output_names
+        self._alias_output_names = alias_output_names
+        self._version = version
+
+    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
+        return self._call(df)
+
+    def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
+        from narwhals_dask.namespace import DaskNamespace
+
+        return DaskNamespace(version=self._version)
+
+    def broadcast(self) -> Self:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            # result.loc[0][0] is a workaround for dask~<=2024.10.0/dask_expr~<=1.1.16
+            #   that raised a KeyError for result[0] during collection.
+            return [result.loc[0][0] for result in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    @classmethod
+    def from_column_names(
+        cls: type[Self],
+        evaluate_column_names: EvalNames[DaskLazyFrame],
+        /,
+        *,
+        context: Any,
+    ) -> Self:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            try:
+                return [
+                    df._native_frame[column_name]
+                    for column_name in evaluate_column_names(df)
+                ]
+            except KeyError as e:
+                if error := df._check_columns_exist(evaluate_column_names(df)):
+                    raise error from e
+                raise
+
+        return cls(
+            func,
+            evaluate_output_names=evaluate_column_names,
+            alias_output_names=None,
+            version=context._version,
+        )
+
+    @classmethod
+    def from_column_indices(cls, *column_indices: int, context: Any) -> Self:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            return [df.native.iloc[:, i] for i in column_indices]
+
+        return cls(
+            func,
+            evaluate_output_names=cls._eval_names_indices(column_indices),
+            alias_output_names=None,
+            version=context._version,
+        )
+
+    def _with_callable(
+        self,
+        # First argument to `call` should be `dx.Series`
+        call: Callable[..., dx.Series],
+        /,
+        expression_args: dict[str, Self] | None = None,
+    ) -> Self:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            native_results: list[dx.Series] = []
+            native_series_list = self._call(df)
+            other_native_series = {
+                key: df._evaluate_single_output_expr(value)
+                for key, value in (expression_args or {}).items()
+            }
+            for native_series in native_series_list:
+                result_native = call(native_series, **other_native_series)
+                native_results.append(result_native)
+            return native_results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def _with_alias_output_names(self, func: AliasNames | None, /) -> Self:
+        current_alias_output_names = self._alias_output_names
+        alias_output_names = (
+            None
+            if func is None
+            else func
+            if current_alias_output_names is None
+            else lambda output_names: func(current_alias_output_names(output_names))
+        )
+        return type(self)(
+            call=self._call,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=alias_output_names,
+            version=self._version,
+        )
+
+    def _with_binary(
+        self, call: Callable[[dx.Series, Any], dx.Series], other: Any
+    ) -> Self:
+        return self._with_callable(call, expression_args={"other": other})
+
+    def _binary_op(self, op_name: str, other: Any) -> Self:
+        return self._with_binary(lambda expr, other: getattr(expr, op_name)(other), other)
+
+    def _reverse_binary_op(
+        self, operator_func: Callable[..., dx.Series], other: Any
+    ) -> Self:
+        return self._with_binary(
+            lambda expr, other: operator_func(other, expr), other
+        ).alias("literal")
+
+    def __floordiv__(self, other: Any) -> Self:
+        def _floordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (series.__floordiv__(other)).where(other != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            other_series = df._evaluate_single_output_expr(other)
+            return [_floordiv(df, series, other_series) for series in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def __rfloordiv__(self, other: Any) -> Self:
+        def _rfloordiv(
+            df: DaskLazyFrame, series: dx.Series, other: dx.Series
+        ) -> dx.Series:
+            series, other = align_series_full_broadcast(df, series, other)
+            return (other.__floordiv__(series)).where(series != 0, None)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            other_native = df._evaluate_single_output_expr(other)
+            return [_rfloordiv(df, series, other_native) for series in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        ).alias("literal")
+
+    def median(self) -> Self:
+        from narwhals.exceptions import InvalidOperationError
+
+        def func(s: dx.Series) -> dx.Series:
+            dtype = native_to_narwhals_dtype(s.dtype, self._version)
+            if not dtype.is_numeric():
+                msg = "`median` operation not supported for non-numeric input type."
+                raise InvalidOperationError(msg)
+            return s.median_approximate().to_series()
+
+        return self._with_callable(func)
+
+    def shift(self, n: int) -> Self:
+        return self._with_callable(lambda expr: expr.shift(n))
+
+    def cum_sum(self, *, reverse: bool) -> Self:
+        if reverse:  # pragma: no cover
+            # https://github.com/dask/dask/issues/11802
+            msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: expr.cumsum())
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        if reverse:  # pragma: no cover
+            msg = "`cum_count(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: (~expr.isna()).astype(int).cumsum())
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        if reverse:  # pragma: no cover
+            msg = "`cum_min(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: expr.cummin())
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        if reverse:  # pragma: no cover
+            msg = "`cum_max(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: expr.cummax())
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        if reverse:  # pragma: no cover
+            msg = "`cum_prod(reverse=True)` is not supported with Dask backend"
+            raise NotImplementedError(msg)
+
+        return self._with_callable(lambda expr: expr.cumprod())
+
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_callable(
+            lambda expr: expr.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).sum()
+        )
+
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._with_callable(
+            lambda expr: expr.rolling(
+                window=window_size, min_periods=min_samples, center=center
+            ).mean()
+        )
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        if ddof == 1:
+            return self._with_callable(
+                lambda expr: expr.rolling(
+                    window=window_size, min_periods=min_samples, center=center
+                ).var()
+            )
+        msg = "Dask backend only supports `ddof=1` for `rolling_var`"
+        raise NotImplementedError(msg)
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        if ddof == 1:
+            return self._with_callable(
+                lambda expr: expr.rolling(
+                    window=window_size, min_periods=min_samples, center=center
+                ).std()
+            )
+        msg = "Dask backend only supports `ddof=1` for `rolling_std`"
+        raise NotImplementedError(msg)
+
+    def floor(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.floor)
+
+    def ceil(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.ceil)
+
+    def fill_nan(self, value: float | None) -> Self:
+        value_nullable = pd.NA if value is None else value
+        value_numpy = float("nan") if value is None else value
+
+        def func(expr: dx.Series) -> dx.Series:
+            # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+            mask = cast("dx.Series", expr != expr)  # noqa: PLR0124
+            mask = mask.fillna(False)
+            fill = value_nullable if get_dtype_backend(expr.dtype) else value_numpy
+            return expr.mask(mask, fill)  # pyright: ignore[reportArgumentType]
+
+        return self._with_callable(func)
+
+    def fill_null(
+        self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
+    ) -> Self:
+        if value is None:
+            return self._with_callable(
+                lambda expr: (
+                    expr.ffill(limit=limit)
+                    if strategy == "forward"
+                    else expr.bfill(limit=limit)
+                )
+            )
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            fill_value = df._evaluate_single_output_expr(value)
+            aligned = (align_series_full_broadcast(df, s, fill_value) for s in self(df))
+            return [series.fillna(fill) for series, fill in aligned]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
+        return self._with_callable(
+            lambda expr, lower_bound, upper_bound: expr.clip(
+                lower=lower_bound, upper=upper_bound
+            ),
+            expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
+        )
+
+    def clip_lower(self, lower_bound: Self) -> Self:
+        return self._with_callable(
+            lambda expr, lower_bound: expr.clip(lower=lower_bound),
+            expression_args={"lower_bound": lower_bound},
+        )
+
+    def clip_upper(self, upper_bound: Self) -> Self:
+        return self._with_callable(
+            lambda expr, upper_bound: expr.clip(upper=upper_bound),
+            expression_args={"upper_bound": upper_bound},
+        )
+
+    def n_unique(self) -> Self:
+        return self._with_callable(lambda expr: expr.nunique(dropna=False).to_series())
+
+    def _var_or_std(self, *, ddof: int, sqrt: bool) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            if ddof <= 1:
+                return (expr.std if sqrt else expr.var)(ddof=ddof).to_series()
+            # Dask gives `inf` (and warns) when N == ddof, so rescale the population
+            # variance instead and mask N <= ddof.
+            n = expr.count().to_series()
+            var = (expr.var(ddof=0).to_series() * n / (n - ddof)).where(n > ddof)
+            return var**0.5 if sqrt else var
+
+        return self._with_callable(func)
+
+    def std(self, *, ddof: int) -> Self:
+        return self._var_or_std(ddof=ddof, sqrt=True)
+
+    def var(self, *, ddof: int) -> Self:
+        return self._var_or_std(ddof=ddof, sqrt=False)
+
+    def is_nan(self) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            dtype = native_to_narwhals_dtype(expr.dtype, self._version)
+            if dtype.is_numeric():
+                return expr != expr  # pyright: ignore[reportReturnType] # noqa: PLR0124
+            msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
+
+        return self._with_callable(func)
+
+    def len(self) -> Self:
+        return self._with_callable(lambda expr: expr.size.to_series())
+
+    def quantile(
+        self, quantile: float, interpolation: RollingInterpolationMethod
+    ) -> Self:
+        if interpolation == "linear":
+
+            def func(expr: dx.Series) -> dx.Series:
+                if expr.npartitions > 1:
+                    msg = "`Expr.quantile` is not supported for Dask backend with multiple partitions."
+                    raise NotImplementedError(msg)
+                return expr.quantile(
+                    q=quantile, method="dask"
+                ).to_series()  # pragma: no cover
+
+            return self._with_callable(func)
+        msg = "`higher`, `lower`, `midpoint`, `nearest` - interpolation methods are not supported by Dask. Please use `linear` instead."
+        raise NotImplementedError(msg)
+
+    def is_first_distinct(self) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
+            frame = add_row_index(expr.to_frame(), col_token)
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            agged = cast(
+                "dx.DataFrame",
+                frame.groupby(_name, **group_by_kwargs).agg({col_token: "min"}),
+            )
+            first_distinct_index = agged[col_token]
+            return frame[col_token].isin(first_distinct_index)
+
+        return self._with_callable(func)
+
+    def is_last_distinct(self) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            col_token = generate_temporary_column_name(
+                n_bytes=8, columns=[_name], prefix="row_index_"
+            )
+            frame = add_row_index(expr.to_frame(), col_token)
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            agged = cast(
+                "dx.DataFrame",
+                frame.groupby(_name, **group_by_kwargs).agg({col_token: "max"}),
+            )
+            last_distinct_index = agged[col_token]
+            return frame[col_token].isin(last_distinct_index)
+
+        return self._with_callable(func)
+
+    def is_unique(self) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+            return (
+                expr.to_frame()
+                .groupby(_name, **group_by_kwargs)
+                .transform("size", meta=(_name, int))
+                == 1
+            )
+
+        return self._with_callable(func)
+
+    def is_in(self, other: Any) -> Self:
+        return self._with_callable(lambda expr: expr.isin(other))
+
+    def null_count(self) -> Self:
+        return self._with_callable(lambda expr: expr.isna().sum().to_series())
+
+    def _over_without_partition_by(self, order_by: Sequence[str]) -> Self:
+        # This is something like `nw.col('a').cum_sum().order_by(key)`
+        # which we can always easily support, as it doesn't require grouping.
+        def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+            return self(df.sort(*order_by, descending=False, nulls_last=False))
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        if not partition_by:
+            assert order_by  # noqa: S101
+            return self._over_without_partition_by(order_by)
+        # We have something like prev.leaf().over(...) (e.g. `nw.col('a').sum().over('b')`), where:
+        # - `prev` must be elementwise (in the example: `nw.col('a')`)
+        # - `leaf` must be a "simple" function, i.e. one that pandas supports in `transform`
+        #   (in the example: `sum`)
+        #
+        # We first evaluate `prev` as-is, and then evaluate `leaf().over(...)`` by using `transform`
+        # or other DataFrameGroupBy methods.
+        meta = self._metadata
+        if partition_by and (
+            meta.prev is not None and not meta.prev.is_elementwise
+        ):  # pragma: no cover
+            msg = (
+                "Only elementary expressions are supported for `.over` in dask backend "
+                "when `partition_by` is specified.\n\n"
+                "Please see: "
+                "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/"
+            )
+            raise NotImplementedError(msg)
+
+        if order_by:
+            # Wrong results https://github.com/dask/dask/issues/11806.
+            msg = "`over` with `order_by` is not yet supported in Dask."
+            raise NotImplementedError(msg)
+
+        nodes = list(reversed(list(self._metadata.iter_nodes_reversed())))
+        leaf_node = nodes[-1]
+        function_name = cast("NarwhalsAggregation", leaf_node.name)
+        try:
+            dask_function_name = PANDAS_REMAP_AGGS[function_name]
+        except KeyError:
+            # window functions are unsupported: https://github.com/dask/dask/issues/11806
+            msg = (
+                f"Unsupported function: {function_name} in `over` context.\n\n"
+                f"Supported functions are {', '.join(PANDAS_REMAP_AGGS)}\n"
+            )
+            raise NotImplementedError(msg) from None
+        dask_kwargs = window_kwargs_to_pandas_equivalent(function_name, leaf_node.kwargs)
+
+        def func(df: DaskLazyFrame) -> Sequence[dx.Series]:
+            plx = self.__narwhals_namespace__()
+            if meta.prev is not None:
+                prev = cast("DaskExpr", Expr(*nodes[:-1])._to_compliant_expr(plx))
+                df = df.with_columns(prev)
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])
+
+            with warnings.catch_warnings():
+                # https://github.com/dask/dask/issues/11804
+                warnings.filterwarnings(
+                    "ignore", message=".*`meta` is not specified", category=UserWarning
+                )
+                group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
+                grouped = df.native.groupby(partition_by, **group_by_kwargs)
+                if dask_function_name == "size":
+                    if len(aliases) != 1:  # pragma: no cover
+                        msg = "Safety check failed, please report a bug."
+                        raise AssertionError(msg)
+                    res_native = grouped.transform(
+                        dask_function_name, **dask_kwargs
+                    ).to_frame(aliases[0])
+                else:
+                    res_native = grouped[list(aliases)].transform(
+                        dask_function_name, **dask_kwargs
+                    )
+            result_frame = df._with_native(res_native).native
+            return [result_frame[name] for name in aliases]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    def cast(self, dtype: IntoDType) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            return expr.astype(native_dtype)
+
+        return self._with_callable(func)
+
+    def is_finite(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.isfinite)
+
+    def log(self, base: float) -> Self:
+        import dask.array as da
+
+        def _log(expr: dx.Series) -> dx.Series:
+            return da.log(expr) / da.log(base)
+
+        return self._with_callable(_log)
+
+    def exp(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.exp)
+
+    def sin(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.sin)
+
+    def cos(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.cos)
+
+    def sqrt(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.sqrt)
+
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            _name = expr.name
+            result = expr.to_frame().mode(dropna=False)[_name]
+            return result.head(1, compute=False) if keep == "any" else result
+
+        return self._with_callable(func)
+
+    def replace_strict(
+        self,
+        default: DaskExpr | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        if default is NO_DEFAULT:
+            msg = "`replace_strict` requires an explicit value for `default` for dask backend."
+            raise ValueError(msg)
+
+        mapping = dict(zip(old, new, strict=False))
+        old_ = list(old)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            default_series = df._evaluate_single_output_expr(default)
+            results = [
+                series.replace(mapping).where(series.isin(old_), default_series)
+                for series in self(df)
+            ]
+
+            if return_dtype:
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version)
+                return [res.astype(native_dtype) for res in results]
+
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
+
+    @staticmethod
+    def _eval_names_indices(indices: Sequence[int], /) -> EvalNames[DaskLazyFrame]:
+        def fn(df: DaskLazyFrame) -> Sequence[str]:
+            column_names = df.columns
+            return [column_names[i] for i in indices]
+
+        return fn
+
+    def _evaluate_aliases(self, frame: DaskLazyFrame, /) -> Sequence[str]:
+        names = self._evaluate_output_names(frame)
+        return alias(names) if (alias := self._alias_output_names) else names
+
+    def _is_elementary(self) -> bool:
+        """Check if expr is elementary, e.g. `nw.col('a').mean()` or `nw.len()`."""
+        return len(list(islice(self._metadata.op_nodes_reversed(), 3))) <= 2
+
+    def alias(self, name: str) -> Self:
+        def fn(names: Sequence[str]) -> Sequence[str]:
+            if len(names) != 1:
+                msg = f"Expected function with single output, found output names: {names}"
+                raise ValueError(msg)
+            return [name]
+
+        return self._with_alias_output_names(fn)
+
+    @property
+    def name(self) -> DaskExprNameNamespace:
+        return DaskExprNameNamespace(self)
+
+    @property
+    def str(self) -> DaskExprStringNamespace:
+        return DaskExprStringNamespace(self)
+
+    @property
+    def dt(self) -> DaskExprDateTimeNamespace:
+        return DaskExprDateTimeNamespace(self)
+
+    @property
+    def list(self) -> DaskExprListNamespace:
+        return DaskExprListNamespace(self)
+
+    any_value = not_implemented()
+    filter = not_implemented(
+        hint=length_changing_hint(
+            instead_of="lf.select(nw.col('a').filter(nw.col('b') > 0))",
+            use="lf.filter(nw.col('b') > 0).select('a')",
+        )
+    )
+    first = not_implemented()
+    rank = not_implemented()
+    last = not_implemented()
+
+    ewm_mean = not_implemented()
+    map_batches = not_implemented()
+
+    # namespaces
+    cat: Any = not_implemented()
+    struct: Any = not_implemented()
+
+
+class DaskExprNameNamespace(
+    ExprNamespace[DaskExpr], CompliantExprNameNamespace[DaskExpr]
+):
+    def _from_callable(self, func: AliasName | None, /) -> DaskExpr:
+        output_names = self._alias_output_names(func) if func else None
+        return self.compliant._with_alias_output_names(output_names)

@@ -1,0 +1,407 @@
+from __future__ import annotations
+
+import operator
+from datetime import date, datetime
+from functools import partial, reduce
+from typing import TYPE_CHECKING, Any, cast
+
+import dask.dataframe as dd
+import pandas as pd
+
+from narwhals import Implementation
+from narwhals.compliant import CompliantNamespace
+from narwhals_dask._vendored import (
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+    ensure_path_source,
+    isinstance_or_issubclass,
+    not_implemented,
+    validate_separators,
+)
+from narwhals_dask.dataframe import DaskLazyFrame
+from narwhals_dask.expr import DaskExpr
+from narwhals_dask.selectors import DaskSelectorNamespace
+from narwhals_dask.utils import (
+    align_series_full_broadcast,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+    validate_comparand,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    import dask.dataframe.dask_expr as dx
+    from typing_extensions import TypeIs
+
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NonNestedLiteral,
+        NormalizedSource,
+    )
+    from narwhals.utils import Version
+
+
+class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
+    _implementation: Implementation = Implementation.DASK
+
+    def is_native(self, obj: Any, /) -> TypeIs[dd.DataFrame]:
+        return self._lazyframe._is_native(obj)
+
+    def from_native(self, data: dd.DataFrame | Any, /) -> DaskLazyFrame:
+        if self._lazyframe._is_native(data):
+            return self._lazyframe.from_native(data, context=self)
+        msg = f"Unsupported type: {type(data).__name__!r}"  # pragma: no cover
+        raise TypeError(msg)
+
+    @property
+    def selectors(self) -> DaskSelectorNamespace:
+        return DaskSelectorNamespace.from_namespace(self)
+
+    @property
+    def _expr(self) -> type[DaskExpr]:
+        return DaskExpr
+
+    @property
+    def _lazyframe(self) -> type[DaskLazyFrame]:
+        return DaskLazyFrame
+
+    def __init__(self, *, version: Version) -> None:
+        self._version = version
+
+    def scan_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DaskLazyFrame:
+        validate_separators(separator, ("sep",), kwds)
+        native = dd.read_csv(ensure_path_source(source), sep=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(
+            dd.read_parquet(ensure_path_source(source), **kwds), context=self
+        )
+
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
+        if isinstance(value, (list, tuple, dict)):
+            msg = f"Nested structures are not supported for Dask backend, found {type(value).__name__}"
+            raise NotImplementedError(msg)
+        if isinstance_or_issubclass(dtype, self._version.dtypes.List):
+            # Dask scalars drop the dtype, so this would be a String column:
+            # https://github.com/dask/dask/issues/11637
+            msg = "`List` literals are not supported for Dask backend."
+            raise NotImplementedError(msg)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            if dtype is not None:
+                native_dtype = narwhals_to_native_dtype(dtype, self._version)
+                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+            elif isinstance(value, date) and not isinstance(
+                value, datetime
+            ):  # pragma: no cover
+                # Dask auto-infers this as object type, which causes issues down the line.
+                # This shows up in TPC-H q8.
+                native_dtype = "date32[pyarrow]"
+                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+            else:
+                native_pd_series = pd.Series([value], name="literal")
+            npartitions = df._native_frame.npartitions
+            dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
+            return [dask_series[0].to_series()]
+
+        return self._expr(
+            func,
+            evaluate_output_names=lambda _df: ["literal"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    def len(self) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            # We don't allow dataframes with 0 columns, so `[0]` is safe.
+            return [df._native_frame[df.columns[0]].size.to_series()]
+
+        return self._expr(
+            func,
+            evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
+            # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
+            # objects in `object` dtype, so we don't need the same check we have for pandas-like.
+            if ignore_nulls:
+                # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
+                series = [s if s.dtype == "bool" else s.fillna(True) for s in series]
+            return [reduce(operator.and_, series)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
+            if ignore_nulls:
+                series = [s if s.dtype == "bool" else s.fillna(False) for s in series]
+            return [reduce(operator.or_, series)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def sum_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            return [dd.concat(series, axis=1).sum(axis=1)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def concat(
+        self, items: Iterable[DaskLazyFrame], *, how: ConcatMethod
+    ) -> DaskLazyFrame:
+        if not items:
+            msg = "No items to concatenate"  # pragma: no cover
+            raise AssertionError(msg)
+        dfs = [i._native_frame for i in items]
+        cols_0 = dfs[0].columns
+        if how == "vertical":
+            for i, df in enumerate(dfs[1:], start=1):
+                cols_current = df.columns
+                if not (
+                    (len(cols_current) == len(cols_0)) and (cols_current == cols_0).all()
+                ):
+                    msg = (
+                        "unable to vstack, column names don't match:\n"
+                        f"   - dataframe 0: {cols_0.to_list()}\n"
+                        f"   - dataframe {i}: {cols_current.to_list()}\n"
+                    )
+                    raise TypeError(msg)
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="inner"), version=self._version
+            )
+        if how == "diagonal":
+            return DaskLazyFrame(
+                dd.concat(dfs, axis=0, join="outer"), version=self._version
+            )
+
+        raise NotImplementedError
+
+    def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            expr_results = [s for _expr in exprs for s in _expr(df)]
+            aligned = align_series_full_broadcast(df, *expr_results)
+            series = (s.fillna(0) for s in aligned)
+            non_na = (1 - s.isna() for s in aligned)
+            num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
+            den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
+            return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def min_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+
+            return [dd.concat(series, axis=1).min(axis=1)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def max_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+
+            return [dd.concat(series, axis=1).max(axis=1)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def concat_str(
+        self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
+    ) -> DaskExpr:
+        to_nw_dtype = partial(native_to_narwhals_dtype, version=self._version)
+
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            expr_results = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            # pandas 2.0 cannot concatenate empty Arrow-string metadata. Cast to str
+            # instead; the pre-cast masks below restore or skip nulls. Polars renders
+            # booleans lowercase, `astype(str)` does not.
+            series = (
+                s.astype(str).str.lower()
+                if to_nw_dtype(s.dtype).is_boolean()
+                else s.astype(str)
+                for s in expr_results
+            )
+            null_mask = [s.isna() for s in expr_results]
+
+            if not ignore_nulls:
+                null_mask_result = reduce(operator.or_, null_mask)
+                result = reduce(lambda x, y: x + separator + y, series).where(
+                    ~null_mask_result, None
+                )
+            else:
+                init_value, *values = [
+                    s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
+                ]
+
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    separators = (seen & not_null).map(
+                        {True: separator, False: ""}, meta=str
+                    )
+                    result = result + separators + value
+                    seen = seen | not_null
+
+            return [result]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=getattr(
+                exprs[0], "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(exprs[0], "_alias_output_names", None),
+            version=self._version,
+        )
+
+    def coalesce(self, *exprs: DaskExpr) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            return [reduce(lambda x, y: x.fillna(y), series)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+        )
+
+    def when_then(
+        self, predicate: DaskExpr, then: DaskExpr, otherwise: DaskExpr | None = None
+    ) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            then_value = df._evaluate_single_output_expr(then)
+            otherwise_value = (
+                df._evaluate_single_output_expr(otherwise)
+                if otherwise is not None
+                else otherwise
+            )
+
+            condition = df._evaluate_single_output_expr(predicate)
+            # re-evaluate DataFrame if the condition aggregates to force
+            # then/otherwise to be evaluated against the aggregated frame
+            if all(
+                x._metadata.is_scalar_like
+                for x in (
+                    (predicate, then)
+                    if otherwise is None
+                    else (predicate, then, otherwise)
+                )
+            ):
+                new_df = df._with_native(condition.to_frame())
+                condition = df._evaluate_single_output_expr(predicate.broadcast())
+                df = new_df
+
+            if otherwise is None:
+                condition, then_series = align_series_full_broadcast(
+                    df, condition, then_value
+                )
+                validate_comparand(condition, then_series)
+                return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
+            condition, then_series, otherwise_series = align_series_full_broadcast(
+                df, condition, then_value, otherwise_value
+            )
+            validate_comparand(condition, then_series)
+            validate_comparand(condition, otherwise_series)
+            return [then_series.where(condition, otherwise_series)]  # pyright: ignore[reportArgumentType]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=getattr(
+                then, "_evaluate_output_names", lambda _df: ["literal"]
+            ),
+            alias_output_names=getattr(then, "_alias_output_names", None),
+            version=self._version,
+        )
+
+    def corr(self, a: DaskExpr, b: DaskExpr, *, method: CorrelationMethod) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [a_.corr(b_, method=method).to_series()]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
+    def cov(self, a: DaskExpr, b: DaskExpr, *, ddof: int) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            # `Series.cov` is sample covariance (ddof=1); rescale it by
+            # (n - 1) / (n - ddof) for other ddof values.
+            cov_samp = a_.cov(b_).to_series()
+            if ddof == 1:
+                return [cov_samp]
+
+            n_samples = (~a_.isna() & ~b_.isna()).sum().to_series()
+            denominator = n_samples - ddof
+            result = cov_samp * (n_samples - 1) / denominator.where(denominator > 0)
+            if ddof == 0:
+                result = result.where(n_samples != 1, 0.0)
+            return [result.rename(a_.name)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
+    struct = not_implemented()
+    list = not_implemented()

@@ -2435,6 +2435,11 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 NO_DEFAULT = _NoDefault.no_default
+"""Sentinel for a parameter the caller did not set, when `None` is a valid value.
+
+Compliant-level methods receive it as-is, e.g. `replace_strict(default=NO_DEFAULT, ...)`,
+so plugins can compare against it with `default is NO_DEFAULT`.
+"""
 # keep this for tubular https://github.com/azukds/tubular/issues/725
 no_default = NO_DEFAULT
 

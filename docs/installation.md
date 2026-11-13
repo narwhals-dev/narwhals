@@ -69,6 +69,21 @@ Specify one or more extras in square brackets, for example:
     poetry add "narwhals[polars,pyarrow]"
     ```
 
+### Dask
+
+Dask support is moving out of Narwhals and into the separate
+[`narwhals-dask`](https://github.com/narwhals-dev/narwhals/tree/main/packages/narwhals-dask)
+plugin. Narwhals still ships a built-in Dask backend for now, but using it emits a
+`FutureWarning`: in a future release, using Dask with Narwhals will require
+`narwhals-dask` to be installed.
+
+Installing it silences the warning, and requires no code changes: once installed,
+Narwhals uses it automatically for all Dask objects.
+
+```terminal
+python -m pip install narwhals-dask
+```
+
 !!! warning "Library authors: prefer keeping backends out of your direct dependencies"
 
     `uv add "narwhals[polars,pyarrow]"` adds the extras to `[project.dependencies]`.

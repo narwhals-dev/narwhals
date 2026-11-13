@@ -236,6 +236,9 @@ conflicts = [
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# NOTE: `narwhals-dask` has its own environment and lock file. Installing it replaces the
+# built-in Dask backend, and its `dask` requirement conflicts with the `extreme-*` groups.
+exclude = ["packages/narwhals-dask"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
@@ -362,6 +365,8 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = [
   "error",
+  # Emitted when using Dask without `narwhals-dask` installed, see `tests/dask_plugin_test.py`.
+  'ignore:Dask support is moving out of Narwhals:FutureWarning',
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
@@ -468,7 +473,10 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin"]
+files = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
+# NOTE: `narwhals-dask` is resolved from source rather than installed, as installing it
+# replaces the built-in Dask backend.
+mypy_path = "packages/narwhals-dask/src"
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -515,16 +523,17 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin"]
+include = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
 defineConstant = { "MYPY" = false }
+extraPaths = ["packages/narwhals-dask/src"]
 
 [tool.pyrefly]
-search-path = ["src", "."]
+search-path = ["src", ".", "packages/narwhals-dask/src"]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",
