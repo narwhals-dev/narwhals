@@ -10,6 +10,59 @@ from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equa
 
 
 @pytest.mark.parametrize(
+    "operator", ["__and__", "__rand__", "__or__", "__ror__", "__xor__", "__rxor__"]
+)
+@pytest.mark.parametrize("mask", [0, 1, 2**63 - 1, 2**63, 2**64 - 1])
+def test_bitwise_uint64_scalar_pyarrow(operator: str, mask: int) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    values = [2**63, 2**64 - 1, None]
+    native = pa.table(
+        {
+            "a": pa.array(values, type=pa.uint64()),
+            "mask": pa.array([mask] * len(values), type=pa.uint64()),
+        }
+    )
+    df = nw.from_native(native, eager_only=True)
+    expected = [getattr(v, operator)(mask) if v is not None else None for v in values]
+    series = getattr(df["a"], operator)(mask)
+    assert_equal_data({"a": series}, {"a": expected})
+    assert series.to_native().type == pa.uint64()
+    result = df.select(a=getattr(nw.col("a"), operator)(nw.col("mask").first()))
+    assert_equal_data(result, {"a": expected})
+    assert result.to_native()["a"].type == pa.uint64()
+    if mask <= 2**63 - 1:
+        result = df.select(a=getattr(nw.col("a"), operator)(mask))
+        assert_equal_data(result, {"a": expected})
+        result = df.select(a=getattr(nw.lit(mask), operator)(nw.col("a")))
+        assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    "operator", ["__and__", "__rand__", "__or__", "__ror__", "__xor__", "__rxor__"]
+)
+def test_bitwise_uint64_signed_scalar_pyarrow(operator: str) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw.from_native(pa.table({"a": pa.array([2**63, None], type=pa.uint64())}))
+    mask = nw.lit(None, dtype=nw.Int64)
+    assert_equal_data(
+        df.select(a=getattr(nw.col("a"), operator)(mask)), {"a": [None, None]}
+    )
+    assert_equal_data(
+        df.select(a=getattr(mask, operator)(nw.col("a"))), {"a": [None, None]}
+    )
+    with pytest.raises(pa.ArrowInvalid):
+        getattr(df["a"], operator)(-1)
+    with pytest.raises(pa.ArrowInvalid):
+        df.select(a=getattr(nw.lit(-1), operator)(nw.col("a")))
+    with pytest.raises(pa.ArrowNotImplementedError):
+        getattr(df["a"], operator)(1.5)
+
+
+@pytest.mark.parametrize(
     ("operator", "expected"),
     [
         ("__eq__", [False, True, False]),

@@ -2,7 +2,9 @@
 
 For PyArrow integer columns, `&`, `|` and `^` perform bitwise operations and
 preserve null values. For example, `3 & 2` gives `2`, `3 | 2` gives `3`, and
-`3 ^ 2` gives `1`. Boolean columns continue to follow the logical rules below.
+`3 ^ 2` gives `1`. UInt64 columns also support non-negative integer scalar masks
+when values exceed the signed 64-bit range, so a value of `2**63` XOR `1` gives
+`2**63 + 1`. Boolean columns continue to follow the logical rules below.
 
 ## Null preservation
 
