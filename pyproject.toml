@@ -342,7 +342,7 @@ extend-ignore-names = [
   "TRY003",
 ]
 "utils/*" = ["S311", "T201"]
-"utils/bump_version.py" = ["S603", "S607"]
+"utils/bump_version*.py" = ["S603", "S607"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -34,18 +34,18 @@ fails, it rolls back and explains why; fix the cause and rerun.
 Lives in [`packages/narwhals-dask`](packages/narwhals-dask). Release it right after the
 Narwhals release it needs.
 
-1. In `packages/narwhals-dask/pyproject.toml`, bump `version` and, if needed, the
-   `narwhals>=` floor. Run `uv lock` in that directory, and merge to `main`.
-2. Tag the merge commit and push:
+1. If it needs a newer Narwhals, raise the `narwhals>=` floor in
+   `packages/narwhals-dask/pyproject.toml`, run `uv lock` in that directory, and merge to `main`.
+2. With a clean working tree, run:
 
    ```terminal
-   git tag narwhals-dask-v0.1.0
-   git push upstream narwhals-dask-v0.1.0
+   python utils/bump_version_narwhals_dask.py minor
    ```
 
-   The tag must match `version` in `pyproject.toml`. If the `pypi-narwhals-dask` environment
-   requires a reviewer, approve the upload in the
+   Check the version it prints, and answer `y` to tag and push. If the `pypi-narwhals-dask`
+   environment requires a reviewer, approve the upload in the
    [workflow run](https://github.com/narwhals-dev/narwhals/actions/workflows/publish_narwhals_dask.yml).
+3. Open a PR from `bump-narwhals-dask` to `main` and squash-merge it.
 
 ## narwhals-daft
 
