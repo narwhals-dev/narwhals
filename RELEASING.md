@@ -22,8 +22,9 @@ pointing at its narwhals-dev repo over SSH (e.g. `git@github.com:narwhals-dev/na
    gh pr create --repo narwhals-dev/narwhals --base main --head bump-version --label release --fill
    ```
 
-5. Once the release `v1.30.0` appears (empty notes), edit it: paste the notes, set the title to
-   `Narwhals v1.30.0`, and press "Update release notes". Don't publish "Narwhals Unreleased".
+5. Once the release for the new tag appears (e.g. `v1.30.0`, with empty notes), edit it: paste
+   the notes, set the title to e.g. `Narwhals v1.30.0`, and press "Update release notes".
+   Don't publish "Narwhals Unreleased".
 6. Squash-merge the PR. A `bypassed rule violations` message is expected.
 
 Don't amend or force-push `bump-version` after step 3: the tag points at it. If the script
