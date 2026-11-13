@@ -656,8 +656,16 @@ def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.Bool
 
 def list_get(array: ChunkedArrayAny, index: int) -> ChunkedArrayAny:
     """`pc.list_element`, also accepting a negative `index` (counted from the end)."""
+    msg = f"Index {index} is out of bounds."
+    if pa.types.is_fixed_size_list(array.type) and index < 0:
+        index += array.type.list_size
+        if index < 0:
+            raise ComputeError(msg)
     if index >= 0:
-        return pc.list_element(array, index)
+        try:
+            return pc.list_element(array, index)
+        except pa.ArrowInvalid as exc:
+            raise ComputeError(msg) from exc
     chunks = []
     for chunk in cast("list[ListArrayAny]", array.chunks):
         offsets = chunk.offsets
@@ -665,7 +673,6 @@ def list_get(array: ChunkedArrayAny, index: int) -> ChunkedArrayAny:
         in_bounds = pc.greater_equal(positions, offsets.slice(0, len(chunk)))
         is_valid = chunk.is_valid()
         if not pc.all(pc.or_kleene(in_bounds, pc.invert(is_valid)), min_count=0).as_py():
-            msg = f"Index {index} is out of bounds."
             raise ComputeError(msg)
         # A null list may still span values, so it must not take one.
         take = pc.and_(in_bounds, is_valid)

@@ -50,7 +50,7 @@ class SparkLikeExprListNamespace(
         def _get(expr: Column) -> Column:
             if index >= 0:
                 return expr.getItem(index)
-            return expr.getItem(self.compliant._F.size(expr) + index)
+            return expr[self.compliant._F.size(expr) + index]
 
         return self.compliant._with_elementwise(_get)
 
