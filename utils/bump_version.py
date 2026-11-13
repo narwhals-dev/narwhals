@@ -1,6 +1,6 @@
 """Bump the version, then commit, tag and push it. Pushing the tag publishes to PyPI.
 
-See https://github.com/narwhals-dev/narwhals/wiki#release-process
+See RELEASING.md
 """
 
 from __future__ import annotations
