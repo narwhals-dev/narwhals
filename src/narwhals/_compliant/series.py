@@ -221,8 +221,8 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
         """
         ...
 
-    def _from_scalar(self, value: Any) -> Self:
-        return self.from_iterable([value], name=self.name, context=self)
+    def _from_scalar(self, value: Any, *, dtype: IntoDType | None = None) -> Self:
+        return self.from_iterable([value], name=self.name, context=self, dtype=dtype)
 
     def _with_native(
         self, series: NativeSeriesT, *, preserve_broadcast: bool = False

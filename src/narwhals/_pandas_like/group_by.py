@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import make_group_by_kwargs
+from narwhals._pandas_like.utils import make_group_by_kwargs, set_index
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
 
-NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
+NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.DataFrame]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
 NativeAggregation: TypeAlias = Literal[
     "any",
@@ -361,23 +361,27 @@ class PandasLikeGroupBy(
         impl = self.compliant._implementation
         func = self._apply_exprs_function(exprs)
         apply = grouped.apply
+        result: pd.DataFrame
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)  # type: ignore[call-overload]
-        return apply(func)  # type: ignore[return-value]  # pragma: no cover
+            result = apply(func, include_groups=False)  # type: ignore[call-overload]
+        else:  # pragma: no cover
+            result = apply(func)
+        # `DataFrame.droplevel` raises on Modin, so drop the level on the index itself.
+        index = cast("pd.MultiIndex", result.index).droplevel(-1)
+        return set_index(result, index, implementation=impl)
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
-        into_series = ns._series.from_iterable
+        impl = self.compliant._implementation
 
-        def fn(df: pd.DataFrame) -> pd.Series[Any]:
+        def fn(df: pd.DataFrame) -> pd.DataFrame:
             compliant = self.compliant._with_native(df)
             results = [
-                (keys.native.iloc[0], keys.name)
+                set_index(keys.native, [0], implementation=impl)
                 for expr in exprs
                 for keys in expr(compliant)
             ]
-            out_group, out_names = zip(*results, strict=True) if results else ([], [])
-            return into_series(out_group, index=out_names, context=ns).native
+            return ns._concat_by_index(results)
 
         return fn
 
