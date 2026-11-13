@@ -26,8 +26,8 @@ df.select(nw.col("a").sum()).collect()
 `narwhals-dask` only depends on Narwhals' public API. Anything it needs from Narwhals'
 private modules is vendored in `narwhals_dask/_vendored.py`.
 
-To run Narwhals' test suite against it, from the repository root:
+Narwhals' own test suite exercises the plugin once it's installed. From this directory:
 
 ```console
-uv run --group narwhals-dask --extra pandas python packages/narwhals-dask/run_tests.py
+uv run pytest ../../tests --constructors=dask
 ```

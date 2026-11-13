@@ -19,7 +19,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 narwhals-dask = 'narwhals_dask'
 
 [dependency-groups]
-# For running Narwhals' own test suite against this plugin, see `run_tests.py`.
+# For running Narwhals' own test suite against this plugin, see the README.
 tests = [
   "covdefaults",
   "hypothesis>=6.0.0",

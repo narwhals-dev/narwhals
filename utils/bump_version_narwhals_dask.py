@@ -52,10 +52,6 @@ def main() -> None:
     bump: BumpKind = parser.parse_args().bump
 
     os.chdir(Path(__file__).resolve().parents[1])
-    # NOTE: narwhals-dask has its own environment. Never let `uv` resolve it to an
-    # active virtualenv or a global `UV_PROJECT_ENVIRONMENT`.
-    os.environ["UV_PROJECT_ENVIRONMENT"] = str((PACKAGE_DIR / ".venv").resolve())
-    os.environ.pop("VIRTUAL_ENV", None)
     uv_version = (UV, "version", "--directory", str(PACKAGE_DIR))
 
     if run(GIT, "status", "--porcelain", "--untracked-files=no"):

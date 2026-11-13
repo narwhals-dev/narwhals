@@ -38,4 +38,5 @@ jobs:
           cache-suffix: narwhals-dask-${{ matrix.python-version }}
           cache-dependency-glob: "packages/narwhals-dask/pyproject.toml"
       - name: Run Narwhals' test suite against narwhals-dask
-        run: python packages/narwhals-dask/run_tests.py
+        working-directory: packages/narwhals-dask
+        run: uv run pytest ../../tests --constructors=dask
