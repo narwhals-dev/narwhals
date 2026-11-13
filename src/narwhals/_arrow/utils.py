@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
-from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
+from narwhals.exceptions import ColumnNotFoundError, ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -662,6 +662,33 @@ def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.Bool
         if block.null_count == 0
         else pc.if_else(block.is_valid(), contains, None)
     )
+
+
+def list_get(array: ChunkedArrayAny, index: int) -> ChunkedArrayAny:
+    """`pc.list_element`, also accepting a negative `index` (counted from the end)."""
+    msg = f"Index {index} is out of bounds."
+    if pa.types.is_fixed_size_list(array.type) and index < 0:
+        index += array.type.list_size
+        if index < 0:
+            raise ComputeError(msg)
+    if index >= 0:
+        try:
+            return pc.list_element(array, index)
+        except pa.ArrowInvalid as exc:
+            raise ComputeError(msg) from exc
+    chunks = []
+    for chunk in cast("list[ListArrayAny]", array.chunks):
+        offsets = chunk.offsets
+        positions = pc.add(offsets.slice(1), lit(index, offsets.type))  # type: ignore[arg-type]
+        in_bounds = pc.greater_equal(positions, offsets.slice(0, len(chunk)))
+        is_valid = chunk.is_valid()
+        if not pc.all(pc.or_kleene(in_bounds, pc.invert(is_valid)), min_count=0).as_py():
+            raise ComputeError(msg)
+        # A null list may still span values, so it must not take one.
+        take = pc.and_(in_bounds, is_valid)
+        chunks.append(chunk.values.take(pc.if_else(take, positions, None)))
+    list_type = cast("pa.ListType[Any] | pa.LargeListType[Any]", array.type)
+    return pa.chunked_array(chunks, list_type.value_type)
 
 
 def sortable(array: ChunkedArrayAny, /) -> ChunkedArrayAny:
