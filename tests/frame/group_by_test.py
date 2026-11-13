@@ -128,10 +128,14 @@ def test_group_by_nw_all(constructor: Constructor) -> None:
         ("len", {"a": [1, 2], "b": [3, 1]}),
         ("n_unique", {"a": [1, 2], "b": [3, 1]}),
         ("count", {"a": [1, 2], "b": [2, 1]}),
+        ("null_count", {"a": [1, 2], "b": [1, 0]}),
     ],
 )
 def test_group_by_depth_1_agg(
-    constructor: Constructor, attr: str, expected: dict[str, list[int | float]]
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    attr: str,
+    expected: dict[str, list[int | float]],
 ) -> None:
     if (
         "pandas_pyarrow" in str(constructor)
@@ -143,6 +147,10 @@ def test_group_by_depth_1_agg(
         )
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
+    if "dask" in str(constructor) and attr == "null_count":
+        request.applymarker(
+            pytest.mark.xfail(reason="Grouped null_count is not supported by Dask")
+        )
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
     result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
@@ -813,3 +821,60 @@ def test_multi_column_expansion(constructor: Constructor) -> None:
         .sort("a", descending=True)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("drop_null_keys", [False, True])
+@pytest.mark.filterwarnings("error:Found complex group-by expression:UserWarning")
+def test_group_by_null_count(
+    request: pytest.FixtureRequest, constructor: Constructor, *, drop_null_keys: bool
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(reason="Grouped null_count is not supported by Dask")
+        )
+    data = {
+        "key": [1, 1, 2, 2, 3, None, None],
+        "other": [0, 0, 0, 0, 0, 0, 0],
+        "a": [None, 4, None, None, 6, None, 8],
+        "b": [1, 2, None, 3, 4, None, None],
+    }
+    df = nw.from_native(constructor(data))
+    grouped = (
+        df.group_by("key", "other", drop_null_keys=True)
+        if drop_null_keys
+        else df.group_by("key", "other")
+    )
+    result = grouped.agg(
+        nw.col("a", "b").null_count().name.suffix("_nulls"),
+        a_valid=nw.col("a").count(),
+        a_size=nw.col("a").len(),
+        a_nulls_again=nw.col("a").null_count(),
+    ).sort("key", nulls_last=True)
+    expected: dict[str, list[int | None]] = {
+        "key": [1, 2, 3, None],
+        "other": [0, 0, 0, 0],
+        "a_nulls": [1, 2, 0, 1],
+        "b_nulls": [0, 1, 0, 2],
+        "a_valid": [1, 0, 1, 1],
+        "a_size": [2, 2, 1, 2],
+        "a_nulls_again": [1, 2, 0, 1],
+    }
+    if drop_null_keys:
+        expected = {name: values[:-1] for name, values in expected.items()}
+    assert_equal_data(result, expected)
+    assert_equal_data(df, data)
+
+
+@pytest.mark.filterwarnings("error:Found complex group-by expression:UserWarning")
+def test_group_by_null_count_empty(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(reason="Grouped null_count is not supported by Dask")
+        )
+    df = nw.from_native(constructor({"key": [1], "a": [1], "b": [2]})).filter(
+        nw.col("key") < 0
+    )
+    result = df.group_by("key").agg(nw.all().null_count())
+    assert_equal_data(result, {"key": [], "a": [], "b": []})
