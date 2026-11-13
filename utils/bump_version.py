@@ -51,13 +51,15 @@ def run(*args: str) -> str:
         sys.exit(f"`{' '.join(args)}` failed:\n{exc.stderr.strip()}")
 
 
+def lock_entry(package: str, version: str) -> bytes:
+    return f'name = "{package}"\nversion = "{version}"\n'.encode()
+
+
 def bump_lock_entry(lock: Path, package: str, old: str, new: str) -> None:
-    old_entry = f'name = "{package}"\nversion = "{old}"\n'.encode()
-    new_entry = f'name = "{package}"\nversion = "{new}"\n'.encode()
     content = lock.read_bytes()
-    if (count := content.count(old_entry)) != 1:
+    if (count := content.count(lock_entry(package, old))) != 1:
         sys.exit(f"Expected one {package} {old} entry in {lock}, found {count}.")
-    lock.write_bytes(content.replace(old_entry, new_entry))
+    lock.write_bytes(content.replace(lock_entry(package, old), lock_entry(package, new)))
 
 
 def main() -> None:
@@ -76,8 +78,6 @@ def main() -> None:
     bump: BumpKind = args.bump
     pkg = PACKAGES[args.package]
 
-    pyproject = str(pkg.directory / "pyproject.toml")
-    lock = str(pkg.directory / "uv.lock")
     uv_version = (UV, "version", "--directory", str(pkg.directory))
 
     os.chdir(Path(__file__).resolve().parents[1])
@@ -95,18 +95,31 @@ def main() -> None:
     if run(GIT, "tag", "--list", tag):
         sys.exit(f"Tag {tag} already exists on {REMOTE}.")
 
+    # Plugins lock Narwhals as an editable path dependency, recording its version,
+    # so a Narwhals release must bump their locks too or `uv lock --locked` fails.
+    locks = [pkg.directory / "uv.lock"]
+    locks += [
+        other.directory / "uv.lock"
+        for other in PACKAGES.values()
+        if other is not pkg
+        and lock_entry(pkg.name, old_version)
+        in (other.directory / "uv.lock").read_bytes()
+    ]
+    files = [str(pkg.directory / "pyproject.toml"), *map(str, locks)]
+
     try:
         # `uv lock` re-spells every fork's resolution markers and Renovate's
         # `uv lock --upgrade` reverts them, so edit only the package's entry.
         run(*uv_version, "--bump", bump, "--frozen")
-        bump_lock_entry(Path(lock), pkg.name, old_version, new_version)
-        run(UV, "lock", "--check", "--directory", str(pkg.directory))
+        for lock in locks:
+            bump_lock_entry(lock, pkg.name, old_version, new_version)
+            run(UV, "lock", "--check", "--directory", str(lock.parent))
 
-        run(GIT, "add", pyproject, lock)
+        run(GIT, "add", *files)
         staged = run(GIT, "diff", "--cached", "--numstat").splitlines()
-        if staged != [f"1\t1\t{pyproject}", f"1\t1\t{lock}"]:
+        if sorted(staged) != sorted(f"1\t1\t{f}" for f in files):
             sys.exit(
-                f"Expected a one-line change in {pyproject} and {lock}, got:\n"
+                f"Expected a one-line change in each of {', '.join(files)}, got:\n"
                 + "\n".join(staged)
             )
         run(GIT, "commit", "-m", f"{pkg.commit_subject} {new_version}")
@@ -130,7 +143,7 @@ def main() -> None:
         )
     except BaseException:
         # The tree was clean before the bump, so this only undoes the script's changes.
-        sp.run([GIT, "restore", "--staged", "--worktree", pyproject, lock], check=False)
+        sp.run([GIT, "restore", "--staged", "--worktree", *files], check=False)
         sp.run([GIT, "tag", "--delete", tag], capture_output=True, check=False)
         raise
 
