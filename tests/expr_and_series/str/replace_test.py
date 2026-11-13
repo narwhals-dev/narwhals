@@ -215,9 +215,9 @@ def test_str_replace_edge_series_scalar(
     if (
         "literal_backslash" in request.node.callspec.id
         and any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow"))
-        and PANDAS_VERSION < PkgVersion("3")
+        and PkgVersion("2.3.3") <= PANDAS_VERSION < PkgVersion("3")
     ):
-        # pandas<3 rejects `\1` in a pyarrow-backed replacement, even when literal.
+        # pandas 2.3.3 rejects `\1` in a pyarrow-backed replacement, even when literal.
         request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace(
@@ -369,9 +369,9 @@ def test_str_replace_edge_expr_scalar(
     if (
         "literal_backslash" in request.node.callspec.id
         and any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
-        and PANDAS_VERSION < PkgVersion("3")
+        and PkgVersion("2.3.3") <= PANDAS_VERSION < PkgVersion("3")
     ):
-        # pandas<3 rejects `\1` in a pyarrow-backed replacement, even when literal.
+        # pandas 2.3.3 rejects `\1` in a pyarrow-backed replacement, even when literal.
         request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
     if "duckdb" in str(constructor) and n > 1:
         request.applymarker(
