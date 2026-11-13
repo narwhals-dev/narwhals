@@ -1234,7 +1234,11 @@ class PandasLikeDataFrame(
                 raise InvalidOperationError(msg)
 
     def explode(
-        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+        self,
+        columns: Sequence[str],
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
     ) -> Self:
         self._validate_explode_dtypes(columns)
 

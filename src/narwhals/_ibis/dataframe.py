@@ -382,7 +382,11 @@ class IbisLazyFrame(
         return self._with_native(self.native.drop_null(subset_))
 
     def explode(
-        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+        self,
+        columns: Sequence[str],
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
     ) -> Self:
         # `unnest(..., keep_empty=True)` emits a single null row for both empty and null
         # lists, so drop the rows the flags exclude up front.

@@ -305,7 +305,11 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self._with_native(result)
 
     def explode(
-        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+        self,
+        columns: Sequence[str],
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
     ) -> Self:
         try:
             if self._backend_version < (1, 36):

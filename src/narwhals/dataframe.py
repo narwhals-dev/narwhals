@@ -488,8 +488,12 @@ class BaseFrame(Generic[_FrameT]):
             else [*columns, *more_columns]
         )
 
+        compliant = self._compliant_frame
+        if empty_as_null and keep_nulls:
+            # Plugins written before these flags existed implement `explode(columns)`.
+            return self._with_compliant(compliant.explode(columns=to_explode))
         return self._with_compliant(
-            self._compliant_frame.explode(
+            compliant.explode(
                 columns=to_explode, empty_as_null=empty_as_null, keep_nulls=keep_nulls
             )
         )

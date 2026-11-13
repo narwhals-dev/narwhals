@@ -383,3 +383,18 @@ def test_explode_drops_every_row(
         .select("a", "i")
     )
     assert_equal_data(result, {"a": [], "i": []})
+
+
+def test_explode_plugin_without_flags(
+    constructor_eager: ConstructorEager, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [1], "b": [2]}))
+    monkeypatch.setattr(
+        type(df._compliant_frame),
+        "explode",
+        lambda self, columns: self.simple_select(*columns),
+    )
+
+    assert_equal_data(df.explode("a"), {"a": [1]})
+    with pytest.raises(TypeError, match="empty_as_null"):
+        df.explode("a", empty_as_null=False)

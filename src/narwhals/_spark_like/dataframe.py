@@ -465,7 +465,11 @@ class SparkLikeLazyFrame(
         )
 
     def explode(
-        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+        self,
+        columns: Sequence[str],
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
     ) -> Self:
         explode_col = self._validate_explode_columns(columns)
         column_names = self.columns
