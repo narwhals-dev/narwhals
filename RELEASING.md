@@ -40,7 +40,7 @@ Narwhals release it needs.
 2. With a clean working tree, run:
 
    ```terminal
-   python utils/bump_version_narwhals_dask.py minor
+   python utils/bump_version.py minor --package narwhals-dask
    ```
 
    Check the version it prints, and answer `y` to tag and push. If the `pypi-narwhals-dask`
