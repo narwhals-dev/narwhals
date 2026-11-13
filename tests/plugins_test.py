@@ -178,6 +178,12 @@ def parquet_path(tmp_path: Path) -> str:
     return path
 
 
+@pytest.fixture
+def file_path(request: pytest.FixtureRequest) -> str:
+    # Resolved at setup: `getfixturevalue` in a test body races under pytest-run-parallel.
+    return cast("str", request.getfixturevalue(request.param))
+
+
 @requires_plugin
 def test_plugin_is_lazy() -> None:
     lf = nw.from_native(DATA)  # type: ignore[call-overload]
@@ -196,15 +202,15 @@ def test_not_implemented() -> None:
 
 @pytest.mark.parametrize("spelling", ["entry-point-name", "module-name", "module"])
 @pytest.mark.parametrize(
-    ("scan_function", "path_fixture"),
+    ("scan_function", "file_path"),
     [(nw.scan_csv, "csv_path"), (nw.scan_parquet, "parquet_path")],
     ids=["scan_csv", "scan_parquet"],
+    indirect=["file_path"],
 )
 def test_scan_plugin(
-    request: pytest.FixtureRequest,
     plugin_module: ModuleType,
     scan_function: Callable[..., nw.LazyFrame[Any]],
-    path_fixture: str,
+    file_path: str,
     spelling: str,
 ) -> None:
     backend = {
@@ -212,28 +218,28 @@ def test_scan_plugin(
         "module-name": "test_plugin",
         "module": plugin_module,
     }[spelling]
-    lf = scan_function(request.getfixturevalue(path_fixture), backend=backend)
+    lf = scan_function(file_path, backend=backend)
     assert isinstance(lf, nw.LazyFrame)
     assert lf.columns == ["a", "b"]
 
 
 @requires_plugin
 @pytest.mark.parametrize(
-    ("read_function", "path_fixture", "expected"),
+    ("read_function", "file_path", "expected"),
     [
         (nw.read_csv, "csv_path", {"a": ["1", "1", "2"], "b": ["4", "5", "6"]}),
         (nw.read_parquet, "parquet_path", DATA),
     ],
     ids=["read_csv", "read_parquet"],
+    indirect=["file_path"],
 )
 def test_read_plugin(
-    request: pytest.FixtureRequest,
     read_function: Callable[..., nw.DataFrame[Any]],
-    path_fixture: str,
+    file_path: str,
     expected: dict[str, Any],
 ) -> None:
     """`read_*` dispatch to the namespace's eager half of the IO contract."""
-    df = read_function(request.getfixturevalue(path_fixture), backend=BACKEND)
+    df = read_function(file_path, backend=BACKEND)
     assert isinstance(df, nw.DataFrame)
     assert df.to_native() == expected
 
