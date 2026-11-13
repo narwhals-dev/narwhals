@@ -69,6 +69,9 @@ replace_edge_data = [
     ),
     pytest.param({"a": ["abc"]}, "abc", "Z", 0, False, {"a": ["abc"]}, id="n_zero"),
     pytest.param({"a": ["abc"]}, "", "Z", 1, True, {"a": ["Zabc"]}, id="empty_pattern"),
+    pytest.param(
+        {"a": ["a.c"]}, ".", "\\1", 1, True, {"a": ["a\\1c"]}, id="literal_backslash"
+    ),
 ]
 
 replace_data_multivalue = [
@@ -181,7 +184,7 @@ def test_str_replace_expr_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
@@ -200,6 +203,7 @@ def test_str_replace_expr_scalar(
 )
 def test_str_replace_edge_series_scalar(
     constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -208,6 +212,13 @@ def test_str_replace_edge_series_scalar(
     literal: bool,
     expected: dict[str, list[str]],
 ) -> None:
+    if (
+        "literal_backslash" in request.node.callspec.id
+        and any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and PkgVersion("2.3.3") <= PANDAS_VERSION < PkgVersion("3")
+    ):
+        # pandas 2.3.3 rejects `\1` in a pyarrow-backed replacement, even when literal.
+        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
@@ -267,7 +278,7 @@ def test_str_replace_value_edge_expr_scalar(
     expected: dict[str, list[str]],
     reason: str,
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
@@ -282,7 +293,10 @@ def test_str_replace_value_edge_expr_scalar(
         and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip(reason="single-character pattern treated as literal")
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+    if any(
+        x in str(constructor)
+        for x in ("pandas", "modin", "cudf", "pyarrow", "dask", "duckdb")
+    ):
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": ["aab"]}))
     result_df = df.select(
@@ -311,7 +325,7 @@ def test_str_replace_null_value_series(
 def test_str_replace_null_value_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
@@ -345,10 +359,24 @@ def test_str_replace_edge_expr_scalar(
     literal: bool,
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
+                raises=NotImplementedError,
+            )
+        )
+    if (
+        "literal_backslash" in request.node.callspec.id
+        and any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and PkgVersion("2.3.3") <= PANDAS_VERSION < PkgVersion("3")
+    ):
+        # pandas 2.3.3 rejects `\1` in a pyarrow-backed replacement, even when literal.
+        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
+    if "duckdb" in str(constructor) and n > 1:
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="DuckDB only supports `n` in {-1, 0, 1}.",
                 raises=NotImplementedError,
             )
         )
@@ -445,7 +473,7 @@ def test_str_replace_expr_multivalue(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
@@ -554,7 +582,7 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
     ## .str.replace
     context = (
         not_implemented
-        if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark"))
+        if any(x in str(constructor) for x in ("ibis", "pyspark"))
         else nullcontext()
     )
     with context:
@@ -562,7 +590,7 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
 
     ## .str.replace multivalue; some dont implement replace, others dont support multivalue
     context = nullcontext()
-    if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark")):
+    if any(x in str(constructor) for x in ("ibis", "pyspark")):
         context = not_implemented
     elif any(
         x in str(constructor) for x in ("dask", "pyarrow", "pandas", "modin", "cudf")

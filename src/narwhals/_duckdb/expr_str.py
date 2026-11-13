@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
+
+from duckdb import CoalesceOperator
 
 from narwhals._duckdb.utils import F, col, concat_str, lit
 from narwhals._sql.expr_str import SQLExprStringNamespace
-from narwhals._utils import not_implemented, requires
+from narwhals._utils import requires
 
 if TYPE_CHECKING:
     from duckdb import Expression
@@ -67,4 +70,23 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
 
         return self.compliant._with_elementwise(_to_titlecase)
 
-    replace = not_implemented()
+    def replace(
+        self, value: DuckDBExpr, pattern: str, *, literal: bool, n: int
+    ) -> DuckDBExpr:
+        if n == -1:
+            return self.replace_all(value, pattern, literal=literal)
+        if n == 0:
+            return self.compliant
+        if n != 1:
+            msg = f"`str.replace` only supports `n` in {{-1, 0, 1}} for DuckDB, got {n}."
+            raise NotImplementedError(msg)
+
+        def func(expr: Expression, value: Expression) -> Expression:
+            if literal:
+                # `regexp_replace` treats backslashes in the replacement as group references.
+                value = F("replace", value, lit("\\"), lit("\\\\"))
+            regex = lit(re.escape(pattern) if literal else pattern)
+            # A null replacement value leaves the string unchanged, as in Polars.
+            return CoalesceOperator(F("regexp_replace", expr, regex, value), expr)
+
+        return self.compliant._with_elementwise(func, expression_args={"value": value})
