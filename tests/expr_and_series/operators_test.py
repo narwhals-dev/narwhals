@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import pytest
 from packaging.version import Version as PkgVersion
 
@@ -99,17 +101,74 @@ def test_logic_operators_expr_kleene(
 def test_xor_operator_integers(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(
-        x in str(constructor)
-        for x in ("pyarrow_table", "duckdb", "sqlframe", "ibis", "pyspark")
-    ):
-        # PyArrow and PySpark raise, DuckDB and SQLFrame cast to boolean,
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
+        # PySpark raises, DuckDB and SQLFrame cast to boolean,
         # Ibis compiles `~(a & b)` on integers to `~a & b`.
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [3, 2, 0]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a") ^ nw.col("b"), c=nw.col("a") ^ 1)
     assert_equal_data(result, {"a": [2, 0, 3], "c": [0, 3, 2]})
+
+
+@pytest.mark.parametrize(
+    "dtype", ["int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"]
+)
+@pytest.mark.parametrize(
+    ("operator", "expected", "expected_scalar"),
+    [
+        ("__and__", [1, 2, 0, None, None], [1, 0, 1, None, 0]),
+        ("__rand__", [1, 2, 0, None, None], [1, 0, 1, None, 0]),
+        ("__or__", [3, 2, 3, None, None], [1, 3, 3, None, 1]),
+        ("__ror__", [3, 2, 3, None, None], [1, 3, 3, None, 1]),
+        ("__xor__", [2, 0, 3, None, None], [0, 3, 2, None, 1]),
+        ("__rxor__", [2, 0, 3, None, None], [0, 3, 2, None, 1]),
+    ],
+)
+def test_bitwise_operators_pyarrow(
+    dtype: Literal[
+        "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"
+    ],
+    operator: str,
+    expected: list[int | None],
+    expected_scalar: list[int | None],
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    native_dtype = pa.type_for_alias(dtype)
+    native = pa.Table.from_arrays(
+        [
+            pa.chunked_array(
+                [
+                    pa.array([1, 2]).cast(native_dtype),
+                    pa.array([3, None, 0]).cast(native_dtype),
+                ]
+            ),
+            pa.chunked_array(
+                [
+                    pa.array([3, 2, 0]).cast(native_dtype),
+                    pa.array([1, None]).cast(native_dtype),
+                ]
+            ),
+        ],
+        names=["a", "b"],
+    )
+    assert [len(chunk) for chunk in native["a"].chunks] == [2, 3]
+    assert [len(chunk) for chunk in native["b"].chunks] == [3, 2]
+    df = nw.from_native(native, eager_only=True)
+    series = df["a"]
+    result_series = getattr(series, operator)(df["b"])
+    assert_equal_data({"a": result_series}, {"a": expected})
+    assert result_series.to_native().type == native["a"].type
+    result_expr = df.select(a=getattr(nw.col("a"), operator)(nw.col("b")))
+    assert_equal_data(result_expr, {"a": expected})
+    assert result_expr.to_native()["a"].type == native["a"].type
+    assert_equal_data({"a": getattr(series, operator)(1)}, {"a": expected_scalar})
+    result_scalar = df.select(a=getattr(nw.col("a"), operator)(1))
+    assert_equal_data(result_scalar, {"a": expected_scalar})
+    result_broadcast = df.select(a=getattr(nw.col("a"), operator)(nw.lit(1)))
+    assert_equal_data(result_broadcast, {"a": expected_scalar})
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,9 @@
 # Boolean columns
 
+For PyArrow integer columns, `&`, `|` and `^` perform bitwise operations and
+preserve null values. For example, `3 & 2` gives `2`, `3 | 2` gives `3`, and
+`3 ^ 2` gives `1`. Boolean columns continue to follow the logical rules below.
+
 ## Null preservation
 
 Generally speaking, Narwhals operations preserve null values.

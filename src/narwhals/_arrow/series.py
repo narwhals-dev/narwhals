@@ -251,22 +251,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_binary(pc.less, other)
 
     def __and__(self, other: Any) -> Self:
-        return self._with_binary(pc.and_kleene, other)
+        op = pc.bit_wise_and if pa.types.is_integer(self.native.type) else pc.and_kleene
+        return self._with_binary(op, other)
 
     def __rand__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.and_kleene, other)
+        op = pc.bit_wise_and if pa.types.is_integer(self.native.type) else pc.and_kleene
+        return self._with_binary_right(op, other)
 
     def __or__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.or_kleene, other)
+        op = pc.bit_wise_or if pa.types.is_integer(self.native.type) else pc.or_kleene
+        return self._with_binary_right(op, other)
 
     def __ror__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.or_kleene, other)
+        op = pc.bit_wise_or if pa.types.is_integer(self.native.type) else pc.or_kleene
+        return self._with_binary_right(op, other)
 
     def __xor__(self, other: Any) -> Self:
-        return self._with_binary(pc.xor, other)
+        op = pc.bit_wise_xor if pa.types.is_integer(self.native.type) else pc.xor
+        return self._with_binary(op, other)
 
     def __rxor__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.xor, other)
+        op = pc.bit_wise_xor if pa.types.is_integer(self.native.type) else pc.xor
+        return self._with_binary_right(op, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)
