@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import make_group_by_kwargs
+from narwhals._pandas_like.utils import make_group_by_kwargs, set_index
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -366,17 +366,18 @@ class PandasLikeGroupBy(
             result = apply(func, include_groups=False)  # type: ignore[call-overload]
         else:  # pragma: no cover
             result = apply(func)
-        # Each group returns a 1-row frame, which adds an inner index level.
-        # `droplevel` is not used because Modin does not support it here.
-        return result.reset_index(level=-1, drop=True)
+        # `DataFrame.droplevel` raises on Modin, so drop the level on the index itself.
+        index = cast("pd.MultiIndex", result.index).droplevel(-1)
+        return set_index(result, index, implementation=impl)
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
+        impl = self.compliant._implementation
 
         def fn(df: pd.DataFrame) -> pd.DataFrame:
             compliant = self.compliant._with_native(df)
             results = [
-                keys.native.reset_index(drop=True)
+                set_index(keys.native, [0], implementation=impl)
                 for expr in exprs
                 for keys in expr(compliant)
             ]
