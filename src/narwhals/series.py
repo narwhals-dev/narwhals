@@ -20,6 +20,7 @@ from narwhals._utils import (
     qualified_type_name,
     supports_arrow_c_stream,
     unstable,
+    validate_quantile,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
@@ -1992,6 +1993,42 @@ class Series(Generic[IntoSeriesT]):
             ),
             level=self._level,
         )
+
+    @unstable
+    def approx_quantile(self, quantile: float) -> float:
+        """Get an approximate quantile value of the series.
+
+        Warning:
+            This functionality is considered **unstable**, as it is in Polars.
+            It may be changed at any point without it being considered a breaking change.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
+
+        Approximate quantiles trade accuracy for speed and memory use, so results
+        can differ between backends and between runs.
+
+        Note:
+            - pandas-like backends, and Polars before version 2.0, have no approximate
+                method. They compute the exact quantile with linear interpolation.
+            - The result type follows the backend. For integer input, Polars returns
+                an integer, whereas pandas and PyArrow return a float.
+            - NaN values are not treated the same way by all backends. For example,
+                Polars counts them as values, whereas pandas and PyArrow ignore them.
+
+        Arguments:
+            quantile: Quantile between 0.0 and 1.0.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pl.Series([1.0, 2.0, 3.0])
+            >>> s_nw = nw.from_native(s_native, series_only=True)
+            >>> s_nw.approx_quantile(0.5)
+            2.0
+        """
+        validate_quantile(quantile)
+        return self._compliant_series.approx_quantile(quantile=quantile)
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod

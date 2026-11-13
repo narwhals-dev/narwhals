@@ -154,6 +154,7 @@ class CompliantExpr(
     def null_count(self) -> Self: ...
     def len(self) -> Self: ...
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self: ...
+    def approx_quantile(self, quantile: float) -> Self: ...
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self: ...
@@ -698,6 +699,11 @@ class EagerExpr(
 
     def is_last_distinct(self) -> Self:
         return self._reuse_series("is_last_distinct")
+
+    def approx_quantile(self, quantile: float) -> Self:
+        return self._reuse_series(
+            "approx_quantile", returns_scalar=True, quantile=quantile
+        )
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod

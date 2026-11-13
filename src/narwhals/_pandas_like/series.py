@@ -877,6 +877,9 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return PandasLikeDataFrame.from_native(val_count, context=self)
 
+    def approx_quantile(self, quantile: float) -> float:
+        return self.quantile(quantile, interpolation="linear")
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:

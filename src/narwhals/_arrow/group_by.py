@@ -25,6 +25,19 @@ if TYPE_CHECKING:
     from narwhals.typing import UniqueKeepStrategy
 
 
+def _unnest_tdigest(
+    table: pa.Table, aggs: Sequence[tuple[str, Aggregation, AggregateOptions | None]]
+) -> pa.Table:
+    """`tdigest` returns one list per group, with one value per `q`."""
+    names = {f"{name}_tdigest" for name, agg, _ in aggs if agg == "tdigest"}
+    for i, field in enumerate(table.schema):
+        # A group key can share the name, but PyArrow can't group by a list.
+        if field.name in names and pa.types.is_fixed_size_list(field.type):
+            values = pc.list_element(table.column(i), 0)
+            table = table.set_column(i, field.name, values)
+    return table
+
+
 class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
     _REMAP_AGGS: ClassVar[Mapping[NarwhalsAggregation, Aggregation]] = {
         "sum": "sum",
@@ -37,6 +50,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+        "approx_quantile": "tdigest",
         "all": "all",
         "any": "any",
         "first": "first",
@@ -91,7 +105,19 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         elif function_name in self._OPTION_ORDERED:
             ignore_nulls = kwargs.get("ignore_nulls", False)
             option = pc.ScalarAggregateOptions(skip_nulls=ignore_nulls)
+        elif function_name == "approx_quantile":
+            option = pc.TDigestOptions(q=kwargs["quantile"])
         return self._remap_expr_name(function_name), option
+
+    def _resolve_agg(
+        self, name: str, function_name: Aggregation, option: AggregateOptions | None
+    ) -> tuple[str, Aggregation, AggregateOptions | None]:
+        # `tdigest` has no kernel for the null type, and `mean` also gives null.
+        if function_name == "tdigest" and pa.types.is_null(
+            self.compliant.native.schema.field(name).type
+        ):
+            return name, "mean", None
+        return name, function_name, option
 
     def _configure_grouped(self, *exprs: ArrowExpr) -> pa.TableGroupBy:
         order_by = ()
@@ -138,8 +164,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, self.compliant, exclude
             )
-            md = expr._metadata
-            op_nodes_reversed = list(md.op_nodes_reversed())
+            op_nodes_reversed = list(expr._metadata.op_nodes_reversed())
             if len(op_nodes_reversed) == 1:
                 # e.g. `agg(nw.len())`
                 if op_nodes_reversed[0].name != "len":  # pragma: no cover
@@ -153,14 +178,14 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
 
             function_name, option = self._configure_agg(expr)
             new_column_names.extend(aliases)
-            expected_pyarrow_column_names.extend(
-                [f"{output_name}_{function_name}" for output_name in output_names]
-            )
-            aggs.extend(
-                [(output_name, function_name, option) for output_name in output_names]
-            )
+            resolved = [
+                self._resolve_agg(name, function_name, option) for name in output_names
+            ]
+            expected_pyarrow_column_names.extend(f"{n}_{fn}" for n, fn, _ in resolved)
+            aggs.extend(resolved)
 
         result_simple = grouped.aggregate(aggs)
+        result_simple = _unnest_tdigest(result_simple, aggs)
 
         # Rename columns, being very careful
         expected_old_names_indices: dict[str, list[int]] = collections.defaultdict(list)

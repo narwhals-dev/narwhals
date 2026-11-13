@@ -213,6 +213,8 @@ class AggExpr:
                 )
                 raise NotImplementedError(msg)
             return methodcaller("nth", n=_REMAP_ORDERED_INDEX[self.leaf_name])
+        if self.leaf_name == "approx_quantile":
+            return _native_agg(native_name, interpolation="linear", **last_node.kwargs)
         return _native_agg(native_name, **last_node.kwargs)
 
 
@@ -232,6 +234,7 @@ class PandasLikeGroupBy(
         "n_unique": "nunique",
         "count": "count",
         "quantile": "quantile",
+        "approx_quantile": "quantile",
         "all": "all",
         "any": "any",
         "first": "nth",
