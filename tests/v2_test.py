@@ -31,8 +31,11 @@ if TYPE_CHECKING:
 
     from typing_extensions import assert_type
 
-    from narwhals._typing import EagerAllowed
-    from narwhals.stable.v2.typing import FrameT as StableFrameT, IntoDataFrameT
+    from narwhals.stable.v2.typing import (
+        EagerAllowed,
+        FrameT as StableFrameT,
+        IntoDataFrameT,
+    )
     from narwhals.typing import IntoDType, _1DArray, _2DArray
 
     FrameT = TypeVar("FrameT", nw_v2.Series[Any], nw_v2.DataFrame[Any])
@@ -421,7 +424,7 @@ def test_imports() -> None:
     from narwhals.stable.v2.dependencies import is_pandas_dataframe  # noqa: F401
     from narwhals.stable.v2.dtypes import Enum  # noqa: F401
     from narwhals.stable.v2.selectors import datetime  # noqa: F401
-    from narwhals.stable.v2.typing import IntoDataFrame  # noqa: F401
+    from narwhals.stable.v2.typing import EagerAllowed, IntoBackend, IntoDataFrame  # noqa: F401
 
 
 def test_dataframe_from_dict(eager_backend: EagerAllowed) -> None:
