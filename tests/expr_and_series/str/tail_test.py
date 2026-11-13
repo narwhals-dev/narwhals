@@ -1,22 +1,35 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
-data = {"a": ["foo", "bars"]}
+data = {"a": ["foo", "bars", "東京", "", None]}
+
+tail_cases = [
+    (0, {"a": ["", "", "", "", None]}),
+    (1, {"a": ["o", "s", "京", "", None]}),
+    (3, {"a": ["foo", "ars", "東京", "", None]}),
+    (10, data),
+]
 
 
-def test_str_tail(constructor: Constructor) -> None:
+@pytest.mark.parametrize(("n", "expected"), tail_cases)
+def test_str_tail(
+    constructor: Constructor, n: int, expected: dict[str, list[str | None]]
+) -> None:
     df = nw.from_native(constructor(data))
-    expected = {"a": ["foo", "ars"]}
 
-    result_frame = df.select(nw.col("a").str.tail(3))
+    result_frame = df.select(nw.col("a").str.tail(n))
     assert_equal_data(result_frame, expected)
 
 
-def test_str_tail_series(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(("n", "expected"), tail_cases)
+def test_str_tail_series(
+    constructor_eager: ConstructorEager, n: int, expected: dict[str, list[str | None]]
+) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    expected = {"a": ["foo", "ars"]}
 
-    result_series = df["a"].str.tail(3)
+    result_series = df["a"].str.tail(n)
     assert_equal_data({"a": result_series}, expected)
