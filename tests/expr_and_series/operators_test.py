@@ -49,7 +49,11 @@ def test_comparand_operators_expr(
 
 @pytest.mark.parametrize(
     ("operator", "expected"),
-    [("__and__", [True, False, False, False]), ("__or__", [True, True, True, False])],
+    [
+        ("__and__", [True, False, False, False]),
+        ("__or__", [True, True, True, False]),
+        ("__xor__", [False, True, True, False]),
+    ],
 )
 def test_logic_operators_expr(
     constructor: Constructor, operator: str, expected: list[bool]
@@ -84,6 +88,28 @@ def test_logic_operators_expr_kleene(
     else:
         expected = [True, None, False, None]
     assert_equal_data(result, {"a": expected})
+    result = df.select(nw.col("a") ^ (nw.col("b")))
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
+        expected = [False, True, False, False]
+    else:
+        expected = [False, None, None, None]
+    assert_equal_data(result, {"a": expected})
+
+
+def test_xor_operator_integers(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(
+        x in str(constructor)
+        for x in ("pyarrow_table", "duckdb", "sqlframe", "ibis", "pyspark")
+    ):
+        # PyArrow and PySpark raise, DuckDB and SQLFrame cast to boolean,
+        # Ibis compiles `~(a & b)` on integers to `~a & b`.
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [1, 2, 3], "b": [3, 2, 0]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a") ^ nw.col("b"), c=nw.col("a") ^ 1)
+    assert_equal_data(result, {"a": [2, 0, 3], "c": [0, 3, 2]})
 
 
 @pytest.mark.parametrize(
@@ -93,6 +119,8 @@ def test_logic_operators_expr_kleene(
         ("__rand__", [False, False, False, False]),
         ("__or__", [True, True, False, False]),
         ("__ror__", [True, True, False, False]),
+        ("__xor__", [True, True, False, False]),
+        ("__rxor__", [True, True, False, False]),
     ],
 )
 def test_logic_operators_expr_scalar(
@@ -104,7 +132,7 @@ def test_logic_operators_expr_scalar(
     if (
         "dask" in str(constructor)
         and DASK_VERSION < PkgVersion("2024.10")
-        and operator in {"__rand__", "__ror__"}
+        and operator in {"__rand__", "__ror__", "__rxor__"}
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}
@@ -162,6 +190,8 @@ def test_comparand_operators_series(
         ("__rand__", [True, False, False, False]),
         ("__or__", [True, True, True, False]),
         ("__ror__", [True, True, True, False]),
+        ("__xor__", [False, True, True, False]),
+        ("__rxor__", [False, True, True, False]),
     ],
 )
 def test_logic_operators_series(
