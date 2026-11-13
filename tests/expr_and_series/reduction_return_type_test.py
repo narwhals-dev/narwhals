@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import multiprocessing
+import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -108,6 +110,48 @@ def test_group_by_skew_kurtosis_all_null_group(
     assert_equal_data(
         result.select(nw.col("a").is_nan().is_null()), {"a": [False, bool(missing)]}
     )
+
+
+@pytest.mark.parametrize("dtype", ["Float64", "double[pyarrow]"])
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.skipif(sys.platform == "win32", reason="needs the fork start method")
+def test_group_by_apply_keeps_dtype_out_of_process(
+    monkeypatch: pytest.MonkeyPatch, dtype: str
+) -> None:
+    """The apply path must not rely on state shared between groups.
+
+    Modin on Ray or Dask runs the function passed to `groupby.apply` on workers,
+    so anything it stores outside its return value is lost. Each group is run in a
+    forked process here to mimic that.
+    """
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    from pandas.core.groupby.generic import DataFrameGroupBy
+
+    original_apply = DataFrameGroupBy.apply
+    ctx = multiprocessing.get_context("fork")
+
+    def in_child(func: Any, group: Any, queue: Any) -> None:
+        queue.put(func(group))
+
+    def apply(self: Any, func: Any, *args: Any, **kwargs: Any) -> Any:
+        def run(group: Any) -> Any:
+            queue = ctx.Queue()
+            process = ctx.Process(target=in_child, args=(func, group, queue))
+            process.start()
+            out = queue.get(timeout=60)
+            process.join()
+            return out
+
+        return original_apply(self, run, *args, **kwargs)
+
+    monkeypatch.setattr(DataFrameGroupBy, "apply", apply)
+    native = pd.DataFrame(
+        {"g": [1, 1, 2, 2, 2], "a": pd.Series([None, None, 1.0, 2.0, 4.0], dtype=dtype)}
+    )
+    result = nw.from_native(native).group_by("g").agg(nw.col("a").skew()).sort("g")
+    assert result.schema["a"] == nw.Float64()
+    assert result["a"].is_null().to_list() == [True, False]
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")

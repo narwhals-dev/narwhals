@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
 
-NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
+NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.DataFrame]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
 NativeAggregation: TypeAlias = Literal[
     "any",
@@ -359,36 +359,28 @@ class PandasLikeGroupBy(
         """
         warn_complex_group_by()
         impl = self.compliant._implementation
-        # A single row cannot carry one dtype per aggregation, so each is recorded
-        # as it is computed and restored below. `None` marks a column whose groups
-        # disagreed, which is left to pandas' own inference.
-        dtypes: dict[str, Any] = {}
-        func = self._apply_exprs_function(exprs, dtypes)
+        func = self._apply_exprs_function(exprs)
         apply = grouped.apply
         result: pd.DataFrame
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             result = apply(func, include_groups=False)  # type: ignore[call-overload]
         else:  # pragma: no cover
-            result = apply(func)  # type: ignore[assignment]
-        return result.astype({k: v for k, v in dtypes.items() if v is not None})
+            result = apply(func)
+        # Each group returns a 1-row frame, which adds an inner index level.
+        # `droplevel` is not used because Modin does not support it here.
+        return result.reset_index(level=-1, drop=True)
 
-    def _apply_exprs_function(
-        self, exprs: Iterable[PandasLikeExpr], dtypes: dict[str, Any], /
-    ) -> NativeApply:
+    def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
-        into_series = ns._series.from_iterable
 
-        def fn(df: pd.DataFrame) -> pd.Series[Any]:
+        def fn(df: pd.DataFrame) -> pd.DataFrame:
             compliant = self.compliant._with_native(df)
-            results: list[tuple[Any, str]] = []
-            for expr in exprs:
-                for keys in expr(compliant):
-                    dtype = keys.native.dtype
-                    if dtypes.setdefault(keys.name, dtype) != dtype:
-                        dtypes[keys.name] = None
-                    results.append((keys.native.iloc[0], keys.name))
-            out_group, out_names = zip(*results, strict=True) if results else ([], [])
-            return into_series(out_group, index=out_names, context=ns).native
+            results = [
+                keys.native.reset_index(drop=True)
+                for expr in exprs
+                for keys in expr(compliant)
+            ]
+            return ns._concat_by_index(results)
 
         return fn
 
