@@ -34,7 +34,7 @@ def _apply_explode_markers(
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < PkgVersion("2.2"):
-            pytest.skip()
+            pytest.skip("`Series.list` needs pandas>=2.2")
         pytest.importorskip("pyarrow")
 
 
@@ -159,10 +159,11 @@ def test_explode_invalid_operation_error(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
-        request.applymarker(pytest.mark.xfail)
+        reason = "`explode` is not implemented."
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.6"):
-        pytest.skip()
+        pytest.skip("Polars<0.20.6 explodes non-list columns without raising")
 
     with pytest.raises(
         InvalidOperationError, match="`explode` operation not supported for dtype"
@@ -176,10 +177,11 @@ def test_explode_invalid_operation_error_eager(
     # Eager explode errors should surface as narwhals exceptions, not native ones
     # (e.g. Polars wraps via `catch_polars_exception`).
     if "pyarrow_table" in str(constructor_eager):
-        request.applymarker(pytest.mark.xfail)
+        reason = "`explode` is not implemented."
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.6"):
-        pytest.skip()
+        pytest.skip("Polars<0.20.6 explodes non-list columns without raising")
 
     with pytest.raises(
         InvalidOperationError, match="`explode` operation not supported for dtype"
@@ -398,3 +400,21 @@ def test_explode_plugin_without_flags(
     assert_equal_data(df.explode("a"), {"a": [1]})
     with pytest.raises(TypeError, match="empty_as_null"):
         df.explode("a", empty_as_null=False)
+
+
+def test_explode_non_default_index(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Filtering out the first row leaves pandas-like frames with a non-default index.
+    _apply_explode_markers(request, constructor)
+
+    data = {"a": [[0], [1, 2], None, []], "i": [0, 1, 2, 3]}
+    result = (
+        nw.from_native(constructor(data))
+        .with_columns(nw.col("a").cast(nw.List(nw.Int32())))
+        .filter(nw.col("i") > 0)
+        .explode("a", keep_nulls=False)
+        .select("a", "i")
+        .sort("i", "a", nulls_last=True)
+    )
+    assert_equal_data(result, {"a": [1, 2, None], "i": [1, 1, 3]})

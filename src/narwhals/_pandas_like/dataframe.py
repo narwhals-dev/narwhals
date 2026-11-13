@@ -1250,7 +1250,12 @@ class PandasLikeDataFrame(
             # Per-row "shape" of the explode: a real list (length >= 1) keeps its
             # length, while an empty `[]` / null list maps to *minus* the number of rows
             # it expands to under the flags (`0` => drops out, `-1` => a single null row).
-            raw = native_frame[name].list.len()
+            # pandas<3 `list.len` resets the index, so align it back to the frame.
+            raw = set_index(
+                native_frame[name].list.len(),
+                native_frame.index,
+                implementation=self._implementation,
+            )
             is_null = native_frame[name].isna()
             return raw.mask(raw == 0, -empty_rows).where(~is_null, -null_rows)
 
