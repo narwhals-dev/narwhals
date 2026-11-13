@@ -12,6 +12,7 @@ from narwhals.compliant import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from types import ModuleType
     from typing import TypeAlias
 
     from typing_extensions import Self
@@ -126,8 +127,12 @@ class DictLazyFrame(
         return self.__class__(self._native_frame, version=version)
 
     # Dunders
+    def __native_namespace__(self) -> ModuleType:
+        import test_plugin
+
+        return test_plugin
+
     __narwhals_namespace__ = not_implemented()
-    __native_namespace__ = not_implemented()
 
     # Properties
     schema: Any = not_implemented()

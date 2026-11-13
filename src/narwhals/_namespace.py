@@ -291,6 +291,16 @@ class Namespace(Generic[CompliantNamespaceT_co]):
         elif is_native_ibis(native):  # pragma: no cover
             impl = Implementation.IBIS
         else:
+            return cls._from_plugin_native_object(native)
+        return cls.from_backend(impl)
+
+    @classmethod
+    def _from_plugin_native_object(
+        cls: type[Namespace[Any]], native: Any, /
+    ) -> Namespace[Any]:
+        from narwhals.plugins import _iter_native_plugins, _plugin_namespace
+
+        if (plugin := next(_iter_native_plugins(native), None)) is None:
             msg = f"Unsupported type: {type(native).__qualname__!r}"
             raise TypeError(msg)
-        return cls.from_backend(impl)
+        return cls(_plugin_namespace(plugin, version=cls._version))

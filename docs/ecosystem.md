@@ -29,6 +29,7 @@ for their dataframe interoperability needs:
 * [scikit-learn](https://github.com/scikit-learn/scikit-learn)
 * [scikit-lego](https://github.com/koaning/scikit-lego)
 * [scikit-playtime](https://github.com/koaning/scikit-playtime)
+* [skore](https://github.com/probabl-ai/skore)
 * [tabmat](https://github.com/Quantco/tabmat)
 * [tea-tasting](https://github.com/e10v/tea-tasting)
 * [timebasedcv](https://github.com/FBruzzesi/timebasedcv)

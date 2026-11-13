@@ -523,6 +523,8 @@ def _get_native_namespace_single_obj(
 ) -> Any:
     if has_native_namespace(obj):
         return obj.__native_namespace__()
+    if (compliant := plugins.from_native(obj, Version.MAIN)) is not None:
+        return compliant.__native_namespace__()
     return Version.MAIN.namespace.from_native_object(
         obj
     ).implementation.to_native_namespace()
