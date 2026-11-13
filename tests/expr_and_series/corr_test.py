@@ -217,9 +217,11 @@ def test_corr_index(constructor_eager: ConstructorEager) -> None:
     result = df.select(nw.corr("a", "b"))
     index = nw.maybe_get_index(result)
     if index is not None:
-        assert index.tolist() == [0]
+        assert len(index) == 1
+        assert index[0] == 0
 
     result_combined = df.select(nw.corr("a", "b"), nw.col("b").mean())
     index_combined = nw.maybe_get_index(result_combined)
     if index_combined is not None:
-        assert index_combined.tolist() == [0]
+        assert len(index_combined) == 1
+        assert index_combined[0] == 0
