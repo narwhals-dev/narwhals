@@ -113,6 +113,14 @@ class SeriesListNamespace(Generic[SeriesT]):
                     4
                     5
             ]
+            >>> s.list.get(-1).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                    2
+                    null
+                    5
+            ]
         """
         if not isinstance(index, int):
             msg = (
