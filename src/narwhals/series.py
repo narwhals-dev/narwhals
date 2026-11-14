@@ -226,10 +226,10 @@ class Series(Generic[IntoSeriesT]):
         """
         # NOTE: Native pyarrow arrays only gained the PyCapsule methods in `pyarrow>=14`
         if not (
-            supports_arrow_c_array(values)
-            or supports_arrow_c_stream(values)
+            _is_pyarrow_chunked_array(values)
             or _is_pyarrow_array(values)
-            or _is_pyarrow_chunked_array(values)
+            or supports_arrow_c_stream(values)
+            or supports_arrow_c_array(values)
         ):
             msg = f"Given object of type {qualified_type_name(values)!r} does not support PyCapsule interface"
             raise TypeError(msg)
@@ -435,12 +435,12 @@ class Series(Generic[IntoSeriesT]):
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
         """
-        msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)!r}"
         try:
-            pa_version = Implementation.PYARROW._backend_version()
-        except ModuleNotFoundError as exc:
-            raise ModuleNotFoundError(msg) from exc
+            pa_version: tuple[int, ...] = Implementation.PYARROW._backend_version()
+        except ModuleNotFoundError:
+            pa_version = ()
         if pa_version < (14, 0):
+            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)!r}"
             raise ModuleNotFoundError(msg)
         result: tuple[object, object] = self.to_arrow().__arrow_c_array__(
             requested_schema=requested_schema
