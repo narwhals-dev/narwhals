@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    BACKEND_VERSION,
     arange,
     cast_for_truediv,
     chunked_array,
@@ -34,6 +35,9 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
+    qualified_type_name,
+    supports_arrow_c_array,
+    supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -63,6 +67,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -207,6 +212,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        # NOTE: The stubs don't accept PyCapsule objects in `pa.array` and `pa.chunked_array`
+        array_from_capsule: Incomplete = pa.array
+        chunked_array_from_capsule: Incomplete = pa.chunked_array
+        if isinstance(data, (pa.Array, pa.ChunkedArray)):
+            native = chunked_array(data)
+        # Prefer the stream: it keeps chunks zero-copy, while `__arrow_c_array__`
+        # may combine them (e.g. `nw.Series` exposes both).
+        elif supports_arrow_c_stream(data) and BACKEND_VERSION >= (16,):
+            native = chunked_array_from_capsule(data)
+        elif supports_arrow_c_array(data) and BACKEND_VERSION >= (14,):
+            native = chunked_array(array_from_capsule(data))
+        elif supports_arrow_c_array(data) or supports_arrow_c_stream(data):
+            msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
+            raise ModuleNotFoundError(msg)
+        else:  # pragma: no cover
+            # Unreachable via the public API: `nw.Series.from_arrow` validates `data` first.
+            msg = f"`Series.from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
+            raise TypeError(msg)
+        return cls.from_native(native, context=context)
+
+    @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
         target_length = max(
@@ -261,6 +288,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(pc.or_kleene, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(pc.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(pc.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)

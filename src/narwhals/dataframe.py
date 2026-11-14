@@ -593,7 +593,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             └──────────────────┘
         """
         if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
-            msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+            msg = f"Given object of type {qualified_type_name(native_frame)!r} does not support PyCapsule interface"
             raise TypeError(msg)
         ns = eager_namespace(
             backend, version=cls._version, function_name="DataFrame.from_arrow"
@@ -821,10 +821,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {qualified_type_name(native_frame)!r}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {qualified_type_name(native_frame)!r}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
