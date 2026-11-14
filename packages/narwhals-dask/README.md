@@ -23,8 +23,11 @@ df.select(nw.col("a").sum()).collect()
 
 ## Development
 
-`narwhals-dask` only depends on Narwhals' public API. Anything it needs from Narwhals'
-private modules is vendored in `narwhals_dask/_vendored.py`.
+`narwhals-dask` never imports from Narwhals' private modules: anything it needs from them
+is vendored in `narwhals_dask/_vendored.py`. The exception is expression metadata
+(`Expr._metadata`, e.g. `op_nodes_reversed()`, `expansion_kind`, `is_literal`), which the
+plugin reads directly and which has no stability guarantees, so the plugin needs to be kept in
+step with the Narwhals versions it supports.
 
 Narwhals' own test suite exercises the plugin once it's installed. From this directory:
 

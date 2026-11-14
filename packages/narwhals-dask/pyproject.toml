@@ -9,7 +9,7 @@ description = "Dask backend for Narwhals"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-dependencies = ["dask[dataframe]>=2024.8", "narwhals>=2.28.0"]
+dependencies = ["dask[dataframe]>=2024.8", "narwhals>=2.29.0"]
 
 [project.urls]
 Homepage = "https://github.com/narwhals-dev/narwhals"

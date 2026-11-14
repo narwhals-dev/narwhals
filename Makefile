@@ -25,7 +25,7 @@ typing-coverage: ## Run type checkers
 
 .PHONY: docs-dynamic-content
 docs-dynamic-content:  ## Regenerate the dynamic docs pages (API completeness tables, docs/this.md, ...)
-	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
+	uv run --group docs --extra ibis utils/generate_backend_completeness.py
 	uv run --group docs utils/generate_zen_content.py
 
 .PHONY: docs-build

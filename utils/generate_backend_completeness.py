@@ -1,7 +1,7 @@
 """Generate backend API completeness tables.
 
 Analyzes the narwhals codebase to create tables showing which methods are implemented
-by each backend (arrow, dask, duckdb, ibis, pandas-like, spark-like).
+by each backend (arrow, duckdb, ibis, pandas-like, spark-like).
 
 For each class (DataFrame, LazyFrame, Series, Expr, etc.), the script:
 - Discovers all public methods
@@ -72,7 +72,6 @@ CLASS_NAME_TO_MODULE_NAME = {
 
 BACKENDS = (
     Backend(name="arrow", type_=BackendType.EAGER),
-    Backend(name="dask", type_=BackendType.LAZY),
     Backend(name="duckdb", type_=BackendType.LAZY),
     Backend(name="ibis", type_=BackendType.LAZY),
     Backend(name="pandas-like", type_=BackendType.EAGER),

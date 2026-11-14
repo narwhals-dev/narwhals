@@ -53,7 +53,9 @@ Outside `src/`, the project has:
 
 - [tests/](tests/): test suite, see [CONTRIBUTING.md → Running tests](CONTRIBUTING.md#7-running-tests)
 - [tpch/](tpch/): TPC-H benchmark queries, see [tpch/README.md](tpch/README.md)
-- `packages/`: uv workspace members, built and installed independently of `src/narwhals`. Currently just a `test-plugin` that is a minimal fake backend used to test `narwhals.plugins`.
+- `packages/`: packages built and installed independently of `src/narwhals`. `test-plugin` is a uv workspace
+  member and a minimal fake backend used to test `narwhals.plugins`. `narwhals-dask` is the Dask backend being
+  moved out of core; it is excluded from the workspace and has its own `uv.lock`, see its README.
 
 ## Hard rules
 
