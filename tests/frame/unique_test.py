@@ -166,3 +166,19 @@ def test_unique_3069(constructor: Constructor) -> None:
     result = df.select(nw.col(unique_to_get)).unique().sort(unique_to_get)
     expected = {"group": ["d", "e", "f"]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [("first", {"g": ["a", "b"], "x": [1, 2]}), ("last", {"g": ["b", "a"], "x": [2, 3]})],
+)
+def test_unique_maintain_order(
+    constructor_eager: ConstructorEager,
+    keep: Literal["first", "last"],
+    expected: dict[str, list[object]],
+) -> None:
+    df = nw.from_native(
+        constructor_eager({"g": ["a", "b", "a"], "x": [1, 2, 3]}), eager_only=True
+    )
+    result = df.unique("g", keep=keep, maintain_order=True)
+    assert_equal_data(result, expected)

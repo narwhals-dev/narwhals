@@ -765,8 +765,6 @@ class ArrowDataFrame(
         maintain_order: bool | None = None,
         order_by: Sequence[str] | None,
     ) -> Self:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
         if subset and (error := self._check_columns_exist(subset)):
@@ -800,6 +798,12 @@ class ArrowDataFrame(
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
+            if maintain_order:
+                # The groups come back in order of first appearance, which is not the row
+                # order of the kept rows for keep="last".
+                keep_idx_native = pc.take(
+                    keep_idx_native, pc.sort_indices(keep_idx_native)
+                )
             return self._with_native(
                 native.take(keep_idx_native), validate_column_names=False
             )
