@@ -174,9 +174,9 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             elif lhs is None:
                 are_equivalent_values = rhs is None
             elif isinstance(lhs, list) and isinstance(rhs, list):
-                are_equivalent_values = all(
+                are_equivalent_values = len(lhs) == len(rhs) and all(
                     left_side == right_side
-                    for left_side, right_side in zip(lhs, rhs, strict=False)
+                    for left_side, right_side in zip(lhs, rhs, strict=True)
                 )
             elif is_pd_na(lhs):
                 are_equivalent_values = is_pd_na(rhs)
