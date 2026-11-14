@@ -429,11 +429,11 @@ class Series(Generic[IntoSeriesT]):
         Narwhals doesn't implement anything itself here: it calls `to_arrow` and then
         defers to PyArrow's implementation.
 
-        Note:
-            `pyarrow>=14` is required.
-
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
+
+        Note:
+            `pyarrow>=14` is required.
         """
         try:
             pa_version: tuple[int, ...] = Implementation.PYARROW._backend_version()
