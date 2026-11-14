@@ -702,3 +702,15 @@ def test_selectors_all_stableified_v2() -> None:
 
     for name, arg in args.items():
         assert isinstance(getattr(nw_v2.selectors, name)(*arg), nw_v2.Expr), name
+
+
+def test_series_from_arrow(eager_backend: EagerAllowed) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    name = "abc"
+    values = pa.array([5, 2, 0, 1])
+    result = nw_v2.Series.from_arrow(name, values, backend=eager_backend)
+    assert result._version is Version.V2
+    assert isinstance(result, nw_v2.Series)
+    assert_equal_data(result.to_frame(), {name: [5, 2, 0, 1]})
