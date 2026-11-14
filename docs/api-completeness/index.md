@@ -13,5 +13,5 @@ class and backend.
     - By design, Polars supports all the methods of the Narwhals API.
     - "pandas-like" means pandas, cuDF and Modin.
     - "spark-like" means PySpark (including Spark Connect) and SQLFrame.
-    - Backends provided by [plugins](../extending.md) (such as Daft) are not covered by
+    - Backends provided by [plugins](../extending.md) (such as Dask and Daft) are not covered by
       these tables.

@@ -579,13 +579,9 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
-            from narwhals._dask.dataframe import DaskLazyFrame
-
-            return DaskLazyFrame(
-                dd.from_pandas(self.native.to_pandas()),
-                validate_backend_version=True,
-                version=self._version,
-            )
+            native_dask = dd.from_pandas(self.native.to_pandas())
+            dask_ns = self._version.namespace.from_backend(Implementation.DASK)
+            return dask_ns.compliant.from_native(native_dask)
         if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 

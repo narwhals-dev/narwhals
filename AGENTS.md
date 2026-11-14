@@ -28,6 +28,7 @@ from the source, and update the page when you change the behaviour it describes.
 | Public API surface | [docs/api-reference/](docs/api-reference/) (member lists are validated by CI) |
 | `narwhals.sql`: generating SQL from Narwhals expressions | [docs/generating_sql.md](docs/generating_sql.md) |
 | Security reporting and release-permission policy | [docs/security.md](docs/security.md) |
+| Releasing Narwhals, narwhals-dask and narwhals-daft | [RELEASING.md](RELEASING.md) |
 
 The one-sentence summary of [docs/how_it_works.md](docs/how_it_works.md), worth internalising before
 touching anything in `_pandas_like/`, `_arrow/`, or `_compliant/`:
@@ -52,7 +53,9 @@ Outside `src/`, the project has:
 
 - [tests/](tests/): test suite, see [CONTRIBUTING.md → Running tests](CONTRIBUTING.md#7-running-tests)
 - [tpch/](tpch/): TPC-H benchmark queries, see [tpch/README.md](tpch/README.md)
-- `packages/`: uv workspace members, built and installed independently of `src/narwhals`. Currently just a `test-plugin` that is a minimal fake backend used to test `narwhals.plugins`.
+- `packages/`: packages built and installed independently of `src/narwhals`. `test-plugin` is a uv workspace
+  member and a minimal fake backend used to test `narwhals.plugins`. `narwhals-dask` is the Dask backend being
+  moved out of core; it is excluded from the workspace and has its own `uv.lock`, see its README.
 
 ## Hard rules
 

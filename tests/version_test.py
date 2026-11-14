@@ -15,7 +15,7 @@ def is_in_ci() -> bool:
 
 
 def test_package_version() -> None:
-    content = Path("pyproject.toml").read_text("utf-8")
+    content = (Path(__file__).parents[1] / "pyproject.toml").read_text("utf-8")
     match = re.search(r'version = "(.*)"', content)
     assert match is not None
     pyproject_version = match.group(1)
