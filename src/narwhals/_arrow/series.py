@@ -11,6 +11,7 @@ from narwhals._arrow.series_list import ArrowSeriesListNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    BACKEND_VERSION,
     arange,
     cast_for_truediv,
     chunked_array,
@@ -212,7 +213,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     @classmethod
     def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
-        backend_version = context._implementation._backend_version()
         # NOTE: The stubs don't accept PyCapsule objects in `pa.array` and `pa.chunked_array`
         array_from_capsule: Incomplete = pa.array
         chunked_array_from_capsule: Incomplete = pa.chunked_array
@@ -220,9 +220,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             native = chunked_array(data)
         # Prefer the stream: it keeps chunks zero-copy, while `__arrow_c_array__`
         # may combine them (e.g. `nw.Series` exposes both).
-        elif supports_arrow_c_stream(data) and backend_version >= (16,):
+        elif supports_arrow_c_stream(data) and BACKEND_VERSION >= (16,):
             native = chunked_array_from_capsule(data)
-        elif supports_arrow_c_array(data) and backend_version >= (14,):
+        elif supports_arrow_c_array(data) and BACKEND_VERSION >= (14,):
             native = chunked_array(array_from_capsule(data))
         elif supports_arrow_c_array(data) or supports_arrow_c_stream(
             data
