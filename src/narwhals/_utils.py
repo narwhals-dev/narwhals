@@ -1852,8 +1852,8 @@ def _into_arrow_chunked_array(
     if find_spec("pyarrow"):
         ns = context._version.namespace.from_backend("pyarrow").compliant
         return ns._series.from_arrow(data, context=ns).native
-    msg = f"'pyarrow>=14.0.0' is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
-    raise ModuleNotFoundError(msg)  # pragma: no cover
+    msg = f"'pyarrow>=14.0.0' is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
+    raise ModuleNotFoundError(msg)
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`

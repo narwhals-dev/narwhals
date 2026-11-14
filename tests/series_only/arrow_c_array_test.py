@@ -43,3 +43,10 @@ def test_arrow_c_array_requested_schema(constructor_eager: Any) -> None:
     result = pa.array(s, type=pa.int32())
     assert result.type == pa.int32()
     assert result.to_pylist() == data
+
+
+def test_arrow_c_array_pyarrow_too_old(monkeypatch: pytest.MonkeyPatch) -> None:
+    s = nw.from_native(pa.chunked_array([data]), series_only=True)
+    monkeypatch.setattr("narwhals._utils.backend_version", lambda _: (13,))
+    with pytest.raises(ModuleNotFoundError, match=r"pyarrow>=14\.0\.0.*ChunkedArray"):
+        s.__arrow_c_array__()

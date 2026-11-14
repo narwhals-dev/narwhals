@@ -224,12 +224,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             native = chunked_array_from_capsule(data)
         elif supports_arrow_c_array(data) and BACKEND_VERSION >= (14,):
             native = chunked_array(array_from_capsule(data))
-        elif supports_arrow_c_array(data) or supports_arrow_c_stream(
-            data
-        ):  # pragma: no cover
+        elif supports_arrow_c_array(data) or supports_arrow_c_stream(data):
             msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
             raise ModuleNotFoundError(msg)
         else:  # pragma: no cover
+            # Unreachable via the public API: `nw.Series.from_arrow` validates `data` first.
             msg = f"`Series.from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
             raise TypeError(msg)
         return cls.from_native(native, context=context)

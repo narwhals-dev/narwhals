@@ -103,3 +103,31 @@ def test_series_from_arrow_invalid() -> None:
     pytest.importorskip("sqlframe")
     with pytest.raises(ValueError, match="lazy"):
         nw.Series.from_arrow(NAME, pa.array(DATA), backend="sqlframe")  # type: ignore[arg-type]
+
+
+def test_series_from_arrow_pycapsule_pyarrow_too_old(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("narwhals._arrow.series.BACKEND_VERSION", (13,))
+    values = ArrayOnly(pa.array(DATA))
+    with pytest.raises(ModuleNotFoundError, match=r"pyarrow>=14\.0\.0.*ArrayOnly"):
+        nw.Series.from_arrow(NAME, values, backend="pyarrow")
+
+
+@pytest.mark.parametrize(
+    "values", [pa.array(DATA), pa.chunked_array([DATA[:2], DATA[2:]])], ids=type
+)
+def test_series_from_arrow_polars_pre_1_3(
+    values: pa.Array[Any] | pa.ChunkedArray[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("polars")
+    monkeypatch.setattr("narwhals._polars.series.BACKEND_VERSION", (1, 2))
+    result = nw.Series.from_arrow(NAME, values, backend="polars")
+    assert_equal_series(result, DATA, NAME)
+
+
+def test_series_from_arrow_without_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("pandas")
+    monkeypatch.setattr("narwhals._utils.find_spec", lambda _: None)
+    with pytest.raises(ModuleNotFoundError, match=r"pyarrow>=14\.0\.0.*from_arrow"):
+        nw.Series.from_arrow(NAME, pa.array(DATA), backend="pandas")

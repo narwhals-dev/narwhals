@@ -226,7 +226,7 @@ class PolarsSeries:
     def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
         if BACKEND_VERSION >= (1, 3):
             native = pl.Series(data)
-        else:  # pragma: no cover
+        else:
             ca = _into_arrow_chunked_array(data, context)
             native = cast("pl.Series", pl.from_arrow(ca))
         return cls.from_native(native, context=context)

@@ -440,7 +440,7 @@ class Series(Generic[IntoSeriesT]):
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
             raise ModuleNotFoundError(msg) from exc
-        if pa_version < (14, 0):  # pragma: no cover
+        if pa_version < (14, 0):
             raise ModuleNotFoundError(msg)
         result: tuple[object, object] = self.to_arrow().__arrow_c_array__(
             requested_schema=requested_schema
