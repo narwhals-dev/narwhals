@@ -192,7 +192,10 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             name: Name of resulting Series.
-            values: Object which implements `__arrow_c_array__` or `__arrow_c_stream__`.
+            values: A `pyarrow.Array` or `pyarrow.ChunkedArray`, or an object which
+                implements `__arrow_c_array__` (requires `pyarrow>=14`) or
+                `__arrow_c_stream__` (requires `pyarrow>=16`). A table-like object
+                (e.g. `pyarrow.Table`) becomes a single Struct Series.
             backend: specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
@@ -426,17 +429,18 @@ class Series(Generic[IntoSeriesT]):
         Narwhals doesn't implement anything itself here: it calls `to_arrow` and then
         defers to PyArrow's implementation.
 
+        Note:
+            `pyarrow>=14` is required.
+
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
         """
-        native_series = self._compliant_series.native
+        msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)}"
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {type(native_series)}"
             raise ModuleNotFoundError(msg)
         result: tuple[object, object] = self.to_arrow().__arrow_c_array__(
             requested_schema=requested_schema

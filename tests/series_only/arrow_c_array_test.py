@@ -38,8 +38,8 @@ def test_arrow_c_array_is_called(monkeypatch: pytest.MonkeyPatch) -> None:
         pa.array(s)
 
 
-def test_arrow_c_array_round_trip() -> None:
-    s = nw.from_native(pa.chunked_array([data]), series_only=True)
-    result = nw.Series.from_arrow("b", s, backend="pyarrow")
-    assert result.name == "b"
-    assert result.to_list() == data
+def test_arrow_c_array_requested_schema(constructor_eager: Any) -> None:
+    s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+    result = pa.array(s, type=pa.int32())
+    assert result.type == pa.int32()
+    assert result.to_pylist() == data

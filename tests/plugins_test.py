@@ -292,13 +292,7 @@ def test_eager_dataframe_constructors_plugin(
         (nw.new_series, [1, 2, 3]),
         (nw.Series.from_iterable, [1, 2, 3]),
         (nw.Series.from_numpy, _np_1d_array),
-        pytest.param(
-            nw.Series.from_arrow,
-            _arrow_chunked_array,
-            marks=pytest.mark.skipif(
-                PYARROW_VERSION < PkgVersion("16"), reason="too old"
-            ),
-        ),
+        (nw.Series.from_arrow, _arrow_chunked_array),
     ],
 )
 def test_eager_series_constructors_plugin(

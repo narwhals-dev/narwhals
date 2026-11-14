@@ -72,6 +72,25 @@ def test_series_from_arrow_c_stream(eager_backend: EagerAllowed) -> None:
 
 
 @pytest.mark.skipif(PYARROW_VERSION < PkgVersion("16"), reason="too old")
+def test_series_from_arrow_c_stream_keeps_chunks() -> None:
+    # `nw.Series` exposes both PyCapsule methods; the stream is preferred so that
+    # chunks are not combined.
+    native = pa.chunked_array([DATA[:2], DATA[2:]])
+    values = nw.from_native(native, series_only=True)
+    result = nw.Series.from_arrow(NAME, values, backend="pyarrow")
+    assert result.to_native().num_chunks == native.num_chunks
+    assert_equal_series(result, DATA, NAME)
+
+
+@pytest.mark.skipif(PYARROW_VERSION < PkgVersion("16"), reason="too old")
+def test_series_from_arrow_table_is_struct(eager_backend: EagerAllowed) -> None:
+    table = pa.table({"a": [1, 2], "b": ["x", "y"]})
+    result = nw.Series.from_arrow(NAME, table, backend=eager_backend)
+    assert result.len() == 2
+    assert result.to_list() == [{"a": 1, "b": "x"}, {"a": 2, "b": "y"}]
+
+
+@pytest.mark.skipif(PYARROW_VERSION < PkgVersion("16"), reason="too old")
 def test_series_from_arrow_renames_polars() -> None:
     pl = pytest.importorskip("polars")
     result = nw.Series.from_arrow(NAME, pl.Series("b", DATA), backend="pyarrow")
