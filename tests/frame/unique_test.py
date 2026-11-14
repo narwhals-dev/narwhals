@@ -157,6 +157,22 @@ def test_unique_none(constructor: Constructor) -> None:
         assert_equal_data(result, data)
 
 
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [("first", {"g": ["a", "b"], "x": [1, 2]}), ("last", {"g": ["b", "a"], "x": [2, 3]})],
+)
+def test_unique_maintain_order_4156(
+    constructor_eager: ConstructorEager,
+    keep: Literal["first", "last"],
+    expected: dict[str, list[object]],
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4156
+    data = {"g": ["a", "b", "a"], "x": [1, 2, 3]}
+    df = nw.from_native(constructor_eager(data))
+    result = df.unique("g", keep=keep, maintain_order=True)
+    assert_equal_data(result, expected)
+
+
 def test_unique_3069(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
