@@ -9,7 +9,7 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION, assert_equal_series
+from tests.utils import POLARS_VERSION, PYARROW_VERSION, assert_equal_series
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed
@@ -90,6 +90,9 @@ def test_series_from_arrow_table_is_struct(eager_backend: EagerAllowed) -> None:
 
 
 @pytest.mark.skipif(PYARROW_VERSION < PkgVersion("16"), reason="too old")
+@pytest.mark.skipif(
+    POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
+)
 def test_series_from_arrow_renames_polars() -> None:
     pl = pytest.importorskip("polars")
     result = nw.Series.from_arrow(NAME, pl.Series("b", DATA), backend="pyarrow")
