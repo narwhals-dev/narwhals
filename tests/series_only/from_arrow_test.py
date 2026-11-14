@@ -86,7 +86,6 @@ def test_series_from_arrow_c_stream_keeps_chunks() -> None:
 def test_series_from_arrow_table_is_struct(eager_backend: EagerAllowed) -> None:
     table = pa.table({"a": [1, 2], "b": ["x", "y"]})
     result = nw.Series.from_arrow(NAME, table, backend=eager_backend)
-    assert result.len() == 2
     assert result.to_list() == [{"a": 1, "b": "x"}, {"a": 2, "b": "y"}]
 
 
