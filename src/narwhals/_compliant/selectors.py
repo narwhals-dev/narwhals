@@ -322,6 +322,34 @@ class CompliantSelector(
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() & other
 
+    @overload  # type: ignore[override]
+    def __xor__(self, other: Self) -> Self: ...
+    @overload
+    def __xor__(
+        self, other: CompliantExpr[FrameT, SeriesOrExprT]
+    ) -> CompliantExpr[FrameT, SeriesOrExprT]: ...
+    def __xor__(
+        self, other: SelectorOrExpr[FrameT, SeriesOrExprT]
+    ) -> SelectorOrExpr[FrameT, SeriesOrExprT]:
+        if self._is_selector(other):
+
+            def series(df: FrameT) -> Sequence[SeriesOrExprT]:
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                selected = set(lhs_names).symmetric_difference(rhs_names)
+                return [
+                    ser
+                    for ser, name in self.selectors._iter_columns_names(df)
+                    if name in selected
+                ]
+
+            def names(df: FrameT) -> Sequence[str]:
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                selected = set(lhs_names).symmetric_difference(rhs_names)
+                return [name for name in df.columns if name in selected]
+
+            return self.selectors._selector.from_callables(series, names, context=self)
+        return self._to_expr() ^ other
+
     def __invert__(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self.selectors.all() - self
 

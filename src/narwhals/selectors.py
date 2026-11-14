@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
-    SupportedSetOps: TypeAlias = Literal["__and__", "__or__", "__sub__"]
+    SupportedSetOps: TypeAlias = Literal["__and__", "__or__", "__sub__", "__xor__"]
 
 
 class Selector(Expr):
@@ -48,6 +48,9 @@ class Selector(Expr):
     def __sub__(self, other: Any) -> Expr:  # type: ignore[override]
         return self._with_set_op("__sub__", other)
 
+    def __xor__(self, other: Any) -> Expr:  # type: ignore[override]
+        return self._with_set_op("__xor__", other)
+
     def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
@@ -55,6 +58,9 @@ class Selector(Expr):
         raise NotImplementedError
 
     def __ror__(self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __rxor__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
 
