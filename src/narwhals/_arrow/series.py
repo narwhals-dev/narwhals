@@ -34,6 +34,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
+    qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
 )
@@ -226,10 +227,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         elif supports_arrow_c_array(data) or supports_arrow_c_stream(
             data
         ):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {type(data).__name__!r}."
+            msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
             raise ModuleNotFoundError(msg)
         else:  # pragma: no cover
-            msg = f"`Series.from_arrow` is not supported for object of type {type(data).__name__!r}."
+            msg = f"`Series.from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
             raise TypeError(msg)
         return cls.from_native(native, context=context)
 

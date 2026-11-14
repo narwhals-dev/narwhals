@@ -231,7 +231,7 @@ class Series(Generic[IntoSeriesT]):
             or _is_pyarrow_array(values)
             or _is_pyarrow_chunked_array(values)
         ):
-            msg = f"Given object of type {type(values)} does not support PyCapsule interface"
+            msg = f"Given object of type {qualified_type_name(values)!r} does not support PyCapsule interface"
             raise TypeError(msg)
         ns = eager_namespace(
             backend, version=cls._version, function_name="Series.from_arrow"
@@ -411,10 +411,10 @@ class Series(Generic[IntoSeriesT]):
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {qualified_type_name(native_series)!r}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
-            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {qualified_type_name(native_series)!r}"
             raise ModuleNotFoundError(msg)
         from narwhals._arrow.utils import chunked_array
 
@@ -435,7 +435,7 @@ class Series(Generic[IntoSeriesT]):
         See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
         for more.
         """
-        msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)}"
+        msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)!r}"
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
