@@ -29,7 +29,12 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    _into_arrow_chunked_array,
+    is_list_of,
+)
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
@@ -49,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -211,6 +217,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         kwds: dict[str, Any] = {"copy": False} if implementation.is_pandas() else {}
         native = implementation.to_native_namespace().Series(arr, name="", **kwds)
         return cls.from_native(native, context=context)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        tbl = pa.Table.from_arrays([_into_arrow_chunked_array(data, context)], names=[""])
+        df = PandasLikeDataFrame.from_arrow(tbl, context=context)
+        return cls.from_native(df.get_column("").native, context=context)
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
@@ -497,6 +513,12 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(operator.or_, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(operator.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(operator.add, other)

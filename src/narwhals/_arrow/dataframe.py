@@ -25,6 +25,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    qualified_type_name,
     scale_bytes,
     supports_arrow_c_stream,
 )
@@ -108,10 +109,10 @@ class ArrowDataFrame(
         elif backend_version >= (14,) or isinstance(data, Collection):
             native = pa.table(data)
         elif supports_arrow_c_stream(data):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
+            msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
             raise ModuleNotFoundError(msg)
         else:  # pragma: no cover
-            msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
+            msg = f"`from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
             raise TypeError(msg)
         return cls.from_native(native, context=context)
 
