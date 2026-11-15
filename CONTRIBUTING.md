@@ -349,6 +349,12 @@ In general we assume that dataframes are used to store and process columnar data
   - Use standard SQL constructs where possible instead of non-standard
     ones such as `GROUP BY ALL` or `EXCLUDE`.
 
+- Dask:
+
+  - Dask support is moving to the `narwhals-dask` plugin in `packages/narwhals-dask`.
+    The built-in `src/narwhals/_dask` is frozen and only kept as a fallback during the
+    deprecation period: make fixes and new features in the plugin only.
+
 ### Test Failure Patterns
 
 We aim to use three standard patterns for handling test failures:
