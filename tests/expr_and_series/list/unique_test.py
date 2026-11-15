@@ -19,6 +19,15 @@ expected = {2, 3, None}
 MAINTAIN_ORDER_UNSUPPORTED = ("cudf", "dask", "duckdb", "ibis", "modin", "sqlframe")
 
 
+def _row_lengths(rows: list[Any]) -> list[int | None]:
+    """Row lengths, with ``None`` kept for null rows.
+
+    ``assert_equal_data`` zips nested lists with ``strict=False`` and so does not
+    catch a missing trailing element; comparing lengths separately does.
+    """
+    return [None if row is None or str(row) == "<NA>" else len(row) for row in rows]
+
+
 def _skip_old_pandas(constructor: Constructor | ConstructorEager) -> None:
     if "pandas" in str(constructor):
         if PANDAS_VERSION < PkgVersion("2.2"):
@@ -79,9 +88,13 @@ def test_unique_maintain_order_expr(
     _skip_old_pandas(constructor)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
-    result = nw.from_native(constructor(maintain_order_data)).select(
-        nw.col("a").cast(nw.List(nw.Int32())).list.unique(maintain_order=True)
+    result = (
+        nw.from_native(constructor(maintain_order_data))
+        .select(nw.col("a").cast(nw.List(nw.Int32())).list.unique(maintain_order=True))
+        .lazy()
+        .collect()
     )
+    assert _row_lengths(result["a"].to_list()) == _row_lengths(maintain_order_expected)
     assert_equal_data(result, {"a": maintain_order_expected})
 
 
@@ -93,6 +106,7 @@ def test_unique_maintain_order_series(
     _skip_old_pandas(constructor_eager)
     df = nw.from_native(constructor_eager(maintain_order_data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.unique(maintain_order=True)
+    assert _row_lengths(result.to_list()) == _row_lengths(maintain_order_expected)
     assert_equal_data({"a": result}, {"a": maintain_order_expected})
 
 
@@ -124,6 +138,7 @@ def test_unique_maintain_order_series_dtypes(
     _skip_old_pandas(constructor_eager)
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
     result = df["a"].cast(nw.List(dtype)).list.unique(maintain_order=True)
+    assert _row_lengths(result.to_list()) == _row_lengths(expected)
     if dtype == nw.Float64():
         # `assert_equal_data` can't compare NaN nested in lists. NaN is kept once, as in Polars.
         assert str(result.to_list()) == str(expected)
