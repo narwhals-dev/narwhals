@@ -80,9 +80,9 @@ def test_dlpack(
 def test_dlpack_float32_with_nulls(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "_pyarrow_constructor" in str(constructor_eager):
+    if "pandas_pyarrow_constructor" in str(constructor_eager):
         # `DataFrame.to_numpy` returns `object` for pandas pyarrow-backed float columns
-        # with nulls, unlike `Series.to_numpy`.
+        # with nulls, unlike `Series.to_numpy` (Modin isn't affected).
         request.applymarker(pytest.mark.xfail(raises=UNSUPPORTED_DTYPE_ERROR))
     data = {"a": [1.5, None], "b": [2.5, 3.5]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
