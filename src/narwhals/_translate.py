@@ -79,6 +79,12 @@ class ArrowStreamExportable(Protocol):
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object: ...
 
 
+class ArrowArrayExportable(Protocol):
+    def __arrow_c_array__(
+        self, requested_schema: object | None = None
+    ) -> tuple[object, object]: ...
+
+
 ToNumpyT_co = TypeVar("ToNumpyT_co", covariant=True)
 FromNumpyDT_contra = TypeVar(
     "FromNumpyDT_contra", contravariant=True, default=ToNumpyT_co
@@ -145,6 +151,15 @@ IntoArrowTable: TypeAlias = "ArrowStreamExportable | pa.Table"
 
 [Arrow PyCapsule Interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrowstream-export
 [`pyarrow.Table`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
+"""
+IntoArrowSeries: TypeAlias = (
+    "ArrowArrayExportable | ArrowStreamExportable | pa.Array[Any] | pa.ChunkedArray[Any]"
+)
+"""An object supporting the [Arrow PyCapsule Interface], or a native [`pyarrow.Array`] or [`pyarrow.ChunkedArray`].
+
+[Arrow PyCapsule Interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrowarray-export
+[`pyarrow.Array`]: https://arrow.apache.org/docs/python/generated/pyarrow.Array.html
+[`pyarrow.ChunkedArray`]: https://arrow.apache.org/docs/python/generated/pyarrow.ChunkedArray.html
 """
 ToArrowT_co = TypeVar("ToArrowT_co", covariant=True)
 FromArrowDT_contra = TypeVar(

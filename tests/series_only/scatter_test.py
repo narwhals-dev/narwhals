@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import ShapeError
 from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
@@ -68,3 +69,70 @@ def test_scatter_2862(constructor_eager: ConstructorEager) -> None:
     assert_equal_series(s.scatter(1, 999), [1, 999, 3], "a")
     assert_equal_series(s.scatter([0, 2], [999, 888]), [999, 2, 888], "a")
     assert_equal_series(s.scatter([2, 0], [999, 888]), [888, 2, 999], "a")
+
+
+def test_scatter_scalar_broadcast(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    assert_equal_series(s.scatter([0, 2], 999), [999, 2, 999, 4], "a")
+    assert_equal_series(s.scatter([0, 2], [999]), [999, 2, 999, 4], "a")
+    assert_equal_series(
+        s.scatter([0, 2], series(constructor_eager, "v", [999])), [999, 2, 999, 4], "a"
+    )
+
+
+def test_scatter_broadcast_nested(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor_eager) for x in ("polars", "pyarrow_table")):
+        reason = (
+            "Neither Polars' scatter nor pyarrow's replace_with_mask support list types."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    if "cudf" in str(constructor_eager):
+        reason = "cuDF ListColumn._cast_setitem_value rejects Series values."
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    s = series(constructor_eager, "a", [[1], [2], [3]])
+    assert_equal_series(s.scatter([0, 2], [[9, 9]]), [[9, 9], [2], [9, 9]], "a")
+
+
+def test_scatter_length_mismatch(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor_eager):
+        reason = (
+            "Polars silently ignores extra values instead of raising "
+            "(https://github.com/pola-rs/polars/issues/30713)."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    with pytest.raises(ShapeError, match="Expected object of length 2"):
+        s.scatter([0, 2], [7, 8, 9])
+
+
+def test_scatter_casts_values(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1.0, 2.0, 3.0])
+    assert_equal_series(s.scatter([0, 2], 7), [7.0, 2.0, 7.0], "a")
+    assert_equal_series(s.scatter([0, 2], [7, 8]), [7.0, 2.0, 8.0], "a")
+    s = series(constructor_eager, "a", ["x", "y", "z"])
+    assert_equal_series(s.scatter([0, 2], None), [None, "y", None], "a")
+
+
+@pytest.mark.parametrize(
+    ("indices", "values", "expected"),
+    [
+        ([0, 2], 99, [99, 2, 99, 4]),
+        (0, 99, [99, 2, 3, 4]),
+        ([0, 2], [99, 88], [99, 2, 88, 4]),
+    ],
+    ids=["broadcast", "single", "equal-length"],
+)
+def test_scatter_scalar_narrow_int_pyarrow(
+    indices: int | list[int], values: int | list[int], expected: list[int]
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    s = nw.from_native(pa.chunked_array([[1, 2, 3, 4]], type=pa.int8()), series_only=True)
+    output = s.scatter(indices, values)
+    assert output.dtype == nw.Int8
+    assert_equal_series(output, expected, "")

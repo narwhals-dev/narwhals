@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - __arrow_c_array__
         - __arrow_c_stream__
         - __contains__
         - __getitem__
@@ -36,6 +37,7 @@
         - filter
         - first
         - floor
+        - from_arrow
         - from_iterable
         - from_numpy
         - gather_every

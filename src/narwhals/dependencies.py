@@ -398,6 +398,11 @@ def is_polars_data_type(obj: Any) -> TypeIs[pl.DataType]:
     return bool(pl := get_polars()) and isinstance(obj, pl.DataType)
 
 
+def _is_pyarrow_array(arr: Any) -> TypeIs[pa.Array[Any]]:
+    """Check whether `arr` is a PyArrow Array without importing PyArrow."""
+    return (pa := get_pyarrow()) is not None and isinstance(arr, pa.Array)
+
+
 def _is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
     """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)

@@ -12,6 +12,7 @@ from narwhals._arrow.series_map import ArrowSeriesMapNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    BACKEND_VERSION,
     arange,
     cast_for_truediv,
     chunked_array,
@@ -23,6 +24,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    repeat,
     sortable,
     zeros,
 )
@@ -34,6 +36,9 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
+    qualified_type_name,
+    supports_arrow_c_array,
+    supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -63,6 +68,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -207,6 +213,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        # NOTE: The stubs don't accept PyCapsule objects in `pa.array` and `pa.chunked_array`
+        array_from_capsule: Incomplete = pa.array
+        chunked_array_from_capsule: Incomplete = pa.chunked_array
+        if isinstance(data, (pa.Array, pa.ChunkedArray)):
+            native = chunked_array(data)
+        # Prefer the stream: it keeps chunks zero-copy, while `__arrow_c_array__`
+        # may combine them (e.g. `nw.Series` exposes both).
+        elif supports_arrow_c_stream(data) and BACKEND_VERSION >= (16,):
+            native = chunked_array_from_capsule(data)
+        elif supports_arrow_c_array(data) and BACKEND_VERSION >= (14,):
+            native = chunked_array(array_from_capsule(data))
+        elif supports_arrow_c_array(data) or supports_arrow_c_stream(data):
+            msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
+            raise ModuleNotFoundError(msg)
+        else:  # pragma: no cover
+            # Unreachable via the public API: `nw.Series.from_arrow` validates `data` first.
+            msg = f"`Series.from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
+            raise TypeError(msg)
+        return cls.from_native(native, context=context)
+
+    @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
         target_length = max(
@@ -261,6 +289,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(pc.or_kleene, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(pc.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(pc.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)
@@ -477,9 +511,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.slice(start, stop - start))
 
     def scatter(self, indices: Self, values: Self) -> Self:
+        n_values, n_indices = len(values), len(indices)
+        if n_values not in {1, n_indices}:
+            msg = f"Expected object of length {n_indices}, got length: {n_values}"
+            raise ShapeError(msg)
+        target_type = self._type
+        values_native = (
+            values.native.cast(target_type)
+            if values.native.type != target_type
+            else values.native
+        )
+        if n_values == n_indices:
+            sorted_indices = pc.sort_indices(indices.native)
+            replacements = values_native.take(sorted_indices).combine_chunks()
+        else:
+            replacements = repeat(values_native[0], n_indices)
         mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
-        sorted_indices = pc.sort_indices(indices.native)
-        replacements = values.native.take(sorted_indices).combine_chunks()
         return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def to_list(self) -> list[Any]:
