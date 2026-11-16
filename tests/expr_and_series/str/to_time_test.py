@@ -40,7 +40,7 @@ def requires_time_support(
         if PYARROW_VERSION == NOT_INSTALLED:
             pytest.skip("pandas requires pyarrow for the Time dtype")
 
-    if "pyspark" in str(constructor) or "dask" in str(constructor):
+    if any(x in str(constructor) for x in ("pyspark", "dask", "cudf")):
         request.applymarker(
             pytest.mark.xfail(reason="backend does not support Time dtype")
         )
@@ -66,7 +66,7 @@ def test_to_time_series(
 ) -> None:
     requires_time_support(request, constructor_eager)
 
-    expected = "12:34:56.000000000" if "cudf" in str(constructor_eager) else "12:34:56"
+    expected = "12:34:56"
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_time(
         format="%H:%M:%S"
     )
@@ -170,7 +170,7 @@ def test_to_time_invalid_raises(
     fmt: str | None,
 ) -> None:
     # These raise for any input, so the test would pass without parsing anything.
-    if "pyspark" in str(constructor) or "dask" in str(constructor):
+    if any(x in str(constructor) for x in ("pyspark", "dask", "cudf")):
         pytest.skip("backend does not support Time dtype")
     requires_time_support(request, constructor)
     df = nw.from_native(constructor(data))

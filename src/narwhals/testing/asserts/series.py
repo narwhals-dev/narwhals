@@ -260,7 +260,8 @@ def _check_list_like(
     # Notice that order within the array/list must be the same, regardless of
     # `check_order` value at the top level.
     try:
-        for lv, rv in zip(left_vals, right_vals, strict=True):
+        # `to_list`, as cuDF series can't be iterated over.
+        for lv, rv in zip(left_vals.to_list(), right_vals.to_list(), strict=True):
             check_fn(
                 _series_like(reference=left_vals, values=lv, dtype=left_dtype.inner),
                 _series_like(reference=right_vals, values=rv, dtype=right_dtype.inner),

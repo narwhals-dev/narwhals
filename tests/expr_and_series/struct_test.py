@@ -156,6 +156,9 @@ def test_struct_with_schema(
 ) -> None:
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+    if "cudf" in str(constructor):
+        reason = "cuDF can't cast struct columns"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
     maybe_skip(constructor=constructor)
 

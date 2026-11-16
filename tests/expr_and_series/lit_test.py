@@ -8,6 +8,7 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    CUDF_POLARS_VERSION,
     CUDF_VERSION,
     DASK_VERSION,
     NOT_INSTALLED,
@@ -16,6 +17,7 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
+    is_polars_gpu,
 )
 
 if TYPE_CHECKING:
@@ -131,9 +133,15 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
 
 def test_null_list_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if is_polars_gpu(constructor) and CUDF_POLARS_VERSION < PkgVersion("26.12"):
+        reason = "cudf-polars<26.12 raises for a null list literal"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11637
         reason = "Dask scalars drop the dtype"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+    elif "cudf" in str(constructor):
+        reason = "cuDF can't cast an all-null object column"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
     elif any(x in str(constructor) for x in ("pandas", "modin")):
         if PANDAS_VERSION < PkgVersion("2.2"):
@@ -191,10 +199,16 @@ def test_nested_structures(
         reason = "Cannot create an empty struct type for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
-    # TODO(FBruzzesi): Check cudf
-    if any(x in str(constructor) for x in ("cudf", "dask")):
+    if "dask" in str(constructor):
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+    if (
+        is_polars_gpu(constructor)
+        and CUDF_POLARS_VERSION < PkgVersion("26.12")
+        and isinstance(value, (list, tuple))
+    ):
+        reason = "cudf-polars<26.12 does not broadcast list literals"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     if any(x in str(constructor) for x in ("pandas", "modin")) and (
         PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2")

@@ -54,11 +54,20 @@ DASK_VERSION = get_module_version("dask")
 PYARROW_VERSION = get_module_version("pyarrow")
 PYSPARK_VERSION = get_module_version("pyspark")
 CUDF_VERSION = get_module_version("cudf")
+CUDF_POLARS_VERSION = get_module_version("cudf_polars")
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
+
+POLARS_GPU = bool(os.environ.get("NARWHALS_POLARS_GPU"))
+"""Whether lazy Polars frames are collected on the GPU engine (cudf-polars)."""
+
+
+def is_polars_gpu(constructor: Constructor | ConstructorEager) -> bool:
+    return POLARS_GPU and "polars_lazy" in str(constructor)
+
 
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
 """`DType`s which **cannot** be used as bare types."""
@@ -162,7 +171,11 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
     for key, expected_value in expected.items():
         result_value = result[key]
-        for i, (lhs, rhs) in enumerate(zip(result_value, expected_value, strict=True)):
+        # cuDF series can't be iterated over, so convert expected series too.
+        comparable_expected = _to_comparable_list(expected_value)
+        for i, (lhs, rhs) in enumerate(
+            zip(result_value, comparable_expected, strict=True)
+        ):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = rhs is not None and math.isclose(
                     lhs, rhs, rel_tol=0, abs_tol=1e-6
