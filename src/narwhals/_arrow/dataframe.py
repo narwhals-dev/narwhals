@@ -799,7 +799,11 @@ class ArrowDataFrame(
                 .column(f"{col_token}_{agg_func}")
             )
             if maintain_order:
-                keep_idx_native = keep_idx_native.take(pc.sort_indices(keep_idx_native))
+                mask = np.zeros(len(self), dtype=bool)
+                mask[keep_idx_native.to_numpy()] = True
+                return self._with_native(
+                    native.filter(pa.array(mask)), validate_column_names=False
+                )
             return self._with_native(
                 native.take(keep_idx_native), validate_column_names=False
             )
