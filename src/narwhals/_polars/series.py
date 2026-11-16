@@ -21,7 +21,13 @@ from narwhals._polars.utils import (
     native_get_categories,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    _into_arrow_chunked_array,
+    floor_mod,
+    requires,
+)
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -35,6 +41,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -215,6 +222,15 @@ class PolarsSeries:
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
+        return cls.from_native(native, context=context)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        if BACKEND_VERSION >= (1, 3):
+            native = pl.Series(data)
+        else:
+            ca = _into_arrow_chunked_array(data, context)
+            native = cast("pl.Series", pl.from_arrow(ca))
         return cls.from_native(native, context=context)
 
     def to_narwhals(self) -> Series[pl.Series]:

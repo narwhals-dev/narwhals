@@ -396,7 +396,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
     def __xor__(self, other: Self) -> Self:
-        # SQL backends lack a native `^`; emulate via (a | b) & ~(a & b).
+        # SQL-like backends lack a boolean xor; `a != b` would accept integers.
         return self._with_binary(
             lambda expr, other: expr.__or__(other).__and__(
                 expr.__and__(other).__invert__()

@@ -157,7 +157,8 @@ def test_xor_operator_integers(
     if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
         # PySpark raises, DuckDB and SQLFrame cast to boolean,
         # Ibis compiles `~(a & b)` on integers to `~a & b`.
-        request.applymarker(pytest.mark.xfail)
+        reason = "https://github.com/narwhals-dev/narwhals/issues/4150"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [1, 2, 3], "b": [3, 2, 0]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a") ^ nw.col("b"), c=nw.col("a") ^ 1)
