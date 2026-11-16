@@ -38,6 +38,7 @@ from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
     get_cupy,
+    get_numpy,
     get_pandas,
     get_polars,
     is_narwhals_series,
@@ -1841,11 +1842,15 @@ def to_dlpack(
         try:
             arr = native.to_cupy()
         except ValueError:
-            # NOTE: cuDF<25.10 raises on any null, while later versions cast integers
-            # to float64 and fill nulls with NaN themselves: do the same on the GPU.
+            # NOTE: cuDF<25.10 raises on any null, while later versions cast non-float
+            # columns to float64 (floats keep their dtype) and fill nulls with NaN
+            # themselves: do the same on the GPU.
             if compliant._implementation._backend_version() >= (25, 10):
                 raise
-            arr = native.astype("float64").to_cupy(na_value=float("nan"))
+            np = get_numpy()
+            dtypes = native.dtypes if native.ndim == 2 else [native.dtype]
+            dtype = np.result_type(*(d if d.kind == "f" else np.float64 for d in dtypes))
+            arr = native.astype(dtype).to_cupy(na_value=float("nan"))
         return arr.__dlpack__(**kwargs)
 
     arr = compliant.to_numpy(None, copy=None)

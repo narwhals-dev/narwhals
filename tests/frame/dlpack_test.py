@@ -77,6 +77,21 @@ def test_dlpack(
     np.testing.assert_array_equal(result, expected)
 
 
+def test_dlpack_float32_with_nulls(
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+) -> None:
+    if "_pyarrow_constructor" in str(constructor_eager):
+        # `DataFrame.to_numpy` returns `object` for pandas pyarrow-backed float columns
+        # with nulls, unlike `Series.to_numpy`.
+        request.applymarker(pytest.mark.xfail(raises=UNSUPPORTED_DTYPE_ERROR))
+    data = {"a": [1.5, None], "b": [2.5, 3.5]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = from_dlpack(df.with_columns(nw.all().cast(nw.Float32)))
+    assert result.dtype == np.float32
+    expected = np.array([[1.5, 2.5], [np.nan, 3.5]], dtype=np.float32)
+    np.testing.assert_array_equal(result, expected)
+
+
 def test_dlpack_legacy_consumer(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2], "b": [3, 4]}), eager_only=True)
     result = from_dlpack(LegacyConsumerView(df))

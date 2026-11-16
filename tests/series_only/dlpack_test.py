@@ -67,6 +67,14 @@ def test_dlpack(
     np.testing.assert_array_equal(result, expected)
 
 
+def test_dlpack_float32_with_nulls(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1.5, None]}
+    s = nw.from_native(constructor_eager(data), eager_only=True)["a"].cast(nw.Float32)
+    result = from_dlpack(s)
+    assert result.dtype == np.float32
+    np.testing.assert_array_equal(result, np.array([1.5, np.nan], dtype=np.float32))
+
+
 def test_dlpack_legacy_consumer(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     result = from_dlpack(LegacyConsumerView(s))
