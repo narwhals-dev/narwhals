@@ -822,8 +822,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         Narwhals doesn't implement anything itself here:
 
         - if the underlying dataframe implements the protocol, it'll return that
-        - for cuDF, it'll defer to `to_dlpack`, which keeps the data on the GPU but
-          always copies it, and rejects nulls
+        - for cuDF, it'll call `to_cupy` and defer to CuPy's implementation, so the
+          data stays on the GPU
         - else, it'll call `to_numpy` and then defer to NumPy's implementation, copying
           read-only arrays for consumers on unversioned DLPack (`max_version` < 1.0),
           which can't flag a buffer as read-only

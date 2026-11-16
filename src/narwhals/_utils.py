@@ -1820,7 +1820,7 @@ def to_dlpack(
     dl_device: tuple[int, int] | None,
     copy: bool | None,
 ) -> CapsuleType:
-    """Export via DLPack: natively, via `to_dlpack` for cuDF, else via `to_numpy`."""
+    """Export via DLPack: natively, via `to_cupy` for cuDF, else via `to_numpy`."""
     native = compliant.native
     # NOTE: Producers on an older DLPack version (e.g. numpy<2.1) reject keywords
     # added later, so only forward what the consumer passed.
@@ -1834,12 +1834,11 @@ def to_dlpack(
     if supports_dlpack(native):
         return native.__dlpack__(**kwargs)
     if compliant._implementation is Implementation.CUDF:  # pragma: no cover
-        # NOTE: cuDF has no `__dlpack__`, only `to_dlpack`. It always copies on the
-        # device and syncs its stream before returning, so ignoring `stream` is safe.
-        if copy is False:
-            msg = "cuDF can't export via DLPack without copying."
-            raise BufferError(msg)
-        return native.to_dlpack()
+        # NOTE: cuDF has no `__dlpack__`, and its `to_dlpack` exports booleans as uint8
+        # and single-column frames as 1D, and ignores `dl_device`. `to_cupy` keeps dtype
+        # and shape (zero-copy for numeric columns without nulls), and CuPy implements
+        # the full protocol (`stream`, `dl_device`, `copy`).
+        return native.to_cupy().__dlpack__(**kwargs)
 
     arr = compliant.to_numpy(None, copy=None)
     # NOTE: Unversioned DLPack (`max_version` < 1.0) can't flag a buffer as read-only,
@@ -1856,7 +1855,8 @@ def dlpack_device(compliant: _DLPackSource) -> tuple[int, int]:
     if supports_dlpack(native):
         return native.__dlpack_device__()
     if compliant._implementation is Implementation.CUDF:  # pragma: no cover
-        # NOTE: cuDF's `to_dlpack` exports on the current CUDA device.
+        # NOTE: cuDF allocates on the current CUDA device. Asking `to_cupy` instead
+        # would gather a copy of every column of a DataFrame just to report this.
         return (2, get_cupy().cuda.runtime.getDevice())
     return (1, 0)
 
