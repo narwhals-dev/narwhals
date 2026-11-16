@@ -514,18 +514,34 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if n_values not in {1, n_indices}:
             msg = f"Expected object of length {n_indices}, got length: {n_values}"
             raise ShapeError(msg)
-        target_type = self._type
         values_native = (
-            values.native.cast(target_type)
-            if values.native.type != target_type
+            values.native.cast(self._type)
+            if values.native.type != self._type
             else values.native
         )
+        n = len(self)
+        indices_native = pc.if_else(
+            pc.less(indices.native, lit(0)),
+            pc.add(indices.native, lit(n)),
+            indices.native,
+        )
+        min_max = pc.min_max(indices_native)
+        if min_max["min"].as_py() < 0 or min_max["max"].as_py() >= n:
+            msg = f"Scatter indices are out of bounds for Series of length {n}."
+            raise IndexError(msg)
+        # `replace_with_mask` fills masked slots in ascending order, so sort (stably)
+        # by index and keep only the last occurrence of each, matching Polars.
+        order = pc.sort_indices(indices_native)
+        sorted_indices = indices_native.take(order)
+        next_indices = pa.concat_arrays(
+            [*sorted_indices[1:].chunks, pa.nulls(1, sorted_indices.type)]
+        )
+        keep = pc.not_equal(sorted_indices, next_indices).fill_null(True)
         if n_values == n_indices:
-            sorted_indices = pc.sort_indices(indices.native)
-            replacements = values_native.take(sorted_indices).combine_chunks()
+            replacements = values_native.take(order).filter(keep).combine_chunks()
         else:
-            replacements = repeat(values_native[0], n_indices)
-        mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
+            replacements = repeat(values_native[0], pc.sum(keep).as_py())
+        mask = pc.is_in(arange(start=0, end=n, step=1), indices_native)
         return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
 
     def to_list(self) -> list[Any]:

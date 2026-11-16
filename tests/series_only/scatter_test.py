@@ -95,18 +95,49 @@ def test_scatter_broadcast_nested(
     assert_equal_series(s.scatter([0, 2], [[9, 9]]), [[9, 9], [2], [9, 9]], "a")
 
 
-def test_scatter_length_mismatch(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    if "polars" in str(constructor_eager):
-        reason = (
-            "Polars silently ignores extra values instead of raising "
-            "(https://github.com/pola-rs/polars/issues/30713)."
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
+def test_scatter_length_mismatch(constructor_eager: ConstructorEager) -> None:
     s = series(constructor_eager, "a", [1, 2, 3, 4])
     with pytest.raises(ShapeError, match="Expected object of length 2"):
         s.scatter([0, 2], [7, 8, 9])
+
+
+@pytest.mark.parametrize(
+    ("indices", "values", "expected"),
+    [
+        ([-1], [9], [1, 2, 3, 9]),
+        ([-1, 0], [9, 8], [8, 2, 3, 9]),
+        ([-4, 1], 7, [7, 7, 3, 4]),
+        ([0, 0, 2], [10, 20, 30], [20, 2, 30, 4]),
+        ([2, 0, 2, -4], [10, 20, 30, 40], [40, 2, 30, 4]),
+        ([1, 1], 5, [1, 5, 3, 4]),
+    ],
+    ids=[
+        "negative",
+        "negative-and-positive",
+        "negative-broadcast",
+        "duplicates-last-wins",
+        "duplicates-unordered-with-negative",
+        "duplicates-broadcast",
+    ],
+)
+def test_scatter_negative_and_duplicate_indices(
+    indices: list[int],
+    values: int | list[int],
+    expected: list[int],
+    constructor_eager: ConstructorEager,
+) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    assert_equal_series(s.scatter(indices, values), expected, "a")
+
+
+@pytest.mark.parametrize("indices", [[4], [-5], [0, 10]])
+def test_scatter_out_of_bounds(
+    indices: list[int], constructor_eager: ConstructorEager
+) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    # Error type is backend-specific (e.g. `IndexError`, Polars' `OutOfBoundsError`).
+    with pytest.raises(Exception, match=r"(?i)out of bounds"):
+        s.scatter(indices, 0)
 
 
 def test_scatter_casts_values(constructor_eager: ConstructorEager) -> None:

@@ -325,6 +325,18 @@ class PandasLikeSeries(EagerSeries[Any]):
         values_native = values.native
         if len(values_native) == 1 and len(target_index) > 1:
             values_native = values_native.repeat(len(target_index))
+        if len(values_native) == len(target_index):
+            # Pyarrow-backed dtypes keep the *first* value for a repeated position on
+            # `iloc` assignment, whereas Polars (and NumPy) keep the last one.
+            import numpy as np  # ignore-banned-import
+
+            positions = indices_native.to_numpy() % len(native_series)
+            _, last_from_end = np.unique(positions[::-1], return_index=True)
+            if len(last_from_end) < len(positions):
+                keep = np.sort(len(positions) - 1 - last_from_end)
+                indices_native = indices_native.iloc[keep]
+                values_native = values_native.iloc[keep]
+                target_index = target_index[keep]
         values_native = set_index(values_native, target_index, implementation=impl)
         series = native_series if in_place else native_series.copy(deep=True)
 
