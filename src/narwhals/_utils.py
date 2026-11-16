@@ -1838,7 +1838,15 @@ def to_dlpack(
         # and single-column frames as 1D, and ignores `dl_device`. `to_cupy` keeps dtype
         # and shape (zero-copy for numeric columns without nulls), and CuPy implements
         # the full protocol (`stream`, `dl_device`, `copy`).
-        return native.to_cupy().__dlpack__(**kwargs)
+        try:
+            arr = native.to_cupy()
+        except ValueError:
+            # NOTE: cuDF<25.10 raises on any null, while later versions cast integers
+            # to float64 and fill nulls with NaN themselves: do the same on the GPU.
+            if compliant._implementation._backend_version() >= (25, 10):
+                raise
+            arr = native.astype("float64").to_cupy(na_value=float("nan"))
+        return arr.__dlpack__(**kwargs)
 
     arr = compliant.to_numpy(None, copy=None)
     # NOTE: Unversioned DLPack (`max_version` < 1.0) can't flag a buffer as read-only,
