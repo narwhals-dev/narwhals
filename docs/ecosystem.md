@@ -29,6 +29,7 @@ for their dataframe interoperability needs:
 * [scikit-learn](https://github.com/scikit-learn/scikit-learn)
 * [scikit-lego](https://github.com/koaning/scikit-lego)
 * [scikit-playtime](https://github.com/koaning/scikit-playtime)
+* [skore](https://github.com/probabl-ai/skore)
 * [tabmat](https://github.com/Quantco/tabmat)
 * [tea-tasting](https://github.com/e10v/tea-tasting)
 * [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
@@ -54,7 +55,8 @@ and other C modules, encapsulating the pointer with a name and optional destruct
 manage resources and ensure safe access,
 see [here](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for details.
 
-Narwhals supports exporting a DataFrame via the Arrow PyCapsule Interface. See
+Narwhals supports exporting a DataFrame or a Series via the Arrow PyCapsule Interface,
+and importing them with `DataFrame.from_arrow` and `Series.from_arrow`. See
 [Universal dataframe support with the Arrow PyCapsule Interface + Narwhals](https://labs.quansight.org/blog/narwhals-pycapsule)
 for how you can use them together.
 
