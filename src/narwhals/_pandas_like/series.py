@@ -330,7 +330,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             # `iloc` assignment, whereas Polars (and NumPy) keep the last one.
             import numpy as np  # ignore-banned-import
 
-            positions = indices_native.to_numpy() % len(native_series)
+            positions = indices_native.to_numpy().astype(np.intp) % len(native_series)
             _, last_from_end = np.unique(positions[::-1], return_index=True)
             if len(last_from_end) < len(positions):
                 keep = np.sort(len(positions) - 1 - last_from_end)

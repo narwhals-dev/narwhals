@@ -140,6 +140,16 @@ def test_scatter_out_of_bounds(
         s.scatter(indices, 0)
 
 
+@pytest.mark.parametrize("dtype", [nw.Int8, nw.UInt8])
+def test_scatter_narrow_index_dtype(
+    dtype: type[nw.Int8 | nw.UInt8], constructor_eager: ConstructorEager
+) -> None:
+    s = series(constructor_eager, "a", list(range(200)))
+    indices = series(constructor_eager, "i", [0, 1, 0]).cast(dtype)
+    result = s.scatter(indices, series(constructor_eager, "v", [7, 8, 9]))
+    assert_equal_series(result.head(3), [9, 8, 2], "a")
+
+
 def test_scatter_casts_values(constructor_eager: ConstructorEager) -> None:
     s = series(constructor_eager, "a", [1.0, 2.0, 3.0])
     assert_equal_series(s.scatter([0, 2], 7), [7.0, 2.0, 7.0], "a")
