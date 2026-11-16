@@ -12,6 +12,7 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     _validate_rolling_arguments,
+    dlpack_device,
     eager_namespace,
     ensure_type,
     generate_repr,
@@ -20,7 +21,6 @@ from narwhals._utils import (
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
-    supports_dlpack,
     to_dlpack,
     unstable,
 )
@@ -438,7 +438,9 @@ class Series(Generic[IntoSeriesT]):
 
         Narwhals doesn't implement anything itself here:
 
-        - if the underlying series implements the protocol (e.g. cuDF), it'll return that
+        - if the underlying series implements the protocol, it'll return that
+        - for cuDF, it'll defer to `to_dlpack`, which keeps the data on the GPU but
+          always copies it, and rejects nulls
         - else, it'll call `to_numpy` and then defer to NumPy's implementation, copying
           read-only arrays for consumers on unversioned DLPack (`max_version` < 1.0),
           which can't flag a buffer as read-only
@@ -469,10 +471,8 @@ class Series(Generic[IntoSeriesT]):
             >>> np.from_dlpack(s)
             array([1, 2, 3])
         """
-        native_series = self._compliant_series.native
         return to_dlpack(
-            native_series,
-            self.to_numpy,
+            self._compliant_series,
             stream=stream,
             max_version=max_version,
             dl_device=dl_device,
@@ -484,7 +484,8 @@ class Series(Generic[IntoSeriesT]):
 
         Returns:
             The underlying series' device if it implements the DLPack protocol,
-            else `(1, 0)` (CPU) for the NumPy fallback.
+            `(2, device_id)` (CUDA, on the current device) for cuDF, else `(1, 0)`
+            (CPU) for the NumPy fallback.
 
         Examples:
             >>> import pandas as pd
@@ -493,10 +494,7 @@ class Series(Generic[IntoSeriesT]):
             >>> s.__dlpack_device__()
             (1, 0)
         """
-        native_series = self._compliant_series.native
-        if supports_dlpack(native_series):
-            return native_series.__dlpack_device__()
-        return (1, 0)
+        return dlpack_device(self._compliant_series)
 
     def __arrow_c_array__(
         self, requested_schema: object | None = None

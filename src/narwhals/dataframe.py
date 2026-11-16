@@ -32,6 +32,7 @@ from narwhals._utils import (
     can_lazyframe_collect,
     check_column_names_are_unique,
     check_columns_exist,
+    dlpack_device,
     eager_namespace,
     flatten,
     generate_repr,
@@ -47,7 +48,6 @@ from narwhals._utils import (
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
-    supports_dlpack,
     to_dlpack,
     validate_bool_flags,
 )
@@ -822,6 +822,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         Narwhals doesn't implement anything itself here:
 
         - if the underlying dataframe implements the protocol, it'll return that
+        - for cuDF, it'll defer to `to_dlpack`, which keeps the data on the GPU but
+          always copies it, and rejects nulls
         - else, it'll call `to_numpy` and then defer to NumPy's implementation, copying
           read-only arrays for consumers on unversioned DLPack (`max_version` < 1.0),
           which can't flag a buffer as read-only
@@ -854,10 +856,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             array([[1, 3],
                    [2, 4]])
         """
-        native_frame = self._compliant_frame.native
         return to_dlpack(
-            native_frame,
-            self.to_numpy,
+            self._compliant_frame,
             stream=stream,
             max_version=max_version,
             dl_device=dl_device,
@@ -869,7 +869,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Returns:
             The underlying dataframe's device if it implements the DLPack protocol,
-            else `(1, 0)` (CPU) for the NumPy fallback.
+            `(2, device_id)` (CUDA, on the current device) for cuDF, else `(1, 0)`
+            (CPU) for the NumPy fallback.
 
         Examples:
             >>> import pandas as pd
@@ -878,10 +879,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> nw.from_native(df_native, eager_only=True).__dlpack_device__()
             (1, 0)
         """
-        native_frame = self._compliant_frame.native
-        if supports_dlpack(native_frame):
-            return native_frame.__dlpack_device__()
-        return (1, 0)
+        return dlpack_device(self._compliant_frame)
 
     def __repr__(self) -> str:  # pragma: no cover
         return generate_repr("Narwhals DataFrame", self.to_native().__repr__())

@@ -37,6 +37,7 @@ from narwhals._enum import NoAutoEnum
 from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
+    get_cupy,
     get_pandas,
     get_polars,
     is_narwhals_series,
@@ -1807,16 +1808,20 @@ def supports_dlpack(obj: Any) -> TypeIs[DLPackExportable]:
     return _hasattr_static(obj, "__dlpack__")
 
 
+class _DLPackSource(_StoresNative[Any], _StoresImplementation, Protocol):
+    def to_numpy(self, dtype: Any, *, copy: bool | None) -> _NDArray[Any]: ...
+
+
 def to_dlpack(
-    native: Any,
-    to_numpy: Callable[[], _NDArray[Any]],
+    compliant: _DLPackSource,
     *,
     stream: int | Any | None,
     max_version: tuple[int, int] | None,
     dl_device: tuple[int, int] | None,
     copy: bool | None,
 ) -> CapsuleType:
-    """Export `native` via DLPack if it supports it, else via `to_numpy()`."""
+    """Export via DLPack: natively, via `to_dlpack` for cuDF, else via `to_numpy`."""
+    native = compliant.native
     # NOTE: Producers on an older DLPack version (e.g. numpy<2.1) reject keywords
     # added later, so only forward what the consumer passed.
     kwds = {
@@ -1828,7 +1833,15 @@ def to_dlpack(
     kwargs = cast("DLPackKwargs", {k: v for k, v in kwds.items() if v is not None})
     if supports_dlpack(native):
         return native.__dlpack__(**kwargs)
-    arr = to_numpy()
+    if compliant._implementation is Implementation.CUDF:  # pragma: no cover
+        # NOTE: cuDF has no `__dlpack__`, only `to_dlpack`. It always copies on the
+        # device and syncs its stream before returning, so ignoring `stream` is safe.
+        if copy is False:
+            msg = "cuDF can't export via DLPack without copying."
+            raise BufferError(msg)
+        return native.to_dlpack()
+
+    arr = compliant.to_numpy(None, copy=None)
     # NOTE: Unversioned DLPack (`max_version` < 1.0) can't flag a buffer as read-only,
     # so NumPy refuses to export read-only arrays (zero-copy Arrow memory, pandas
     # copy-on-write) to such consumers. They may write to it, so hand them a copy.
@@ -1836,6 +1849,16 @@ def to_dlpack(
     if legacy and not arr.flags.writeable and copy is not False:
         arr = arr.copy()
     return arr.__dlpack__(**kwargs)
+
+
+def dlpack_device(compliant: _DLPackSource) -> tuple[int, int]:
+    native = compliant.native
+    if supports_dlpack(native):
+        return native.__dlpack_device__()
+    if compliant._implementation is Implementation.CUDF:  # pragma: no cover
+        # NOTE: cuDF's `to_dlpack` exports on the current CUDA device.
+        return (2, get_cupy().cuda.runtime.getDevice())
+    return (1, 0)
 
 
 def supports_arrow_c_array(obj: Any) -> TypeIs[ArrowArrayExportable]:
