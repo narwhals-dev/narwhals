@@ -166,11 +166,25 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _with_binary_right(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
-    def _with_bitwise(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
+    def _with_bitwise(
+        self,
+        integer_op: Callable[..., ArrayOrScalar],
+        boolean_op: Callable[..., ArrayOrScalar],
+        other: Any,
+    ) -> Self:
         if pa.types.is_uint64(self.native.type) and type(other) is int and other >= 0:
             other = lit(other, type=self.native.type)
 
         def func(left: ArrayOrScalar, right: ArrayOrScalar) -> ArrayOrScalar:
+            if pa.types.is_null(left.type) and pa.types.is_boolean(right.type):
+                left = left.cast(right.type)
+            elif pa.types.is_null(right.type) and pa.types.is_boolean(left.type):
+                right = right.cast(left.type)
+            op = (
+                integer_op
+                if pa.types.is_integer(left.type) or pa.types.is_integer(right.type)
+                else boolean_op
+            )
             # Avoid Arrow promoting UInt64 values to Int64 for a signed scalar mask.
             if (
                 pa.types.is_uint64(left.type)
@@ -302,28 +316,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_binary(pc.less, other)
 
     def __and__(self, other: Any) -> Self:
-        op = pc.bit_wise_and if pa.types.is_integer(self.native.type) else pc.and_kleene
-        return self._with_bitwise(op, other)
+        return self._with_bitwise(pc.bit_wise_and, pc.and_kleene, other)
 
     def __rand__(self, other: Any) -> Self:
-        op = pc.bit_wise_and if pa.types.is_integer(self.native.type) else pc.and_kleene
-        return self._with_bitwise(op, other)
+        return self._with_bitwise(pc.bit_wise_and, pc.and_kleene, other)
 
     def __or__(self, other: Any) -> Self:
-        op = pc.bit_wise_or if pa.types.is_integer(self.native.type) else pc.or_kleene
-        return self._with_bitwise(op, other)
+        return self._with_bitwise(pc.bit_wise_or, pc.or_kleene, other)
 
     def __ror__(self, other: Any) -> Self:
-        op = pc.bit_wise_or if pa.types.is_integer(self.native.type) else pc.or_kleene
-        return self._with_bitwise(op, other)
+        return self._with_bitwise(pc.bit_wise_or, pc.or_kleene, other)
 
     def __xor__(self, other: Any) -> Self:
-        op = pc.bit_wise_xor if pa.types.is_integer(self.native.type) else pc.xor
-        return self._with_bitwise(op, other)
+        return self._with_bitwise(pc.bit_wise_xor, pc.xor, other)
 
     def __rxor__(self, other: Any) -> Self:
-        op = pc.bit_wise_xor if pa.types.is_integer(self.native.type) else pc.xor
-        return self._with_bitwise(op, other)
+        return self._with_bitwise(pc.bit_wise_xor, pc.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)

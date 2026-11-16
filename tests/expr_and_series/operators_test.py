@@ -9,6 +9,56 @@ import narwhals as nw
 from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
+@pytest.mark.parametrize("dtype", ["int64", "uint64"])
+@pytest.mark.parametrize(
+    "operator", ["__and__", "__rand__", "__or__", "__ror__", "__xor__", "__rxor__"]
+)
+@pytest.mark.parametrize("null_side", ["left", "right"])
+def test_bitwise_null_literal_pyarrow(
+    dtype: Literal["int64", "uint64"], operator: str, null_side: str
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    values = [1, 2, None] if dtype == "int64" else [2**63, 2**64 - 1, None]
+    native = pa.table({"a": pa.array(values, type=pa.type_for_alias(dtype))})
+    df = nw.from_native(native, eager_only=True)
+    left, right = (nw.lit(None), nw.col("a"))
+    if null_side == "right":
+        left, right = right, left
+    result = df.select(a=getattr(left, operator)(right))
+    assert_equal_data(result, {"a": [None, None, None]})
+    assert result.to_native()["a"].type == native["a"].type
+
+
+@pytest.mark.parametrize(
+    ("operator", "expected"),
+    [
+        ("__and__", [None, False, None]),
+        ("__rand__", [None, False, None]),
+        ("__or__", [True, None, None]),
+        ("__ror__", [True, None, None]),
+        ("__xor__", [None, None, None]),
+        ("__rxor__", [None, None, None]),
+    ],
+)
+@pytest.mark.parametrize("null_side", ["left", "right"])
+@pytest.mark.parametrize("typed", [True, False])
+def test_bitwise_null_boolean_pyarrow(
+    operator: str, expected: list[bool | None], null_side: str, *, typed: bool
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw.from_native(pa.table({"a": [True, False, None]}), eager_only=True)
+    left, right = (nw.lit(None, dtype=nw.Boolean if typed else None), nw.col("a"))
+    if null_side == "right":
+        left, right = right, left
+    result = df.select(a=getattr(left, operator)(right))
+    assert_equal_data(result, {"a": expected})
+    assert result.to_native()["a"].type == pa.bool_()
+
+
 @pytest.mark.parametrize(
     "operator", ["__and__", "__rand__", "__or__", "__ror__", "__xor__", "__rxor__"]
 )
