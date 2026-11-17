@@ -76,6 +76,14 @@ repos:
       pass_filenames: false
       entry: uv run utils/sort_api_reference.py
       language: system
+    # The plugin's lock embeds narwhals' dev-dependency metadata via its `../..` path
+    # source, so it goes stale whenever the root `pyproject.toml` changes.
+    - id: uv-lock-narwhals-dask
+      name: uv-lock (narwhals-dask)
+      pass_filenames: false
+      entry: uv lock --directory packages/narwhals-dask
+      language: system
+      files: ^(pyproject\.toml|packages/narwhals-dask/(pyproject\.toml|uv\.lock))$
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false

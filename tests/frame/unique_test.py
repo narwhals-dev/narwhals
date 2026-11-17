@@ -7,7 +7,13 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -155,6 +161,30 @@ def test_unique_none(constructor: Constructor) -> None:
     if not isinstance(df, nw.LazyFrame):
         result = df.unique(maintain_order=True)
         assert_equal_data(result, data)
+
+
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [("first", {"g": ["a", "b"], "x": [1, 2]}), ("last", {"g": ["b", "a"], "x": [2, 3]})],
+)
+def test_unique_maintain_order_4156(
+    constructor_eager: ConstructorEager,
+    keep: Literal["first", "last"],
+    expected: dict[str, list[object]],
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4156
+    data = {"g": ["a", "b", "a"], "x": [1, 2, 3]}
+    df = nw.from_native(constructor_eager(data))
+    result = df.unique("g", keep=keep, maintain_order=True)
+    assert_equal_data(result, expected)
+
+
+def test_unique_maintain_order_no_columns(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.26"):
+        reason = "Polars raises on `unique` of a zero-column frame before 0.20.26."
+        pytest.skip(reason=reason)
+    df = nw.from_native(constructor_eager({}))
+    assert df.unique(maintain_order=True).shape == (0, 0)
 
 
 def test_unique_3069(constructor: Constructor) -> None:

@@ -36,6 +36,7 @@ from narwhals.functions import col
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
+from narwhals.series_map import SeriesMapNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
@@ -3108,6 +3109,10 @@ class Series(Generic[IntoSeriesT]):
     @property
     def list(self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)
+
+    @property
+    def map(self) -> SeriesMapNamespace[Self]:
+        return SeriesMapNamespace(self)
 
     @property
     def struct(self) -> SeriesStructNamespace[Self]:
