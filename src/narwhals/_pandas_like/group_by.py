@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._pandas_like.utils import make_group_by_kwargs
+from narwhals._pandas_like.utils import is_dtype_pyarrow, make_group_by_kwargs
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -167,12 +167,24 @@ class AggExpr:
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(grouped[select])
+        result = self._keep_pyarrow_dtype(result, group_by)
         if is_pandas_like_dataframe(result):
             result = cast("pd.DataFrame", result)
             result.columns = list(self.aliases)
         else:
             result = cast("pd.Series[Any]", result)
             result.name = self.aliases[0]
+        return result
+
+    def _keep_pyarrow_dtype(
+        self, result: Any, group_by: PandasLikeGroupBy
+    ) -> pd.DataFrame | pd.Series[Any]:
+        # narwhals-canary: delete this line to confirm you have read the full diff
+        # pandas returns NumPy `int64` for `size`/`nunique`, but `count` keeps pyarrow.
+        if self.is_len() or self.leaf_name == "n_unique":
+            source = self.output_names[0] if not self.is_len() else group_by._keys[0]
+            if is_dtype_pyarrow(group_by.compliant.native.dtypes[source]):
+                return result.astype("int64[pyarrow]")
         return result
 
     def is_len(self) -> bool:

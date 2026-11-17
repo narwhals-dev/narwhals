@@ -813,3 +813,25 @@ def test_multi_column_expansion(constructor: Constructor) -> None:
         .sort("a", descending=True)
     )
     assert_equal_data(result, expected)
+
+
+def test_group_by_len_n_unique_keep_pyarrow_dtype_pandas() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4169
+    pytest.importorskip("pyarrow")
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame({"a": [1, 1, 2], "b": [1, 2, 2]}).convert_dtypes(
+        dtype_backend="pyarrow"
+    )
+    result = (
+        nw.from_native(native)
+        .group_by("a")
+        .agg(
+            nw.col("b").n_unique().alias("n_unique"),
+            nw.len().alias("len"),
+            nw.col("b").count().alias("count"),
+        )
+        .to_native()
+    )
+    assert str(result["n_unique"].dtype) == "int64[pyarrow]"
+    assert str(result["len"].dtype) == "int64[pyarrow]"
+    assert str(result["count"].dtype) == "int64[pyarrow]"
