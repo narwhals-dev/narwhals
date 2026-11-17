@@ -8,6 +8,7 @@ from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
+    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -203,3 +204,41 @@ def test_cum_max_series(
         cum_max=df["a"].cum_max(), reverse_cum_max=df["a"].cum_max(reverse=True)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected_cum_max", "expected_reverse_cum_max"),
+    [
+        ([-1.0, -3.0, -2.0, -5.0], [-1.0, -1.0, -1.0, -1.0], [-1.0, -2.0, -2.0, -5.0]),
+        ([float("-inf"), -3.0, -2.0], [float("-inf"), -3.0, -2.0], [-2.0, -2.0, -2.0]),
+        ([-1.0, None, -3.0, -0.5], [-1.0, None, -1.0, -0.5], [-0.5, None, -0.5, -0.5]),
+    ],
+)
+@pytest.mark.parametrize("reverse", [True, False])
+def test_cum_max_non_positive_floats(
+    constructor_eager: ConstructorEager,
+    values: list[float | None],
+    expected_cum_max: list[float | None],
+    expected_reverse_cum_max: list[float | None],
+    *,
+    reverse: bool,
+) -> None:
+    if "pandas_pyarrow" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
+        # pandas calls the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
+        pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
+
+    df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
+    result = df.select(nw.col("a").cum_max(reverse=reverse))
+
+    expected = expected_reverse_cum_max if reverse else expected_cum_max
+    assert_equal_data(result, {"a": expected})
+
+
+def test_cum_max_non_positive_float32_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
+
+    native = pa.chunked_array([pa.array([-1.0, -3.0, -2.0], type=pa.float32())])
+    result = nw.from_native(native, series_only=True).cum_max()
+
+    assert result.dtype == nw.Float32
+    assert_equal_data({"a": result}, {"a": [-1.0, -1.0, -1.0]})
