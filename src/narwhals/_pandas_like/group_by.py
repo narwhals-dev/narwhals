@@ -181,10 +181,22 @@ class AggExpr:
     ) -> pd.DataFrame | pd.Series[Any]:
         # narwhals-canary: delete this line to confirm you have read the full diff
         # pandas returns NumPy `int64` for `size`/`nunique`, but `count` keeps pyarrow.
-        if self.is_len() or self.leaf_name == "n_unique":
-            source = self.output_names[0] if not self.is_len() else group_by._keys[0]
-            if is_dtype_pyarrow(group_by.compliant.native.dtypes[source]):
+        dtypes = group_by.compliant.native.dtypes
+        if self.is_len():
+            if is_dtype_pyarrow(dtypes[group_by._keys[0]]):
                 return result.astype("int64[pyarrow]")
+        elif self.leaf_name == "n_unique":
+            if not is_pandas_like_dataframe(result):
+                if is_dtype_pyarrow(dtypes[self.output_names[0]]):
+                    return result.astype("int64[pyarrow]")
+            else:
+                casts = {
+                    name: "int64[pyarrow]"
+                    for name in self.output_names
+                    if is_dtype_pyarrow(dtypes[name])
+                }
+                if casts:
+                    return result.astype(casts)
         return result
 
     def is_len(self) -> bool:
