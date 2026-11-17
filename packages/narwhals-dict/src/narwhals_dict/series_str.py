@@ -6,8 +6,8 @@ from datetime import datetime, time
 from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import EagerSeriesNamespace
-from narwhals._compliant.any_namespace import StringNamespace
+from narwhals.compliant import StringNamespace
+from narwhals_dict._vendored import SeriesNamespace
 from narwhals_dict.utils import parse_datetime_format, parse_time_format
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ def _python_template(template: str, pattern: re.Pattern[str]) -> str:
 
 
 class DictSeriesStringNamespace(
-    EagerSeriesNamespace["DictSeries", Any], StringNamespace["DictSeries"]
+    SeriesNamespace["DictSeries"], StringNamespace["DictSeries"]
 ):
     def _unary(self, fn: Callable[[str], Any]) -> DictSeries:
         return self.with_native(

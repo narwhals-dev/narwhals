@@ -85,6 +85,12 @@ repos:
       entry: uv lock --directory packages/narwhals-dask
       language: system
       files: ^(pyproject\.toml|packages/narwhals-dask/(pyproject\.toml|uv\.lock))$
+    - id: uv-lock-narwhals-dict
+      name: uv-lock (narwhals-dict)
+      pass_filenames: false
+      entry: uv lock --directory packages/narwhals-dict
+      language: system
+      files: ^(pyproject\.toml|packages/narwhals-dict/(pyproject\.toml|uv\.lock))$
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false

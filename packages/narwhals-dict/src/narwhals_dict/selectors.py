@@ -2,15 +2,30 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._compliant import CompliantSelector, EagerSelectorNamespace
+from narwhals.compliant import CompliantSelector, CompliantSelectorNamespace
 from narwhals_dict.expr import DictExpr
 
 if TYPE_CHECKING:
-    from narwhals_dict.dataframe import DictDataFrame  # noqa: F401
-    from narwhals_dict.series import DictSeries  # noqa: F401
+    from collections.abc import Iterator
+
+    from narwhals.dtypes import DType
+    from narwhals_dict.dataframe import DictDataFrame
+    from narwhals_dict.series import DictSeries
 
 
-class DictSelectorNamespace(EagerSelectorNamespace["DictDataFrame", "DictSeries"]):
+class DictSelectorNamespace(CompliantSelectorNamespace["DictDataFrame", "DictSeries"]):
+    def _iter_schema(self, df: DictDataFrame, /) -> Iterator[tuple[str, DType]]:
+        yield from df.schema.items()
+
+    def _iter_columns(self, df: DictDataFrame, /) -> Iterator[DictSeries]:
+        yield from df.iter_columns()
+
+    def _iter_columns_dtypes(
+        self, df: DictDataFrame, /
+    ) -> Iterator[tuple[DictSeries, DType]]:
+        for series in self._iter_columns(df):
+            yield series, series.dtype
+
     @property
     def _selector(self) -> type[DictSelector]:
         return DictSelector

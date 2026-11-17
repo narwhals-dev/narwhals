@@ -4,9 +4,8 @@ from calendar import monthrange
 from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import EagerSeriesNamespace
-from narwhals._compliant.any_namespace import DateTimeNamespace
-from narwhals._duration import Interval
+from narwhals.compliant import DateTimeNamespace
+from narwhals_dict._vendored import Interval, SeriesNamespace
 from narwhals_dict.utils import (
     EPOCH_NAIVE,
     MICROSECONDS_PER_UNIT,
@@ -56,7 +55,7 @@ def _floor_time_of_day(
 
 
 class DictSeriesDateTimeNamespace(
-    EagerSeriesNamespace["DictSeries", Any], DateTimeNamespace["DictSeries"]
+    SeriesNamespace["DictSeries"], DateTimeNamespace["DictSeries"]
 ):
     def _unary(self, fn: Callable[[Any], Any]) -> DictSeries:
         return self.with_native(

@@ -9,6 +9,9 @@ are listed in `known_failures.txt` and excluded via `--deselect`, keyed by full
 `file::name` node id so that same-named tests in different files are not
 conflated.
 
+The suite runs in this package's own environment (`packages/narwhals-dict/.venv`,
+see `pyproject.toml`), where neither `test-plugin` nor `narwhals-dask` is installed.
+
 Usage, from anywhere inside the repository:
 
     python packages/narwhals-dict/run_tests.py             # excludes known failures
@@ -23,6 +26,7 @@ so a new failure cannot be absorbed into the baseline unnoticed.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -35,6 +39,8 @@ KNOWN_FAILURES = PACKAGE_ROOT / "known_failures.txt"
 BASE_COMMAND = [
     "uv",
     "run",
+    "--project",
+    str(PACKAGE_ROOT),
     "pytest",
     "tests",
     "-p",
@@ -47,6 +53,14 @@ BASE_COMMAND = [
 FAILED_PATTERN = re.compile(
     r"^(?:FAILED|ERROR) (tests/\S+?::\w+(?:\[[^\]]*\])?)", re.MULTILINE
 )
+
+
+def _env() -> dict[str, str]:
+    # Never sync into whichever environment is active: `uv sync` is exact, so it would
+    # uninstall everything this package doesn't depend on.
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+    env["UV_PROJECT_ENVIRONMENT"] = str(PACKAGE_ROOT / ".venv")
+    return env
 
 
 def read_known_failures(*, required: bool) -> list[str]:
@@ -69,13 +83,13 @@ def run_tests(extra_args: list[str], *, deselect_known_failures: bool) -> int:
     if deselect_known_failures:
         for node_id in read_known_failures(required=True):
             command.extend(["--deselect", node_id])
-    return subprocess.run(command, check=False, cwd=REPO_ROOT).returncode  # noqa: S603
+    return subprocess.run(command, check=False, cwd=REPO_ROOT, env=_env()).returncode  # noqa: S603
 
 
 def update_known_failures() -> int:
     command = [*BASE_COMMAND, "-p", "no:randomly", "--tb=no", "-q"]
     result = subprocess.run(  # noqa: S603
-        command, check=False, cwd=REPO_ROOT, capture_output=True, text=True
+        command, check=False, cwd=REPO_ROOT, env=_env(), capture_output=True, text=True
     )
     # Only rc 0 (all passed) and rc 1 (some failed) describe the suite. Anything
     # else is a crash, and rewriting the baseline from it would destroy it.

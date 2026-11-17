@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+from itertools import chain
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from narwhals._compliant import EagerGroupBy
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
+from narwhals.compliant import CompliantGroupBy
+from narwhals_dict._vendored import (
+    evaluate_aliases,
+    evaluate_output_names_and_aliases,
+    is_sequence_of,
+)
 from narwhals_dict.series import DictSeries
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
-    from narwhals._compliant.typing import NarwhalsAggregation
-    from narwhals._expression_parsing import ExprNode
+    from narwhals_dict._vendored import NarwhalsAggregation
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.expr import DictExpr
     from narwhals_dict.typing import DictFrame
@@ -112,7 +116,7 @@ class _GroupedRows:
         return frames
 
 
-class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
+class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     """Group-by for the dict backend.
 
     The "native" aggregation is simply the name of the `DictSeries` method to
@@ -152,12 +156,66 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
 
+    def _parse_keys(
+        self, frame: DictDataFrame, keys: Sequence[DictExpr] | Sequence[str]
+    ) -> tuple[DictDataFrame, list[str], list[str]]:
+        if is_sequence_of(keys, str):
+            keys_str = list(keys)
+            return frame, keys_str, keys_str.copy()
+        return self._parse_expr_keys(frame, keys=keys)
+
+    @staticmethod
+    def _parse_expr_keys(
+        frame: DictDataFrame, keys: Sequence[DictExpr]
+    ) -> tuple[DictDataFrame, list[str], list[str]]:
+        """Evaluate key expressions into temporary columns which don't clash with existing ones.
+
+        The output key names are returned too, so the temporary columns can be renamed
+        back after aggregating, and excluded from unnamed expressions in `.agg(...)`.
+        """
+        tmp_name_length = max(len(str(c)) for c in frame.columns) + 1
+
+        def _temporary_name(key: str) -> str:
+            # 5 is the length of `__tmp`
+            return f"_{key}_tmp{'_' * (tmp_name_length - len(key) - 5)}"
+
+        keys_aliases = [expr._evaluate_aliases(frame) for expr in keys]
+        safe_keys = [
+            # multi-output expression cannot have duplicate names, hence it's safe to suffix
+            key.name.map(_temporary_name)
+            if (metadata := key._metadata) and metadata.expansion_kind.is_multi_output()
+            # otherwise it's single named and we can use Expr.alias
+            else key.alias(_temporary_name(new_names[0]))
+            for key, new_names in zip(keys, keys_aliases, strict=True)
+        ]
+        return (
+            frame.with_columns(*safe_keys),
+            evaluate_aliases(frame, safe_keys),
+            list(chain.from_iterable(keys_aliases)),
+        )
+
+    @classmethod
+    def _is_simple(cls, expr: DictExpr, /) -> bool:
+        return expr._is_elementary() and cls._leaf_name(expr) in cls._REMAP_AGGS
+
+    @classmethod
+    def _remap_expr_name(cls, name: NarwhalsAggregation | Any, /) -> str:
+        return cls._REMAP_AGGS.get(name, name)
+
+    @classmethod
+    def _leaf_name(cls, expr: DictExpr, /) -> NarwhalsAggregation | Any:
+        return next(expr._metadata.op_nodes_reversed()).name
+
+    @classmethod
+    def _kwargs(cls, expr: DictExpr, /) -> dict[str, Any]:
+        return next(expr._metadata.op_nodes_reversed()).kwargs
+
     def _group_indices(self, frame: DictDataFrame) -> dict[Any, list[int]]:
         """Map each key to its row indices, in order of first appearance."""
         return _bucket_by_keys([frame.native[key] for key in self._keys])
 
     @staticmethod
-    def _leaf_order_by(leaf: ExprNode) -> tuple[str, ...]:
+    def _leaf_order_by(leaf: Any) -> tuple[str, ...]:
         """The `order_by` an order-dependent leaf (`first`/`last`) sorts each group by."""
         if leaf.name in DictGroupBy._ORDER_DEPENDENT:
             return tuple(leaf.kwargs.get("order_by", ()))

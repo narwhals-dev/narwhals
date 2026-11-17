@@ -18,7 +18,7 @@ from narwhals_dict.utils import is_native_frame
 if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
-    from narwhals._utils import Version
+    from narwhals.utils import Version
     from narwhals_dict.namespace import DictNamespace
     from narwhals_dict.typing import DictFrame
 

@@ -8,10 +8,10 @@ from collections import Counter
 from itertools import accumulate, compress, count, islice, pairwise, repeat
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import EagerSeries
-from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.compliant import EagerSeries
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
+from narwhals.utils import NO_DEFAULT, Implementation
+from narwhals_dict._vendored import assert_never, not_implemented
 from narwhals_dict.utils import (
     binary_op,
     cast_values,
@@ -35,8 +35,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeIs
 
-    from narwhals._typing import NoDefault
-    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -44,6 +42,7 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         ModeKeepStrategy,
+        NoDefault,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -51,6 +50,7 @@ if TYPE_CHECKING:
         _1DArray,
         _SliceIndex,
     )
+    from narwhals.utils import Version
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.namespace import DictNamespace
     from narwhals_dict.series_cat import DictSeriesCatNamespace
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from narwhals_dict.series_list import DictSeriesListNamespace
     from narwhals_dict.series_str import DictSeriesStringNamespace
     from narwhals_dict.series_struct import DictSeriesStructNamespace
-    from narwhals_dict.typing import DictFrame, NativeSeries
+    from narwhals_dict.typing import Context, DictFrame, NativeSeries
 
 
 class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
@@ -104,7 +104,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     @classmethod
     def from_native(
-        cls, data: NativeSeries, /, *, context: _LimitedContext, name: str = ""
+        cls, data: NativeSeries, /, *, context: Context, name: str = ""
     ) -> Self:
         return cls(data, name=name, version=context._version)
 
@@ -114,7 +114,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         data: Iterable[Any],
         /,
         *,
-        context: _LimitedContext,
+        context: Context,
         name: str = "",
         dtype: IntoDType | None = None,
     ) -> Self:
@@ -122,7 +122,17 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return result.cast(dtype) if dtype is not None else result
 
     @classmethod
-    def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
+    def from_arrow(cls, data: Any, /, *, context: Context) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        if isinstance(data, pa.ChunkedArray) or hasattr(data, "__arrow_c_stream__"):
+            values = pa.chunked_array(data)
+        else:
+            values = pa.array(data)
+        return cls(values.to_pylist(), name="", version=context._version)
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: Context) -> Self:
         values = data.tolist()
         # `tolist` on a 0-d array or numpy scalar returns a plain scalar.
         return cls.from_iterable(
@@ -254,6 +264,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     def __ror__(self, other: Any) -> Self:
         return self._with_logical(kleene_or, operator.or_, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(operator.add, other)
@@ -1021,8 +1037,25 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(self.native[rows.start : rows.stop : rows.step])
 
     def scatter(self, indices: Self, values: Self) -> Self:
+        n_indices, n_values = len(indices), len(values)
+        if n_values not in {1, n_indices}:
+            msg = f"Expected object of length {n_indices}, got length: {n_values}"
+            raise ShapeError(msg)
+        if None in indices.native:
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
+        native = values.native
+        dtype = self.dtype
+        if not isinstance(dtype, self._version.dtypes.Unknown) and values.dtype != dtype:
+            native = cast_values(native, dtype, self._version)
+        replacements = repeat(native[0], n_indices) if n_values == 1 else native
+        n = len(self)
         result = list(self.native)
-        for index, value in zip(indices, values, strict=True):
+        # Sequential assignment, so the last of any duplicate indices wins, as in Polars.
+        for index, value in zip(indices.native, replacements, strict=False):
+            if not -n <= index < n:
+                msg = f"Scatter indices are out of bounds for Series of length {n}."
+                raise IndexError(msg)
             result[index] = value
         return self._with_native(result)
 
@@ -1248,3 +1281,5 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         from narwhals_dict.series_cat import DictSeriesCatNamespace
 
         return DictSeriesCatNamespace(self)
+
+    map: Any = not_implemented()

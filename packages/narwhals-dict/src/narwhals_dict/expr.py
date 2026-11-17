@@ -3,9 +3,9 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import EagerExpr
-from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import Implementation
+from narwhals.compliant import EagerExpr
+from narwhals.utils import Implementation
+from narwhals_dict._vendored import evaluate_output_names_and_aliases
 from narwhals_dict.series import DictSeries
 from narwhals_dict.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
@@ -14,10 +14,11 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals.utils import Version
+    from narwhals_dict._vendored import AliasNames, EvalNames, EvalSeries
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.namespace import DictNamespace
+    from narwhals_dict.typing import Context
 
 
 class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
@@ -39,11 +40,7 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
 
     @classmethod
     def from_column_names(
-        cls,
-        evaluate_column_names: EvalNames[DictDataFrame],
-        /,
-        *,
-        context: _LimitedContext,
+        cls, evaluate_column_names: EvalNames[DictDataFrame], /, *, context: Context
     ) -> Self:
         def func(df: DictDataFrame) -> list[DictSeries]:
             try:
@@ -64,7 +61,7 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         )
 
     @classmethod
-    def from_column_indices(cls, *column_indices: int, context: _LimitedContext) -> Self:
+    def from_column_indices(cls, *column_indices: int, context: Context) -> Self:
         def func(df: DictDataFrame) -> list[DictSeries]:
             columns = df.columns
             return [

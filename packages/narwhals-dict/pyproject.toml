@@ -1,15 +1,42 @@
 [build-system]
-requires = ["uv_build>=0.11.0,<0.12.0"]
+requires = ["uv_build>=0.11.0,<0.13.0"]
 build-backend = "uv_build"
 
 [project]
 name = "narwhals-dict"
 version = "0.1.0"
+description = "Pure-Python eager Narwhals backend for dicts of lists"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
-dependencies = ["narwhals>=2.10.0"]
+dependencies = ["narwhals>=2.29.0"]
+
+[project.urls]
+Homepage = "https://github.com/narwhals-dev/narwhals"
+Repository = "https://github.com/narwhals-dev/narwhals"
 
 [project.entry-points.'narwhals.plugins']
 narwhals-dict = 'narwhals_dict'
 
+[dependency-groups]
+# For running Narwhals' own test suite against this plugin, see the README.
+tests = [
+  "covdefaults",
+  "hypothesis>=6.0.0",
+  "numpy",
+  "packaging>=21.3",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "pytest>=9.0.3",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-randomly",
+  "pytest-xdist",
+]
+
+[tool.uv]
+default-groups = ["tests"]
+
 [tool.uv.sources]
-narwhals = { workspace = true }
+narwhals = { path = "../..", editable = true }

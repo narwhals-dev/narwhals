@@ -10,14 +10,16 @@ from functools import lru_cache
 from itertools import islice
 from typing import TYPE_CHECKING, Any, cast
 
-from narwhals._datetime_formats import DATE_FORMATS, FULL_RE, TIME_FORMATS
-from narwhals._utils import (
-    Version,
+from narwhals.dependencies import get_numpy
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
+from narwhals.utils import Version
+from narwhals_dict._vendored import (
+    DATE_FORMATS,
+    FULL_RE,
+    TIME_FORMATS,
     check_column_names_are_unique,
     isinstance_or_issubclass,
 )
-from narwhals.dependencies import get_numpy
-from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator

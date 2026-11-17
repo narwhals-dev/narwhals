@@ -8,7 +8,7 @@ from narwhals_dict.series import DictSeries
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from narwhals._utils import Version
+    from narwhals.utils import Version
 
 # Leaf node names (see `ExprNode` in `narwhals._expression_parsing`) the kernel
 # supports; each is the name of the identically-behaving `DictSeries` method.

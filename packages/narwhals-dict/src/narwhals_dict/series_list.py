@@ -4,9 +4,9 @@ import statistics
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import EagerSeriesNamespace
-from narwhals._compliant.any_namespace import ListNamespace
+from narwhals.compliant import ListNamespace
 from narwhals.exceptions import InvalidOperationError
+from narwhals_dict._vendored import SeriesNamespace
 from narwhals_dict.utils import infer_dtype, non_null, sort_with_nulls
 
 if TYPE_CHECKING:
@@ -16,9 +16,7 @@ if TYPE_CHECKING:
     from narwhals_dict.series import DictSeries
 
 
-class DictSeriesListNamespace(
-    EagerSeriesNamespace["DictSeries", Any], ListNamespace["DictSeries"]
-):
+class DictSeriesListNamespace(SeriesNamespace["DictSeries"], ListNamespace["DictSeries"]):
     def _unary(self, fn: Callable[[Sequence[Any]], Any]) -> DictSeries:
         """Apply `fn` to each inner list, propagating outer nulls."""
         return self.with_native(

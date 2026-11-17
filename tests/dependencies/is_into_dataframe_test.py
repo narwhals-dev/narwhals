@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -78,9 +79,11 @@ def test_is_into_dataframe_numpy() -> None:
 
 
 def test_is_into_dataframe_other(always_has_attr: AlwaysHasAttr) -> None:
-    assert not is_into_dataframe(data)
-    assert not v1_is_into_dataframe(data)
-    assert not v2_is_into_dataframe(data)
+    # If `narwhals_dict` is installed, a plain `dict` is convertible to a DataFrame.
+    expected = find_spec("narwhals_dict") is not None
+    assert is_into_dataframe(data) is expected
+    assert v1_is_into_dataframe(data) is expected
+    assert v2_is_into_dataframe(data) is expected
 
     assert is_into_dataframe(DictDataFrame(data))
     assert v1_is_into_dataframe(DictDataFrame(data))

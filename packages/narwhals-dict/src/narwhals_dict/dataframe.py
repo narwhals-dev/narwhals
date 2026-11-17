@@ -7,17 +7,17 @@ from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping
 from itertools import chain, compress, islice, repeat
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
-from narwhals._compliant import EagerDataFrame
-from narwhals._typing_compat import assert_never
-from narwhals._utils import (
-    Implementation,
+from narwhals.compliant import EagerDataFrame
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.utils import Implementation
+from narwhals_dict._vendored import (
+    assert_never,
     check_column_names_are_unique,
     not_implemented,
     scale_bytes,
 )
-from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.series import DictSeries
 from narwhals_dict.utils import infer_dtype, is_native_frame, nan_last_column
 
@@ -33,14 +33,11 @@ if TYPE_CHECKING:
     from _typeshed import SupportsWrite
     from typing_extensions import Self, TypeIs
 
-    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
-    from narwhals._spark_like.utils import SparkSession
-    from narwhals._translate import IntoArrowTable
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals.compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import (
         AsofJoinStrategy,
+        Backend,
         IntoDType,
         JoinStrategy,
         PivotAgg,
@@ -51,10 +48,11 @@ if TYPE_CHECKING:
         _SliceIndex,
         _SliceName,
     )
+    from narwhals.utils import Version
     from narwhals_dict.expr import DictExpr
     from narwhals_dict.group_by import DictGroupBy
     from narwhals_dict.namespace import DictNamespace
-    from narwhals_dict.typing import DictFrame, NativeSeries
+    from narwhals_dict.typing import Context, DictFrame, NativeSeries
 
 
 class DictDataFrame(
@@ -85,7 +83,7 @@ class DictDataFrame(
         return is_native_frame(obj)
 
     @classmethod
-    def from_native(cls, data: DictFrame, /, *, context: _LimitedContext) -> Self:
+    def from_native(cls, data: DictFrame, /, *, context: Context) -> Self:
         return cls(data, version=context._version)
 
     @classmethod
@@ -94,7 +92,7 @@ class DictDataFrame(
         data: Mapping[str, Any],
         /,
         *,
-        context: _LimitedContext,
+        context: Context,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         names = list(schema) if schema else list(data)
@@ -117,7 +115,7 @@ class DictDataFrame(
         data: Sequence[Mapping[str, Any]],
         /,
         *,
-        context: _LimitedContext,
+        context: Context,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         names = list(schema) if schema else (list(data[0]) if data else [])
@@ -130,7 +128,7 @@ class DictDataFrame(
         data: _2DArray,
         /,
         *,
-        context: _LimitedContext,
+        context: Context,
         schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         names = (
@@ -146,12 +144,11 @@ class DictDataFrame(
         return cls(native, version=context._version)
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
-        from narwhals._utils import _into_arrow_table
+    def from_arrow(cls, data: Any, /, *, context: Context) -> Self:
+        import pyarrow as pa  # ignore-banned-import
 
-        # Reuse narwhals' pyarrow bridge (handles both `pa.Table` and any
-        # `__arrow_c_stream__` object), then materialize columns as plain lists.
-        table = _into_arrow_table(data, context)
+        # Accepts both `pa.Table` and any `__arrow_c_stream__` object.
+        table = pa.table(data)
         native: DictFrame = {
             name: column.to_pylist()
             for name, column in zip(table.column_names, table.columns, strict=True)
@@ -795,9 +792,9 @@ class DictDataFrame(
             )
         if how == "semi":
             return self._join_semi(other, left_on=left_on, right_on=right_on)
-        if how == "anti":
-            return self._join_anti(other, left_on=left_on, right_on=right_on)
-        assert_never(how)
+        if how != "anti":
+            assert_never(how)
+        return self._join_anti(other, left_on=left_on, right_on=right_on)
 
     def _asof_candidates(
         self, on: str, by: Sequence[str] | None
@@ -876,100 +873,55 @@ class DictDataFrame(
         return self._with_native(result, validate_column_names=False)
 
     def lazy(
-        self,
-        backend: _LazyAllowedImpl | None = None,
-        *,
-        session: SparkSession | None = None,
-    ) -> CompliantLazyFrameAny:
+        self, backend: Implementation | None = None, *, session: Any = None
+    ) -> CompliantLazyFrame[Any, Any, Any]:
+        native: Any
         match backend:
             case None:
                 return self
             case Implementation.POLARS:
-                from narwhals._polars.dataframe import PolarsLazyFrame
-
-                return PolarsLazyFrame(
-                    self.to_polars().lazy(),
-                    validate_backend_version=True,
-                    version=self._version,
-                )
+                native = self.to_polars().lazy()
             case Implementation.DUCKDB:
                 import duckdb  # ignore-banned-import
 
-                from narwhals._duckdb.dataframe import DuckDBLazyFrame
-
-                _df = self.to_arrow()  # `duckdb.table` reads it from this frame
-                return DuckDBLazyFrame(
-                    duckdb.table("_df"),
-                    validate_backend_version=True,
-                    version=self._version,
-                )
+                native = duckdb.from_arrow(self.to_arrow())
             case Implementation.DASK:
                 import dask.dataframe as dd  # ignore-banned-import
 
-                from narwhals._dask.dataframe import DaskLazyFrame
-
-                return DaskLazyFrame(
-                    dd.from_pandas(self.to_pandas()),
-                    validate_backend_version=True,
-                    version=self._version,
-                )
+                native = dd.from_pandas(self.to_pandas())
             case Implementation.IBIS:
                 import ibis  # ignore-banned-import
 
-                from narwhals._ibis.dataframe import IbisLazyFrame
-
-                return IbisLazyFrame(
-                    ibis.memtable(self.to_arrow(), columns=self.columns),
-                    validate_backend_version=True,
-                    version=self._version,
-                )
+                native = ibis.memtable(self.to_arrow(), columns=self.columns)
             case backend if backend.is_spark_like():
-                from narwhals._spark_like.dataframe import SparkLikeLazyFrame
-
                 if session is None:
                     msg = "Spark like backends require `session` to be not None."
                     raise ValueError(msg)
-                return SparkLikeLazyFrame._from_compliant_dataframe(
-                    self, session=session, implementation=backend, version=self._version
-                )
+                native = session.createDataFrame(self.to_pandas())
             case _:  # pragma: no cover
                 msg = f"Unsupported `backend` value: {backend}"
                 raise ValueError(msg)
+        namespace = self._version.namespace.from_backend(cast("Backend", backend))
+        return namespace.compliant.from_native(native)
 
     def collect(
-        self, backend: _EagerAllowedImpl | None, **kwargs: Any
-    ) -> CompliantDataFrameAny:
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrame[Any, Any, Any, Any]:
+        native: Any
         match backend:
             case None:
                 return self
             case Implementation.PANDAS:
-                from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-
-                return PandasLikeDataFrame(
-                    self.to_pandas(),
-                    implementation=Implementation.PANDAS,
-                    validate_backend_version=True,
-                    version=self._version,
-                    validate_column_names=False,
-                )
+                native = self.to_pandas()
             case Implementation.PYARROW:
-                from narwhals._arrow.dataframe import ArrowDataFrame
-
-                return ArrowDataFrame(
-                    self.to_arrow(),
-                    validate_backend_version=True,
-                    version=self._version,
-                    validate_column_names=False,
-                )
+                native = self.to_arrow()
             case Implementation.POLARS:
-                from narwhals._polars.dataframe import PolarsDataFrame
-
-                return PolarsDataFrame(
-                    self.to_polars(), validate_backend_version=True, version=self._version
-                )
+                native = self.to_polars()
             case _:  # pragma: no cover
                 msg = f"Unsupported `backend` value: {backend}"
                 raise ValueError(msg)
+        namespace = self._version.namespace.from_backend(cast("Backend", backend))
+        return namespace.compliant.from_native(native)
 
     @staticmethod
     def _row_keys(columns: Sequence[NativeSeries]) -> Sequence[Any]:
@@ -1076,7 +1028,13 @@ class DictDataFrame(
         result[value_name] = list(chain.from_iterable(native[name] for name in on))
         return self._with_native(result)
 
-    def explode(self, columns: Sequence[str]) -> Self:
+    def explode(
+        self,
+        columns: Sequence[str],
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         dtypes = self._version.dtypes
         for name in columns:
             if not isinstance((dtype := self.get_column(name).dtype), dtypes.List):
@@ -1085,33 +1043,37 @@ class DictDataFrame(
                     "expected List type"
                 )
                 raise InvalidOperationError(msg)
-        # Per-row element count of the first exploded column, the anchor every
-        # other exploded column must match. A null list counts as `None` (its own
-        # value, distinct from any int) so it only matches another null, while an
-        # empty list counts as `0` -- both still explode to a single null row.
-        counts = [None if cell is None else len(cell) for cell in self.native[columns[0]]]
+
+        def shape(cell: Sequence[Any] | None) -> tuple[bool, int]:
+            # `(is non-empty list, rows it expands to)`: a non-empty list never matches
+            # a null/empty one, which only match each other if they expand alike.
+            if cell:
+                return True, len(cell)
+            return False, int(keep_nulls if cell is None else empty_as_null)
+
+        shapes = [shape(cell) for cell in self.native[columns[0]]]
         to_explode = set(columns)
         for name in columns[1:]:
             column = self.native[name]
             if any(
-                (None if cell is None else len(cell)) != count
-                for cell, count in zip(column, counts, strict=True)
+                shape(cell) != expected
+                for cell, expected in zip(column, shapes, strict=True)
             ):
                 msg = "exploded columns must have matching element counts"
                 raise ShapeError(msg)
         result: DictFrame = {}
         for name, column in self.native.items():
             if name in to_explode:
-                # `if cell:` is False for both `None` and `[]`, which each yield a
-                # single null; a non-empty list contributes its elements as-is.
                 result[name] = [
-                    element for cell in column for element in (cell or (None,))
+                    element
+                    for cell, (_, count) in zip(column, shapes, strict=True)
+                    for element in (cell or repeat(None, count))
                 ]
             else:
                 result[name] = [
                     value
-                    for value, count in zip(column, counts, strict=True)
-                    for _ in range(count or 1)
+                    for value, (_, count) in zip(column, shapes, strict=True)
+                    for _ in range(count)
                 ]
         return self._with_native(result, validate_column_names=False)
 
