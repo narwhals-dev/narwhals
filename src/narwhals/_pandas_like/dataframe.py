@@ -953,8 +953,7 @@ class PandasLikeDataFrame(
         # `DataFrame.to_dict` goes through NumPy and turns nulls into NaN for
         # pyarrow-backed columns, so convert those column by column instead.
         result: dict[str, Any] = {}
-        for col in self.columns:
-            ser = self.native[col]
+        for col, ser in self.native.items():
             if hasattr(ser.dtype, "pyarrow_dtype"):
                 result[col] = ser.astype(object).where(ser.notna(), None).tolist()
             else:

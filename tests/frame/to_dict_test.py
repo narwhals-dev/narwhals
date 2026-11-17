@@ -27,7 +27,7 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_to_dict_pyarrow_backed_pandas_nulls() -> None:
-    pd = pytest.importorskip("pandas")
+    pd = pytest.importorskip("pandas", minversion="1.5.0")
     pa = pytest.importorskip("pyarrow")
     tbl = pa.table({"i": [1, None, 3], "f": [1.5, float("nan"), None]})
     native = tbl.to_pandas(types_mapper=pd.ArrowDtype)
