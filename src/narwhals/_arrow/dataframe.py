@@ -766,8 +766,6 @@ class ArrowDataFrame(
         maintain_order: bool | None = None,
         order_by: Sequence[str] | None,
     ) -> Self:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
         if subset and (error := self._check_columns_exist(subset)):
@@ -801,6 +799,13 @@ class ArrowDataFrame(
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
+            if maintain_order:
+                mask: _1DArray = np.zeros(len(self), dtype=bool)
+                # A keyless `group_by` (zero-column frame) over zero rows yields one null.
+                mask[keep_idx_native.drop_null().to_numpy()] = True
+                return self._with_native(
+                    native.filter(pa.array(mask)), validate_column_names=False
+                )
             return self._with_native(
                 native.take(keep_idx_native), validate_column_names=False
             )
