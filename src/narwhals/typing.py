@@ -14,7 +14,7 @@ from narwhals._native import (
     IntoSeries,
     IntoSeriesT,
 )
-from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
+from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed, NoDefault
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -90,6 +90,8 @@ if TYPE_CHECKING:
         def Struct(self) -> type[dtypes.Struct]: ...
         @property
         def List(self) -> type[dtypes.List]: ...
+        @property
+        def Map(self) -> type[dtypes.Map]: ...
         @property
         def Array(self) -> type[dtypes.Array]: ...
         @property
@@ -436,6 +438,7 @@ __all__ = [
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",
+    "NoDefault",
     "NormalizedPath",
     "NormalizedSource",
 ]

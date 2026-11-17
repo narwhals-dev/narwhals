@@ -25,6 +25,7 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    qualified_type_name,
     scale_bytes,
     supports_arrow_c_stream,
 )
@@ -108,10 +109,10 @@ class ArrowDataFrame(
         elif backend_version >= (14,) or isinstance(data, Collection):
             native = pa.table(data)
         elif supports_arrow_c_stream(data):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {type(data).__name__!r}."
+            msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."
             raise ModuleNotFoundError(msg)
         else:  # pragma: no cover
-            msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
+            msg = f"`from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
             raise TypeError(msg)
         return cls.from_native(native, context=context)
 
@@ -604,13 +605,9 @@ class ArrowDataFrame(
         if backend is Implementation.DASK:
             import dask.dataframe as dd  # ignore-banned-import
 
-            from narwhals._dask.dataframe import DaskLazyFrame
-
-            return DaskLazyFrame(
-                dd.from_pandas(self.native.to_pandas()),
-                validate_backend_version=True,
-                version=self._version,
-            )
+            native_dask = dd.from_pandas(self.native.to_pandas())
+            dask_ns = self._version.namespace.from_backend(Implementation.DASK)
+            return dask_ns.compliant.from_native(native_dask)
         if backend is Implementation.IBIS:
             import ibis  # ignore-banned-import
 
@@ -765,8 +762,6 @@ class ArrowDataFrame(
         maintain_order: bool | None = None,
         order_by: Sequence[str] | None,
     ) -> Self:
-        # The param `maintain_order` is only here for compatibility with the Polars API
-        # and has no effect on the output.
         import numpy as np  # ignore-banned-import
 
         if subset and (error := self._check_columns_exist(subset)):
@@ -800,6 +795,13 @@ class ArrowDataFrame(
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")
             )
+            if maintain_order:
+                mask: _1DArray = np.zeros(len(self), dtype=bool)
+                # A keyless `group_by` (zero-column frame) over zero rows yields one null.
+                mask[keep_idx_native.drop_null().to_numpy()] = True
+                return self._with_native(
+                    native.filter(pa.array(mask)), validate_column_names=False
+                )
             return self._with_native(
                 native.take(keep_idx_native), validate_column_names=False
             )

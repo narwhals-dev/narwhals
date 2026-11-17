@@ -73,13 +73,14 @@ def read_documented_members(source: str | Path) -> list[str]:
 
 ret = 0
 
-NAMESPACES = {"dt", "str", "cat", "name", "list", "struct"}
+NAMESPACES = {"dt", "str", "cat", "name", "list", "map", "struct"}
 EXPR_ONLY_METHODS = {"over", "map_batches"}
 SERIES_ONLY_METHODS = {
     "arg_max",
     "arg_min",
     "arg_true",
     "dtype",
+    "from_arrow",
     "from_iterable",
     "from_numpy",
     "gather_every",

@@ -99,6 +99,7 @@ NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
 UNSUPPORTED_DTYPES = (
     dtypes.Struct,
     dtypes.Array,
+    dtypes.Map,
     dtypes.Time,
     dtypes.Binary,
     dtypes.Decimal,

@@ -50,6 +50,7 @@ from narwhals.stable.v1.dtypes import (
     Int64,
     Int128,
     List,
+    Map,
     Object,
     String,
     Struct,
@@ -90,6 +91,7 @@ if TYPE_CHECKING:
         AllowSeriesV1 as AllowSeries,
         ExcludeSeriesStrictV1 as ExcludeSeriesStrict,
         ExcludeSeriesV1 as ExcludeSeries,
+        IntoArrowSeries,
         IntoArrowTable,
         OnlyEagerOrInterchange,
         OnlyEagerOrInterchangeStrict,
@@ -339,6 +341,17 @@ class Series(NwSeries[IntoSeriesT]):
         backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
+
+    @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        result = super().from_arrow(name, values, backend=backend)
         return cast("Series[Any]", result)
 
     @classmethod
@@ -1167,6 +1180,7 @@ __all__ = [
     "InvalidIntoExprError",
     "LazyFrame",
     "List",
+    "Map",
     "Object",
     "Schema",
     "Series",

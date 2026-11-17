@@ -177,6 +177,7 @@ IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
 
 NoDefault: TypeAlias = Literal[_NoDefault.no_default]
+"""The type of [`narwhals.utils.NO_DEFAULT`][], for annotating parameters which accept it."""
 
 IOMethodName: TypeAlias = Literal["read_csv", "read_parquet", "scan_csv", "scan_parquet"]
 """Name of a Narwhals IO function, dispatched to a same-named namespace method."""

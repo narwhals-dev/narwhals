@@ -475,14 +475,28 @@ class BaseFrame(Generic[_FrameT]):
         )
         raise NotImplementedError(msg)
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         to_explode = (
             [columns, *more_columns]
             if isinstance(columns, str)
             else [*columns, *more_columns]
         )
 
-        return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
+        compliant = self._compliant_frame
+        if empty_as_null and keep_nulls:
+            # Plugins written before these flags existed implement `explode(columns)`.
+            return self._with_compliant(compliant.explode(columns=to_explode))
+        return self._with_compliant(
+            compliant.explode(
+                columns=to_explode, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+            )
+        )
 
 
 class DataFrame(BaseFrame[DataFrameT]):
@@ -579,7 +593,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             └──────────────────┘
         """
         if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
-            msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+            msg = f"Given object of type {qualified_type_name(native_frame)!r} does not support PyCapsule interface"
             raise TypeError(msg)
         ns = eager_namespace(
             backend, version=cls._version, function_name="DataFrame.from_arrow"
@@ -807,10 +821,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {qualified_type_name(native_frame)!r}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {qualified_type_name(native_frame)!r}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
@@ -2380,7 +2394,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -2390,6 +2410,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             columns: Column names. The underlying columns being exploded must be of the `List` data type.
             *more_columns: Additional names of columns to explode, specified as positional arguments.
+            empty_as_null: How to explode an empty list. If `True`, an empty list explodes
+                into a single null row; if `False`, it produces no rows.
+            keep_nulls: How to explode a null list. If `True`, a null list explodes into a
+                single null row; if `False`, it produces no rows.
 
         Examples:
             >>> import polars as pl
@@ -2408,7 +2432,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ y   ┆ 3   │
             └─────┴─────┘
         """
-        return super().explode(columns, *more_columns)
+        return super().explode(
+            columns, *more_columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+        )
 
 
 class LazyFrame(BaseFrame[LazyFrameT]):
@@ -3414,7 +3440,13 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -3424,6 +3456,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         Arguments:
             columns: Column names. The underlying columns being exploded must be of the `List` data type.
             *more_columns: Additional names of columns to explode, specified as positional arguments.
+            empty_as_null: How to explode an empty list. If `True`, an empty list explodes
+                into a single null row; if `False`, it produces no rows.
+            keep_nulls: How to explode a null list. If `True`, a null list explodes into a
+                single null row; if `False`, it produces no rows.
 
         Examples:
             >>> import duckdb
@@ -3446,4 +3482,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └─────────┴───────┘
             <BLANKLINE>
         """
-        return super().explode(columns, *more_columns)
+        return super().explode(
+            columns, *more_columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+        )

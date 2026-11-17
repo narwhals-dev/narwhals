@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.28.0"
+version = "2.29.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -236,6 +236,11 @@ conflicts = [
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# NOTE: the standalone plugins have their own environment and lock file. Installing
+# `narwhals-dask` replaces the built-in Dask backend, and its `dask` requirement conflicts
+# with the `extreme-*` groups. Installing `narwhals-dict` makes it claim every plain `dict`,
+# which clashes with `test-plugin`.
+exclude = ["packages/narwhals-dask", "packages/narwhals-dict"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
@@ -369,6 +374,8 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = [
   "error",
+  # Emitted when using Dask without `narwhals-dask` installed, see `tests/dask_plugin_test.py`.
+  'ignore:Dask support is moving out of Narwhals:FutureWarning',
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
@@ -475,7 +482,16 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin", "packages/narwhals-dict"]
+files = [
+  "src",
+  "tests",
+  "packages/test-plugin",
+  "packages/narwhals-dask/src",
+  "packages/narwhals-dict/src",
+]
+# NOTE: the standalone plugins are resolved from source rather than installed: installing
+# `narwhals-dask` replaces the built-in Dask backend, and `narwhals-dict` claims plain dicts.
+mypy_path = ["packages/narwhals-dask/src", "packages/narwhals-dict/src"]
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -523,16 +539,23 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin", "packages/narwhals-dict"]
+include = [
+  "src",
+  "tests",
+  "packages/test-plugin",
+  "packages/narwhals-dask/src",
+  "packages/narwhals-dict/src",
+]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
 defineConstant = { "MYPY" = false }
+extraPaths = ["packages/narwhals-dask/src", "packages/narwhals-dict/src"]
 
 [tool.pyrefly]
-search-path = ["src", "."]
+search-path = ["src", ".", "packages/narwhals-dask/src", "packages/narwhals-dict/src"]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",
