@@ -56,6 +56,17 @@ if TYPE_CHECKING:
     from pizzlies._plugin.typing import Context, DictFrame, NativeSeries
 
 
+def _row_filter(
+    mask: Sequence[Any], *, n_kept: int, n_columns: int
+) -> Callable[[Sequence[Any]], list[Any]]:
+    """Keep the rows of any column where `mask` is truthy, in order."""
+    if n_columns > 1 and n_kept * 2 < len(mask):
+        # Gathering the kept rows beats scanning each whole column with `compress`,
+        # once their indices are found (in one scan, shared by all columns).
+        return gatherer(list(compress(range(len(mask)), mask)))
+    return lambda column: list(compress(column, mask))
+
+
 def _nullable_gatherer(
     indices: Sequence[int | None],
 ) -> Callable[[Sequence[Any]], list[Any]]:
@@ -309,8 +320,9 @@ class DictDataFrame(
         if len(mask) != len(self):
             msg = f"Expected mask of length {len(self)}, got: {len(mask)}."
             raise ShapeError(msg)
+        keep = _row_filter(mask, n_kept=mask.count(True), n_columns=len(self.native))
         return self._with_native(
-            {name: list(compress(column, mask)) for name, column in self.native.items()},
+            {name: keep(column) for name, column in self.native.items()},
             validate_column_names=False,
         )
 
@@ -705,11 +717,13 @@ class DictDataFrame(
         right_names = self._join_output_names(
             other, exclude_right=exclude_right, suffix=suffix
         )
-        all_matched = None not in positions
-        gather = gatherer(list(map(operator.sub, filter(None, positions), repeat(1))))
-
-        def keep(column: Sequence[Any]) -> Sequence[Any]:
-            return column if all_matched else list(compress(column, positions))
+        matches = list(map(operator.sub, filter(None, positions), repeat(1)))
+        gather = gatherer(matches)
+        if len(matches) == len(positions):  # every probing row matched
+            keep: Callable[[Sequence[Any]], Sequence[Any]] = lambda column: column  # noqa: E731
+        else:
+            n_columns = len(self.native if probe_is_left else other.native)
+            keep = _row_filter(positions, n_kept=len(matches), n_columns=n_columns)
 
         take_left, take_right = (keep, gather) if probe_is_left else (gather, keep)
         result: DictFrame = {

@@ -190,7 +190,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return other, True
 
     def _with_binary(
-        self, op: Callable[[Any, Any], Any], other: Any, *, propagate_null: bool = True
+        self,
+        op: Callable[[Any, Any], Any],
+        other: Any,
+        *,
+        propagate_null: bool = True,
+        reflected: bool = False,
     ) -> Self:
         rhs, rhs_is_scalar = self._extract_comparand(other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
@@ -198,11 +203,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             # e.g. `nw.lit(1) + nw.col("a")`: broadcast the scalar left-hand side.
             lhs = self.native[0] if self.native else None
             result = binary_op(
-                lambda value, scalar: op(scalar, value),
+                op,
                 rhs,
                 lhs,
                 is_scalar=True,
                 propagate_null=propagate_null,
+                reflected=not reflected,
             )
         else:
             result = binary_op(
@@ -211,6 +217,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                 rhs,
                 is_scalar=rhs_is_scalar,
                 propagate_null=propagate_null,
+                reflected=reflected,
             )
         return self._with_native(result, preserve_broadcast=preserve_broadcast)
 
@@ -228,13 +235,16 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_binary(bitwise, other)
 
     def _with_binary_right(self, op: Callable[[Any, Any], Any], other: Any) -> Self:
-        return self._with_binary(lambda lhs, rhs: op(rhs, lhs), other)
+        return self._with_binary(op, other, reflected=True)
 
     def _with_unary(
         self, fn: Callable[[Any], Any], *, preserve_broadcast: bool = True
     ) -> Self:
+        native = self.native
         return self._with_native(
-            [None if value is None else fn(value) for value in self.native],
+            list(map(fn, native))
+            if None not in native
+            else [None if value is None else fn(value) for value in native],
             preserve_broadcast=preserve_broadcast,
         )
 

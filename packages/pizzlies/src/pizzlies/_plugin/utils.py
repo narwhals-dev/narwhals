@@ -6,8 +6,8 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, time, timedelta, timezone
-from functools import lru_cache
-from itertools import islice
+from functools import lru_cache, partial
+from itertools import islice, repeat
 from operator import itemgetter
 from typing import TYPE_CHECKING, Any, cast
 
@@ -687,8 +687,9 @@ def binary_op(
     *,
     is_scalar: bool,
     propagate_null: bool = True,
+    reflected: bool = False,
 ) -> list[Any]:
-    """Elementwise binary operation.
+    """Elementwise binary operation, `op(left, right)`, or `op(right, left)` if `reflected`.
 
     By default any `None` (null) operand yields `None` without calling `op`.
     Pass `propagate_null=False` for operators that define their own null
@@ -698,20 +699,30 @@ def binary_op(
     if is_scalar:
         if right is None and propagate_null:
             return [None] * len(left)
-        left, right = promote_decimal_mix(left, right, is_scalar=True)
+    elif len(left) != len(right):
+        msg = f"Expected object of length {len(left)}, got: {len(right)}."
+        raise ShapeError(msg)
+    left, right = promote_decimal_mix(left, right, is_scalar=is_scalar)
+    if propagate_null and None not in left and (is_scalar or None not in right):
+        # No nulls to skip: apply `op` directly, at C speed for builtin operators.
+        others = repeat(right) if is_scalar else right
+        return list(map(op, others, left) if reflected else map(op, left, others))
+    if reflected:
+        op = partial(_swapped, op)
+    if is_scalar:
         if not propagate_null:
             return [op(lhs, right) for lhs in left]
         return [None if lhs is None else op(lhs, right) for lhs in left]
-    if len(left) != len(right):
-        msg = f"Expected object of length {len(left)}, got: {len(right)}."
-        raise ShapeError(msg)
-    left, right = promote_decimal_mix(left, right, is_scalar=False)
     if not propagate_null:
         return [op(lhs, rhs) for lhs, rhs in zip(left, right, strict=True)]
     return [
         None if (lhs is None or rhs is None) else op(lhs, rhs)
         for lhs, rhs in zip(left, right, strict=True)
     ]
+
+
+def _swapped(op: Callable[[Any, Any], Any], lhs: Any, rhs: Any) -> Any:
+    return op(rhs, lhs)
 
 
 _FULL_DATETIME_RE = re.compile(FULL_RE)

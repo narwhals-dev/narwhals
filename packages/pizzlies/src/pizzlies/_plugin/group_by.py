@@ -33,8 +33,12 @@ def _bucket_by_keys(key_columns: Sequence[Sequence[Any]]) -> dict[Any, list[int]
         if len(key_columns) == 1
         else enumerate(zip(*key_columns, strict=True))
     )
+    get = groups.get
     for index, key in it:
-        groups.setdefault(key, []).append(index)
+        if (rows := get(key)) is None:
+            groups[key] = [index]
+        else:
+            rows.append(index)
     return groups
 
 

@@ -106,6 +106,35 @@ def test_roundtrip(codec: str, data_page_version: str, use_dictionary: bool) -> 
     assert all(type(v) is list for v in result.values())
 
 
+@pytest.mark.parametrize("use_dictionary", [True, False])
+@pytest.mark.parametrize(
+    "strings",
+    [
+        ["ascii", "", None, "short"],
+        ["héllo", "naïve", None, "日本語", "🐍"],  # non-ASCII: decoded value by value
+        ["x" * 200, "y", None],  # a length byte >= 128 makes the data non-ASCII
+    ],
+)
+def test_strings(strings: list[str | None], use_dictionary: bool) -> None:  # noqa: FBT001
+    table = pa.table({"s": strings * 50})
+    buf = _write(table, use_dictionary=use_dictionary)
+    assert read_parquet(buf) == table.to_pydict()
+
+
+@pytest.mark.parametrize("n_distinct", [3, 1000, 70_000])
+def test_mixed_rle_and_bitpacked_runs(n_distinct: int) -> None:
+    # Long repeats become RLE runs, varied stretches bit-packed ones, interleaved.
+    rng = random.Random(n_distinct)  # noqa: S311
+    values: list[int] = []
+    while len(values) < 20_000:
+        if rng.random() < 0.5:
+            values += [rng.randrange(n_distinct)] * rng.randint(8, 100)
+        else:
+            values += [rng.randrange(n_distinct) for _ in range(rng.randint(1, 50))]
+    table = pa.table({"a": values})
+    assert read_parquet(_write(table, data_page_size=4096)) == {"a": values}
+
+
 def test_int96_timestamps() -> None:
     values = [
         dt.datetime(1999, 12, 31, 23, 59, 59, 123456),

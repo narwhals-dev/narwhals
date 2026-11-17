@@ -18,14 +18,17 @@ dicts keyed by field id, and only the fields this reader needs are looked up.
 from __future__ import annotations
 
 import datetime as dt
+import operator
 import struct
 import sys
 import zlib
 from decimal import Decimal
+from functools import cache
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterator, Sequence
     from typing import BinaryIO
 
     Converter = Callable[[Any], Any]
@@ -207,37 +210,118 @@ def _decompress(codec: int, data: bytes) -> bytes:
     raise NotImplementedError(msg)
 
 
+@cache
+def _bit_lanes(bit_width: int) -> list[tuple[int, list[list[int]]]]:
+    """How to read each of the 8 values of a bit-packed group, see `_unpack_bits`.
+
+    For value `j`: the offset of its first byte in the group, and one 256-entry table
+    per byte it spans, mapping that byte to its contribution to the value.
+    """
+    mask = (1 << bit_width) - 1
+    lanes = []
+    for j in range(8):
+        first, shift = divmod(j * bit_width, 8)
+        n_bytes = (shift + bit_width + 7) // 8
+        tables = [
+            [((byte << (8 * k)) >> shift) & mask for byte in range(256)]
+            for k in range(n_bytes)
+        ]
+        lanes.append((first, tables))
+    return lanes
+
+
+def _unpack_bits(data: bytes, bit_width: int) -> list[int]:
+    """Unpack groups of 8 little-endian `bit_width`-bit values, `bit_width` bytes each.
+
+    Value `j` of every group sits at the same byte offset and bit shift, so all of
+    them are read at once from strided slices, through lookup tables: there's no
+    Python-level work per value.
+    """
+    lanes = []
+    for first, (table, *more_tables) in _bit_lanes(bit_width):
+        lane: Iterator[int] = map(table.__getitem__, data[first::bit_width])
+        for k, extra in enumerate(more_tables, start=1):
+            lane = map(
+                operator.add, lane, map(extra.__getitem__, data[first + k :: bit_width])
+            )
+        lanes.append(lane)
+    return list(chain.from_iterable(zip(*lanes, strict=True)))
+
+
 def _decode_rle_bitpacked(
     buf: bytes, pos: int, end: int, bit_width: int, count: int
 ) -> list[int]:
     """Decode `count` values of the RLE / bit-packing hybrid encoding."""
     if bit_width == 0:
         return [0] * count
-    out: list[int] = []
     byte_width = (bit_width + 7) // 8
-    mask = (1 << bit_width) - 1
-    while len(out) < count and pos < end:
+    # Writers interleave many short bit-packed and RLE runs. Unpacking every
+    # bit-packed run in one go is much cheaper than unpacking each separately:
+    # `runs` holds `(value, n)` for RLE runs, and `(None, n)` for bit-packed ones.
+    runs: list[tuple[int | None, int]] = []
+    packed: list[bytes] = []
+    n_values = 0
+    while n_values < count and pos < end:
         r = _Reader(buf, pos)
         header = r.varint()
         pos = r.pos
         if header & 1:  # bit-packed groups of 8 values, `bit_width` bytes per group
-            n_groups = header >> 1
-            # Unpack a few groups at a time, as shifting one huge int is quadratic.
-            for first in range(0, n_groups, 64):
-                groups = min(64, n_groups - first)
-                n_bytes = groups * bit_width
-                packed = int.from_bytes(buf[pos : pos + n_bytes], "little")
-                pos += n_bytes
-                out.extend(
-                    (packed >> s) & mask
-                    for s in range(0, groups * 8 * bit_width, bit_width)
-                )
+            n_bytes = (header >> 1) * bit_width
+            packed.append(buf[pos : pos + n_bytes])
+            pos += n_bytes
+            runs.append((None, (header >> 1) * 8))
         else:  # a run of one repeated value
-            value = int.from_bytes(buf[pos : pos + byte_width], "little")
+            runs.append(
+                (int.from_bytes(buf[pos : pos + byte_width], "little"), header >> 1)
+            )
             pos += byte_width
-            out += [value] * (header >> 1)
+        n_values += runs[-1][1]
+    unpacked = _unpack_bits(b"".join(packed), bit_width) if packed else []
+    if len(runs) == 1 and runs[0][0] is None:
+        out = unpacked
+    else:
+        out = []
+        offset = 0
+        for value, n in runs:
+            if value is None:
+                out += unpacked[offset : offset + n]
+                offset += n
+            else:
+                out += [value] * n
     del out[count:]
     return out
+
+
+_read_uint32 = struct.Struct("<I").unpack_from
+
+
+def _decode_byte_arrays(buf: bytes, pos: int, count: int, *, utf8: bool) -> list[Any]:
+    """PLAIN `BYTE_ARRAY` values: each is a 4-byte length followed by its bytes.
+
+    With `utf8`, values are decoded to `str`. If the data is pure ASCII, bytes and
+    characters line up, so it's decoded once and sliced, rather than value by value.
+    """
+    data = buf[pos:]
+    source: bytes | str = data.decode("ascii") if utf8 and data.isascii() else data
+    out: list[Any] = []
+    append = out.append
+    pos = 0
+    for _ in range(count):
+        (length,) = _read_uint32(data, pos)
+        pos += 4
+        append(source[pos : pos + length])
+        pos += length
+    if utf8 and source is data:
+        return list(map(bytes.decode, out))
+    return out
+
+
+def _decode_plain_values(page: bytes, pos: int, count: int, column: _Column) -> list[Any]:
+    """`_decode_plain`, converted to Python values."""
+    if column.physical == BYTE_ARRAY and column.convert is bytes.decode:
+        return _decode_byte_arrays(page, pos, count, utf8=True)
+    values = _decode_plain(page, pos, column.physical, count, column.type_length)
+    return list(map(column.convert, values)) if column.convert else values
 
 
 def _decode_plain(
@@ -246,13 +330,7 @@ def _decode_plain(
     if fmt := _STRUCT_FORMATS.get(physical):
         return list(struct.unpack_from(f"<{count}{fmt}", buf, pos))
     if physical == BYTE_ARRAY:
-        out = []
-        for _ in range(count):
-            length = int.from_bytes(buf[pos : pos + 4], "little")
-            pos += 4
-            out.append(buf[pos : pos + length])
-            pos += length
-        return out
+        return _decode_byte_arrays(buf, pos, count, utf8=False)
     if physical == BOOLEAN:
         return [bool((buf[pos + i // 8] >> (i % 8)) & 1) for i in range(count)]
     width = 12 if physical == INT96 else type_length
@@ -367,8 +445,7 @@ def _decode_values(
     dictionary: list[Any] | None,
 ) -> list[Any]:
     if encoding == PLAIN:
-        values = _decode_plain(page, pos, column.physical, count, column.type_length)
-        return list(map(column.convert, values)) if column.convert else values
+        return _decode_plain_values(page, pos, count, column)
     if encoding in {PLAIN_DICTIONARY, RLE_DICTIONARY}:
         assert dictionary is not None  # noqa: S101
         indices = _decode_rle_bitpacked(page, pos + 1, len(page), page[pos], count)
@@ -446,9 +523,7 @@ def _read_column_chunk(buf: bytes, meta: dict[int, Any], column: _Column) -> lis
         pos = r.pos + compressed_size
         if page_type == DICTIONARY_PAGE:
             page = _decompress(codec, raw)
-            count = header[7][1]
-            values = _decode_plain(page, 0, column.physical, count, column.type_length)
-            dictionary = list(map(column.convert, values)) if column.convert else values
+            dictionary = _decode_plain_values(page, 0, header[7][1], column)
         elif page_type == DATA_PAGE:
             page = _decompress(codec, raw)
             out += _read_data_page_v1(page, header[5], column, dictionary)
