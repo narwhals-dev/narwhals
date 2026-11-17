@@ -32,14 +32,16 @@ NUMERIC_REDUCTIONS = [
 def test_numeric_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, reduction: str
 ) -> None:
-    if reduction != "sum" and any(
-        x in str(constructor)
-        for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
-    ):
-        reason = "Return an untyped `pd.NA`. `sum` returns a typed zero."
-        request.applymarker(pytest.mark.xfail(reason=reason))
     if reduction in {"skew", "kurtosis"} and any(
-        x in str(constructor) for x in ("pandas_constructor", "modin_constructor", "ibis")
+        x in str(constructor)
+        for x in (
+            "pandas_constructor",
+            "pandas_nullable",
+            "pandas_pyarrow",
+            "modin_constructor",
+            "modin_pyarrow",
+            "ibis",
+        )
     ):
         reason = "pandas-like returns an untyped `None`. Ibis does not implement them."
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -145,3 +147,12 @@ def test_expr_aggregation_keeps_dtype(
     if empty:
         df = df.head(0)
     assert df.select(expr).schema == {"a": dtype}
+
+
+@pytest.mark.parametrize("reduction", ["mean", "min", "max", "median", "std", "var"])
+def test_reduction_all_null_int64_is_numeric_pandas_nullable(reduction: str) -> None:
+    pd = pytest.importorskip("pandas")
+    df = nw.from_native(pd.DataFrame({"a": pd.Series([None, None], dtype="Int64")}))
+    result = df.select(getattr(nw.col("a"), reduction)())
+    assert result.collect_schema()["a"].is_numeric()
+    assert result.select(nw.col("a").is_null())["a"].to_list() == [True]

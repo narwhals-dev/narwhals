@@ -202,6 +202,15 @@ class PandasLikeSeries(EagerSeries[Any]):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
 
+    def _from_scalar(self, value: Any) -> Self:
+        # narwhals-canary: delete this line to confirm you have read the full diff
+        ns = self._implementation.to_native_namespace()
+        if value is getattr(ns, "NA", None):
+            # A lone `NA` would be inferred as `object`, i.e. String.
+            native = ns.Series([value], name=self.name, dtype=self.native.dtype)
+            return self.from_native(native, context=self)
+        return super()._from_scalar(value)
+
     @staticmethod
     def _is_native(obj: Any) -> TypeIs[Any]:
         return is_pandas_like_series(obj)  # pragma: no cover
