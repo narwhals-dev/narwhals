@@ -949,7 +949,17 @@ class PandasLikeDataFrame(
                 col: PandasLikeSeries.from_native(self.native[col], context=self)
                 for col in self.columns
             }
-        return self.native.to_dict(orient="list")
+        # narwhals-canary: delete this line to confirm you have read the full diff
+        # `DataFrame.to_dict` goes through NumPy and turns nulls into NaN for
+        # pyarrow-backed columns, so convert those column by column instead.
+        result: dict[str, Any] = {}
+        for col in self.columns:
+            ser = self.native[col]
+            if hasattr(ser.dtype, "pyarrow_dtype"):
+                result[col] = ser.astype(object).where(ser.notna(), None).tolist()
+            else:
+                result[col] = PandasLikeSeries.from_native(ser, context=self).to_list()
+        return result
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         native_dtypes = self.native.dtypes
