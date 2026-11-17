@@ -18,10 +18,17 @@ from narwhals._utils import (
     is_compliant_series,
     is_index_selector,
     qualified_type_name,
+    supports_arrow_c_array,
     supports_arrow_c_stream,
     unstable,
 )
-from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
+from narwhals.dependencies import (
+    _is_pyarrow_array,
+    _is_pyarrow_chunked_array,
+    is_numpy_array,
+    is_numpy_array_1d,
+    is_numpy_scalar,
+)
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr import Expr
@@ -44,6 +51,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
@@ -170,6 +178,65 @@ class Series(Generic[IntoSeriesT]):
         compliant = ns._series.from_numpy(values, context=ns).alias(name)
         if dtype:
             return cls(compliant.cast(dtype), level="full")
+        return cls(compliant, level="full")
+
+    @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        """Construct a Series from an object which supports the PyCapsule Interface.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: A `pyarrow.Array` or `pyarrow.ChunkedArray`, or an object which
+                implements `__arrow_c_array__` (requires `pyarrow>=14`) or
+                `__arrow_c_stream__` (requires `pyarrow>=16`). A table-like object
+                (e.g. `pyarrow.Table`) becomes a single Struct Series.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = pa.array([5, 6, 7])
+            >>> nw.Series.from_arrow("arr", arr, backend="polars")
+            ┌───────────────────┐
+            |  Narwhals Series  |
+            |-------------------|
+            |shape: (3,)        |
+            |Series: 'arr' [i64]|
+            |[                  |
+            |        5          |
+            |        6          |
+            |        7          |
+            |]                  |
+            └───────────────────┘
+        """
+        # NOTE: Native pyarrow arrays only gained the PyCapsule methods in `pyarrow>=14`
+        if not (
+            _is_pyarrow_chunked_array(values)
+            or _is_pyarrow_array(values)
+            or supports_arrow_c_stream(values)
+            or supports_arrow_c_array(values)
+        ):
+            msg = f"Given object of type {qualified_type_name(values)!r} does not support PyCapsule interface"
+            raise TypeError(msg)
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="Series.from_arrow"
+        )
+        compliant = ns._series.from_arrow(values, context=ns).alias(name)
         return cls(compliant, level="full")
 
     @classmethod
@@ -344,15 +411,41 @@ class Series(Generic[IntoSeriesT]):
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {qualified_type_name(native_series)!r}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
-            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {qualified_type_name(native_series)!r}"
             raise ModuleNotFoundError(msg)
         from narwhals._arrow.utils import chunked_array
 
         ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
+
+    def __arrow_c_array__(
+        self, requested_schema: object | None = None
+    ) -> tuple[object, object]:
+        """Export a Series as a single array via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here: it calls `to_arrow` and then
+        defers to PyArrow's implementation.
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+
+        Note:
+            `pyarrow>=14` is required.
+        """
+        try:
+            pa_version: tuple[int, ...] = Implementation.PYARROW._backend_version()
+        except ModuleNotFoundError:
+            pa_version = ()
+        if pa_version < (14, 0):
+            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)!r}"
+            raise ModuleNotFoundError(msg)
+        result: tuple[object, object] = self.to_arrow().__arrow_c_array__(
+            requested_schema=requested_schema
+        )
+        return result
 
     def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
@@ -1787,6 +1880,16 @@ class Series(Generic[IntoSeriesT]):
     def __ror__(self, other: Any) -> Self:
         return self._with_compliant(
             self._compliant_series.__ror__(self._extract_native(other))
+        )
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_compliant(
+            self._compliant_series.__xor__(self._extract_native(other))
+        )
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_compliant(
+            self._compliant_series.__rxor__(self._extract_native(other))
         )
 
     # unary

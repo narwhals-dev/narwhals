@@ -289,6 +289,20 @@ class PolarsExpr:
             native = pl.selectors.all() & native
         return self._with_native(native)
 
+    def __xor__(self, other: PolarsExpr) -> Self:
+        other_native = extract_native(other)
+        if is_selector(self.native):
+            if not is_selector(other_native):
+                # Polars < 2.0 turns `selector ^ pl.col(...)` into a set operation.
+                return self._with_native(self.native.as_expr() ^ other_native)
+            if BACKEND_VERSION < (1,):
+                # No selector `^` before 1.0; `all() &` restores schema order, as in `__or__`.
+                return self._with_native(
+                    pl.selectors.all()
+                    & ((self.native - other_native) | (other_native - self.native))
+                )
+        return self._with_native(self.native ^ other_native)
+
     def __add__(self, other: Any) -> Self:
         return self._with_native(self.native.__add__(extract_native(other)))
 

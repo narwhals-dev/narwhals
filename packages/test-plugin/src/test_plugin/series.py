@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, _into_arrow_chunked_array
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from typing_extensions import Self
 
+    from narwhals._translate import IntoArrowSeries
     from narwhals._utils import _LimitedContext
     from narwhals.series import Series
     from narwhals.utils import Version
@@ -42,6 +43,11 @@ class DictSeries:
     @classmethod
     def from_numpy(cls, data: Any, /, *, context: _LimitedContext) -> Self:
         return cls(data.tolist(), version=context._version)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        native = _into_arrow_chunked_array(data, context)
+        return cls(native.to_pylist(), version=context._version)
 
     def __narwhals_series__(self) -> Self:
         return self
