@@ -800,7 +800,7 @@ class ArrowDataFrame(
                 .column(f"{col_token}_{agg_func}")
             )
             if maintain_order:
-                mask = np.zeros(len(self), dtype=bool)
+                mask: _1DArray = np.zeros(len(self), dtype=bool)
                 mask[keep_idx_native.to_numpy()] = True
                 return self._with_native(
                     native.filter(pa.array(mask)), validate_column_names=False
