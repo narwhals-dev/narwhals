@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, datetime, time, timedelta, timezone
 from functools import lru_cache
 from itertools import islice
+from operator import itemgetter
 from typing import TYPE_CHECKING, Any, cast
 
 from narwhals.dependencies import get_numpy
@@ -822,3 +823,11 @@ def _parse_csv_column(cells: Iterable[str]) -> list[Any]:
     if all(map(_CSV_BOOL.fullmatch, present)):
         return [None if value is None else value.lower() == "true" for value in values]
     return values
+
+
+def gatherer(indices: Sequence[int]) -> Callable[[Sequence[Any]], list[Any]]:
+    """Gather values at `indices` from any column, with one `itemgetter` shared by all."""
+    if len(indices) > 1:
+        getter = itemgetter(*indices)
+        return lambda column: list(getter(column))
+    return lambda column: [column[i] for i in indices]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from operator import attrgetter
+from operator import itemgetter
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals.compliant import CompliantGroupBy
@@ -36,6 +36,30 @@ def _bucket_by_keys(key_columns: Sequence[Sequence[Any]]) -> dict[Any, list[int]
     for index, key in it:
         groups.setdefault(key, []).append(index)
     return groups
+
+
+def _mean(values: list[Any]) -> Any:
+    return sum(values) / len(values)
+
+
+# Aggregations computed with builtins straight on each group's values, matching the
+# `DictSeries` methods of the same name. Groups are never empty.
+_NULL_SAFE_AGGS: Mapping[str, Callable[[list[Any]], Any]] = {
+    "len": len,
+    "first": itemgetter(0),
+    "last": itemgetter(-1),
+    "n_unique": lambda values: len(set(values)),
+}
+# These ones skip nulls, so only apply as-is to columns without any.
+_NULL_FREE_AGGS: Mapping[str, Callable[[list[Any]], Any]] = {
+    "sum": sum,
+    "mean": _mean,
+    "min": min,
+    "max": max,
+    "count": len,
+    "any": any,
+    "all": all,
+}
 
 
 class _GroupedRows:
@@ -95,11 +119,15 @@ class _GroupedRows:
     def gather(self, order_by: tuple[str, ...], name: str) -> list[list[Any]]:
         """Column `name` split into one list of values per group, in `order_by` order."""
         if (columns := self._columns.get(cache_key := (order_by, name))) is None:
-            column = self._frame.native[name]
-            columns = self._columns[cache_key] = [
-                [column[i] for i in indices] for indices in self.indices(order_by)
-            ]
+            columns = self._columns[cache_key] = self.split(
+                self._frame.native[name], order_by
+            )
         return columns
+
+    def split(self, values: Sequence[Any], order_by: tuple[str, ...]) -> list[list[Any]]:
+        """`values`, one per row, split into one list per group in `order_by` order."""
+        get = values.__getitem__
+        return [list(map(get, indices)) for indices in self.indices(order_by)]
 
     def frames(
         self, order_by: tuple[str, ...], columns: tuple[str, ...]
@@ -221,31 +249,58 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             return tuple(leaf.kwargs.get("order_by", ()))
         return ()
 
-    def _agg_simple(  # noqa: PLR0917
-        self,
+    @staticmethod
+    def _agg_elementwise(
         expr: DictExpr,
         frame: DictDataFrame,
+        *,
+        groups: _GroupedRows,
         order_by: tuple[str, ...],
-        gather: Callable[[tuple[str, ...], str], list[list[Any]]],
         output_names: Sequence[str],
         aliases: Sequence[str],
     ) -> dict[str, list[Any]]:
-        """Fast path: dispatch elementary aggregations straight to `DictSeries` methods."""
-        method = attrgetter(self._remap_expr_name(self._leaf_name(expr)))
-        version = frame._version
-        kwargs = {
-            name: value
-            for name, value in self._kwargs(expr).items()
-            if name != "order_by"
-        }
+        """Aggregate an elementwise input, evaluated once over the whole frame.
 
-        return {
-            alias: [
-                method(DictSeries(values, name=output_name, version=version))(**kwargs)
-                for values in gather(order_by, output_name)
-            ]
-            for output_name, alias in zip(output_names, aliases, strict=True)
-        }
+        E.g. `col("a").sum()` or `(col("a") * col("b")).sum()`: the input gives one
+        value per row, which is split by group and aggregated with a builtin if
+        possible, or else with the `DictSeries` method.
+        """
+        assert expr._agg_source is not None  # noqa: S101
+        source, method_name, kwargs = expr._agg_source
+        # Groups are already sorted by `order_by`, which `first`/`last` would re-apply.
+        kwargs = {name: value for name, value in kwargs.items() if name != "order_by"}
+        version = frame._version
+        result: dict[str, list[Any]] = {}
+        # Multi-output inputs (e.g. `all()`) may include the group keys, which
+        # `output_names` (named after the root columns) excludes.
+        wanted = set(output_names)
+        inputs = [
+            series
+            for series, root_name in zip(
+                source(frame), source._evaluate_output_names(frame), strict=True
+            )
+            if root_name in wanted
+        ]
+        for series, alias in zip(inputs, aliases, strict=True):
+            native = series.native
+            values = (
+                groups.gather(order_by, series.name)
+                if frame.native.get(series.name) is native
+                else groups.split(native, order_by)
+            )
+            fast = _NULL_SAFE_AGGS.get(method_name) or (
+                _NULL_FREE_AGGS.get(method_name) if None not in native else None
+            )
+            if fast is not None and not kwargs:
+                result[alias] = list(map(fast, values))
+            else:
+                result[alias] = [
+                    getattr(DictSeries(group, name=alias, version=version), method_name)(
+                        **kwargs
+                    )
+                    for group in values
+                ]
+        return result
 
     @staticmethod
     def _agg_complex(
@@ -289,15 +344,21 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                 # `agg(nw.len())`: no input column, just count rows per group. Other
                 # single-node exprs (e.g. `nw.corr(...)`) go through the fallback.
                 result[aliases[0]] = [len(indices) for indices in groups.indices(())]
-            elif self._is_simple(expr) and op_nodes[1].name == "col":
-                # e.g. `col("a").sum()`: the aggregation applies directly to a stored
-                # column, so we can gather it and dispatch to a `DictSeries` method.
-                # A non-`col` node before the leaf (e.g. `when(...).then(...)`,
-                # `round(...)`, arithmetic) transforms the values first and must go
-                # through the fallback, which re-evaluates the whole expression.
+            elif expr._agg_source is not None and all(
+                node.is_elementwise() for node in op_nodes[1:]
+            ):
+                # e.g. `col("a").sum()` or `(col("a") * 2).round(1).sum()`: one value
+                # per row goes into the aggregation, so the input can be evaluated once.
+                # Otherwise (e.g. `(col("a") - col("a").mean()).sum()`, `filter(...)`),
+                # the fallback evaluates the whole expression on each group.
                 result.update(
-                    self._agg_simple(
-                        expr, frame, order_by, groups.gather, output_names, aliases
+                    self._agg_elementwise(
+                        expr,
+                        frame,
+                        groups=groups,
+                        order_by=order_by,
+                        output_names=output_names,
+                        aliases=aliases,
                     )
                 )
             else:

@@ -20,7 +20,8 @@ df.to_native()  # {'a': [1, 2, 3], 'b': [4.0, None, 6.0]}
 ```
 
 `pz.from_dict`, `pz.from_dicts`, `pz.from_numpy`, `pz.from_arrow`, `pz.new_series`,
-`pz.read_csv` and `pz.scan_csv` create `pizzlies`-backed objects. Everything else (`pz.col`,
+`pz.read_csv`, `pz.scan_csv`, `pz.read_parquet` and `pz.scan_parquet` create `pizzlies`-backed
+objects. Everything else (`pz.col`,
 `pz.when`, `pz.concat`, `pz.selectors`, the dtypes, ...) is Narwhals' own, so see the
 [Narwhals docs](https://narwhals-dev.github.io/narwhals/) for the full API.
 
@@ -41,8 +42,13 @@ Note that, once installed, `pizzlies` claims every plain `dict` passed to `nw.fr
 
 ## Limitations
 
-Parquet isn't supported: read the file with pyarrow and convert it instead,
-`pz.from_arrow(pq.read_table(path))`. `Map` dtypes aren't supported, and dtypes are inferred
+Parquet files are read by a small pure-Python reader, straight into a dict of lists. It
+supports flat columns; data pages V1 and V2; `PLAIN`, dictionary and boolean `RLE` encodings;
+and uncompressed, snappy, gzip and zstd compression, where zstd (Polars' default) needs
+Python 3.14+ for the stdlib's `compression.zstd`. Anything else (nested columns, `DELTA_*`
+encodings, brotli/lz4, ...) raises `NotImplementedError`: read such files with pyarrow and
+convert them, `pz.from_arrow(pq.read_table(path))`. Writing Parquet isn't supported.
+`Map` dtypes aren't supported, and dtypes are inferred
 from the Python values, so e.g. integers are always `Int64`.
 
 ## Development

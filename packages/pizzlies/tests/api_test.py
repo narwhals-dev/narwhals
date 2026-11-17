@@ -10,9 +10,6 @@ import narwhals as nw
 if TYPE_CHECKING:
     from pathlib import Path
 
-# Narwhals functions which need a backend that `pizzlies` doesn't support.
-NOT_REEXPORTED = {"read_parquet", "scan_parquet"}
-
 
 def assert_pizzlies_frame(df: Any, expected: dict[str, list[Any]]) -> None:
     assert nw.get_native_namespace(df) is pz
@@ -22,7 +19,7 @@ def assert_pizzlies_frame(df: Any, expected: dict[str, list[Any]]) -> None:
 
 
 def test_reexports_narwhals_api() -> None:
-    assert set(nw.__all__) - NOT_REEXPORTED <= set(pz.__all__)
+    assert set(nw.__all__) <= set(pz.__all__)
     for name in pz.__all__:
         assert hasattr(pz, name), name
 

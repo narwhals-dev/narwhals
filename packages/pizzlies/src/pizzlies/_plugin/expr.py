@@ -10,7 +10,7 @@ from pizzlies._plugin.series import DictSeries
 from pizzlies._plugin.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from typing_extensions import Self
 
@@ -37,6 +37,34 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         self._evaluate_output_names = evaluate_output_names
         self._alias_output_names = alias_output_names
         self._version = version
+
+    # For an aggregation reusing a Series method: `(input expr, method name, kwargs)`.
+    # `DictGroupBy.agg` uses it to evaluate the input once over the whole frame, rather
+    # than once per group, when the input is elementwise.
+    _agg_source: tuple[DictExpr, str, dict[str, Any]] | None = None
+
+    def _reuse_series(
+        self, method_name: str, *, returns_scalar: bool = False, **kwargs: Any
+    ) -> Self:
+        result = super()._reuse_series(
+            method_name, returns_scalar=returns_scalar, **kwargs
+        )
+        if returns_scalar:
+            result._agg_source = (self, method_name, kwargs)
+        return result
+
+    # Renaming keeps the values, so it keeps `_agg_source` too.
+    def alias(self, name: str) -> Self:
+        result = super().alias(name)
+        result._agg_source = self._agg_source
+        return result
+
+    def _with_alias_output_names(
+        self, alias_name: Callable[[str], str] | None, /
+    ) -> Self:
+        result = super()._with_alias_output_names(alias_name)
+        result._agg_source = self._agg_source
+        return result
 
     @classmethod
     def from_column_names(

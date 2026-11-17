@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from itertools import chain, compress, repeat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from narwhals.compliant import EagerNamespace
 from narwhals.utils import Implementation
@@ -10,7 +10,6 @@ from pizzlies._plugin._vendored import (
     check_column_names_are_unique,
     combine_alias_output_names,
     combine_evaluate_output_names,
-    not_implemented,
 )
 from pizzlies._plugin.dataframe import DictDataFrame
 from pizzlies._plugin.expr import DictExpr
@@ -79,9 +78,20 @@ class DictNamespace(
             native = csv_to_native(csv.reader(StringIO(text, newline=""), **kwds))
         return self._dataframe.from_native(native, context=self)
 
-    # NOTE: Both, or the inherited `scan_parquet` would call `read_parquet` and raise a bare error.
-    read_parquet = not_implemented()
-    scan_parquet = not_implemented()
+    # NOTE: `scan_parquet` falls back to `read_parquet` via `EagerNamespace`.
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> DictDataFrame:
+        """Read with `pizzlies`' own pure-Python reader, see `pizzlies._plugin.parquet`.
+
+        The only supported keyword argument is `columns`, to read a subset of columns.
+        """
+        from pizzlies._plugin.parquet import read_parquet
+
+        columns = kwds.pop("columns", None)
+        if kwds:
+            msg = f"Unsupported keyword arguments for `read_parquet`: {sorted(kwds)}."
+            raise TypeError(msg)
+        native = cast("DictFrame", read_parquet(source, columns))  # type: ignore[arg-type]
+        return self._dataframe.from_native(native, context=self)
 
     def len(self) -> DictExpr:
         return self._expr(

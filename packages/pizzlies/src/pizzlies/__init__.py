@@ -13,11 +13,8 @@ or as a Narwhals plugin, where plain dicts become valid native frames:
 
     nw.from_native({"a": [1, 2, 3]}, eager_only=True)
 
-Parquet is not supported. Read the file with pyarrow and convert it instead:
-
-    import pyarrow.parquet as pq
-
-    df = pz.from_arrow(pq.read_table(path))
+Parquet files are read by a small pure-Python reader, which supports flat columns and the
+common encodings and compression codecs (zstd needs Python 3.14+).
 """
 
 from __future__ import annotations
@@ -165,6 +162,16 @@ def read_csv(
     return nw.read_csv(source, backend=BACKEND, separator=separator, **kwargs)
 
 
+def read_parquet(source: FileSource, **kwargs: Any) -> DataFrame[Any]:
+    """Read a Parquet file into a DataFrame, see `narwhals.read_parquet`."""
+    return nw.read_parquet(source, backend=BACKEND, **kwargs)
+
+
+def scan_parquet(source: FileSource, **kwargs: Any) -> LazyFrame[Any]:
+    """Read a Parquet file into a LazyFrame, see `narwhals.scan_parquet`."""
+    return nw.scan_parquet(source, backend=BACKEND, **kwargs)
+
+
 def scan_csv(
     source: FileSource, *, separator: str = ",", **kwargs: Any
 ) -> LazyFrame[Any]:
@@ -266,7 +273,9 @@ __all__ = [
     "new_series",
     "nth",
     "read_csv",
+    "read_parquet",
     "scan_csv",
+    "scan_parquet",
     "selectors",
     "show_versions",
     "struct",
