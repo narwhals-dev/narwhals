@@ -41,7 +41,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -520,6 +520,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             if values.native.type != self._type
             else values.native
         )
+        if indices.native.null_count:
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
         n = len(self)
         indices_native = pc.if_else(
             pc.less(indices.native, lit(0)),
@@ -542,8 +545,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             replacements = values_native.take(order).filter(keep).combine_chunks()
         else:
             replacements = repeat(values_native[0], pc.sum(keep).as_py())
-        mask = pc.is_in(arange(start=0, end=n, step=1), indices_native)
-        return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
+        return self._with_native(
+            _replace_sorted(self.native, indices_native, replacements)
+        )
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
@@ -1293,3 +1297,22 @@ class _ArrowHist(
         if self._breakpoint:
             return {"breakpoint": bins[1:], "count": counts}
         return {"count": counts}
+
+
+def _replace_sorted(
+    native: ChunkedArrayAny, indices: ChunkedArrayAny, replacements: ArrayAny
+) -> ChunkedArrayAny:
+    """Replace `native` at unique, non-negative `indices` (`replacements` sorted by index)."""
+    n = len(native)
+    positions = arange(start=0, end=n, step=1)
+    mask = pc.is_in(positions, indices)
+    try:
+        return pc.replace_with_mask(native, mask, replacements)
+    except pa.ArrowNotImplementedError:
+        # No `replace_with_mask` kernel for dictionary, duration and nested types:
+        # append the replacements and `take` each masked slot's replacement from the
+        # tail instead.
+        offsets = pc.add(pc.cumulative_sum(mask.cast(pa.int64())), lit(n - 1))
+        return pa.chunked_array([*native.chunks, replacements], type=native.type).take(
+            pc.if_else(mask, offsets, positions)
+        )
