@@ -247,7 +247,9 @@ class PandasLikeNamespace(
             expr_results = [s for _expr in exprs for s in _expr(df)]
             series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             non_na = (1 - s.is_null() for s in expr_results)
-            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
+            count = reduce(operator.add, non_na)
+            mean = reduce(operator.add, series) / count
+            return [mean._with_native(mean.native.where(count.native != 0))]
 
         return self._expr._from_callable(
             func=func,
