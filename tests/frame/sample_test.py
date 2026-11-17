@@ -65,6 +65,9 @@ def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
     assert result_expr == expected_expr
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
+)
 def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     size, n = 100, 10
     df = nw.from_native(constructor_eager({"a": range(size)}), eager_only=True)
