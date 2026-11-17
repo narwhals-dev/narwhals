@@ -5,20 +5,20 @@ from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals.compliant import CompliantGroupBy
-from narwhals_dict._vendored import (
+from pizzlies._plugin._vendored import (
     evaluate_aliases,
     evaluate_output_names_and_aliases,
     is_sequence_of,
 )
-from narwhals_dict.series import DictSeries
+from pizzlies._plugin.series import DictSeries
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
-    from narwhals_dict._vendored import NarwhalsAggregation
-    from narwhals_dict.dataframe import DictDataFrame
-    from narwhals_dict.expr import DictExpr
-    from narwhals_dict.typing import DictFrame
+    from pizzlies._plugin._vendored import NarwhalsAggregation
+    from pizzlies._plugin.dataframe import DictDataFrame
+    from pizzlies._plugin.expr import DictExpr
+    from pizzlies._plugin.typing import DictFrame
 
 
 def _bucket_by_keys(key_columns: Sequence[Sequence[Any]]) -> dict[Any, list[int]]:

@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals.compliant import CatNamespace
-from narwhals_dict._vendored import SeriesNamespace
+from pizzlies._plugin._vendored import SeriesNamespace
 
 if TYPE_CHECKING:
-    from narwhals_dict.series import DictSeries
+    from pizzlies._plugin.series import DictSeries
 
 
 class DictSeriesCatNamespace(SeriesNamespace["DictSeries"], CatNamespace["DictSeries"]):

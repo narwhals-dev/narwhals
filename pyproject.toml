@@ -238,9 +238,9 @@ conflicts = [
 members = ["packages/*"]
 # NOTE: the standalone plugins have their own environment and lock file. Installing
 # `narwhals-dask` replaces the built-in Dask backend, and its `dask` requirement conflicts
-# with the `extreme-*` groups. Installing `narwhals-dict` makes it claim every plain `dict`,
+# with the `extreme-*` groups. Installing `pizzlies` makes it claim every plain `dict`,
 # which clashes with `test-plugin`.
-exclude = ["packages/narwhals-dask", "packages/narwhals-dict"]
+exclude = ["packages/narwhals-dask", "packages/pizzlies"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
@@ -322,7 +322,7 @@ extend-ignore-names = [
 "src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
-"packages/*/src/*/utils.py" = [
+"packages/*/src/**/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
 "packages/*/tests/*" = [
@@ -487,11 +487,11 @@ files = [
   "tests",
   "packages/test-plugin",
   "packages/narwhals-dask/src",
-  "packages/narwhals-dict/src",
+  "packages/pizzlies/src",
 ]
 # NOTE: the standalone plugins are resolved from source rather than installed: installing
-# `narwhals-dask` replaces the built-in Dask backend, and `narwhals-dict` claims plain dicts.
-mypy_path = ["packages/narwhals-dask/src", "packages/narwhals-dict/src"]
+# `narwhals-dask` replaces the built-in Dask backend, and `pizzlies` claims plain dicts.
+mypy_path = ["packages/narwhals-dask/src", "packages/pizzlies/src"]
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -524,7 +524,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
-  "narwhals_dict.*",
+  "pizzlies.*",
 ]
 warn_return_any = false
 
@@ -544,7 +544,7 @@ include = [
   "tests",
   "packages/test-plugin",
   "packages/narwhals-dask/src",
-  "packages/narwhals-dict/src",
+  "packages/pizzlies/src",
 ]
 ignore = [
   "../.venv/",
@@ -552,10 +552,10 @@ ignore = [
   "../../../**/typeshed*" # typeshed-fallback
 ]
 defineConstant = { "MYPY" = false }
-extraPaths = ["packages/narwhals-dask/src", "packages/narwhals-dict/src"]
+extraPaths = ["packages/narwhals-dask/src", "packages/pizzlies/src"]
 
 [tool.pyrefly]
-search-path = ["src", ".", "packages/narwhals-dask/src", "packages/narwhals-dict/src"]
+search-path = ["src", ".", "packages/narwhals-dask/src", "packages/pizzlies/src"]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",

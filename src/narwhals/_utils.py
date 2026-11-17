@@ -1495,6 +1495,14 @@ def _resolve_sample_size(
     return size
 
 
+def native_repr(compliant: Any) -> str:
+    # Plugins whose native objects have an unhelpful repr (e.g. a plain `dict`) can
+    # define `native_repr` on their compliant frames and series.
+    if (custom := getattr(compliant, "native_repr", None)) is not None:
+        return str(custom())
+    return repr(compliant.native)
+
+
 def generate_repr(header: str, native_repr: str) -> str:
     try:
         terminal_width = os.get_terminal_size().columns

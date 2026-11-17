@@ -3,9 +3,9 @@ requires = ["uv_build>=0.11.0,<0.13.0"]
 build-backend = "uv_build"
 
 [project]
-name = "narwhals-dict"
+name = "pizzlies"
 version = "0.1.0"
-description = "Pure-Python eager Narwhals backend for dicts of lists"
+description = "Pure-Python eager dataframes on dicts of lists, with the Narwhals API"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ Homepage = "https://github.com/narwhals-dev/narwhals"
 Repository = "https://github.com/narwhals-dev/narwhals"
 
 [project.entry-points.'narwhals.plugins']
-narwhals-dict = 'narwhals_dict'
+pizzlies = 'pizzlies'
 
 [dependency-groups]
 # For running Narwhals' own test suite against this plugin, see the README.

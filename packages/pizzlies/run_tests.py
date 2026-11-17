@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Run narwhals' own test suite against `narwhals-dict`.
+"""Run `pizzlies`' own tests, and narwhals' test suite against it.
 
 Mirrors the approach of `narwhals-daft`: narwhals' `tests/conftest.py` skips its
 own constructor parametrization when `--use-external-constructor` is passed, and
-the `narwhals_dict.testing` pytest plugin injects a plain-dict constructor
+the `pizzlies.testing` pytest plugin injects a plain-dict constructor
 instead. Tests that are known to fail (mostly `not_implemented` functionality)
 are listed in `known_failures.txt` and excluded via `--deselect`, keyed by full
 `file::name` node id so that same-named tests in different files are not
 conflated.
 
-The suite runs in this package's own environment (`packages/narwhals-dict/.venv`,
+The suite runs in this package's own environment (`packages/pizzlies/.venv`,
 see `pyproject.toml`), where neither `test-plugin` nor `narwhals-dask` is installed.
 
 Usage, from anywhere inside the repository:
 
-    python packages/narwhals-dict/run_tests.py             # excludes known failures
-    python packages/narwhals-dict/run_tests.py --all       # includes known failures
-    python packages/narwhals-dict/run_tests.py --update    # regenerate known_failures.txt
-    python packages/narwhals-dict/run_tests.py -x -q ...   # extra args pass through to pytest
+    python packages/pizzlies/run_tests.py             # excludes known failures
+    python packages/pizzlies/run_tests.py --all       # includes known failures
+    python packages/pizzlies/run_tests.py --update    # regenerate known_failures.txt
+    python packages/pizzlies/run_tests.py -x -q ...   # extra args pass through to pytest
 
 Fixing a `not_implemented` method? Run with `--update` afterwards to shrink the list.
 `--update` prints what it added and removed, and exits non-zero on any addition,
@@ -43,8 +43,9 @@ BASE_COMMAND = [
     str(PACKAGE_ROOT),
     "pytest",
     "tests",
+    "packages/pizzlies/tests",
     "-p",
-    "narwhals_dict.testing",
+    "pizzlies.testing",
     "--use-external-constructor",
 ]
 

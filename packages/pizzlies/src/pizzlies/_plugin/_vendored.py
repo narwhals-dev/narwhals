@@ -1,6 +1,6 @@
 """Helpers vendored from Narwhals' private modules.
 
-`narwhals-dict` only imports from Narwhals' public API, so anything it needs from
+`pizzlies` only imports from Narwhals' public API, so anything it needs from
 `narwhals._*` is copied here instead. Keep these in sync with upstream on a
 best-effort basis, there is no requirement that they stay identical.
 """

@@ -3,7 +3,7 @@ from __future__ import annotations
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any
 
-from narwhals_dict.series import DictSeries
+from pizzlies._plugin.series import DictSeries
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

@@ -7,13 +7,13 @@ from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import StringNamespace
-from narwhals_dict._vendored import SeriesNamespace
-from narwhals_dict.utils import parse_datetime_format, parse_time_format
+from pizzlies._plugin._vendored import SeriesNamespace
+from pizzlies._plugin.utils import parse_datetime_format, parse_time_format
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from narwhals_dict.series import DictSeries
+    from pizzlies._plugin.series import DictSeries
 
 
 _RUST_GROUP_REF = re.compile(r"\$(?:\$|\{([^}]*)\}|([0-9A-Za-z_]+))")

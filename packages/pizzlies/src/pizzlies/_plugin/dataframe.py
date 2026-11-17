@@ -12,14 +12,15 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 from narwhals.compliant import EagerDataFrame
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.utils import Implementation
-from narwhals_dict._vendored import (
+from pizzlies._plugin._vendored import (
     assert_never,
     check_column_names_are_unique,
     not_implemented,
     scale_bytes,
 )
-from narwhals_dict.series import DictSeries
-from narwhals_dict.utils import infer_dtype, is_native_frame, nan_last_column
+from pizzlies._plugin.repr import frame_repr
+from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.utils import infer_dtype, is_native_frame, nan_last_column
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
@@ -49,10 +50,10 @@ if TYPE_CHECKING:
         _SliceName,
     )
     from narwhals.utils import Version
-    from narwhals_dict.expr import DictExpr
-    from narwhals_dict.group_by import DictGroupBy
-    from narwhals_dict.namespace import DictNamespace
-    from narwhals_dict.typing import Context, DictFrame, NativeSeries
+    from pizzlies._plugin.expr import DictExpr
+    from pizzlies._plugin.group_by import DictGroupBy
+    from pizzlies._plugin.namespace import DictNamespace
+    from pizzlies._plugin.typing import Context, DictFrame, NativeSeries
 
 
 class DictDataFrame(
@@ -156,16 +157,16 @@ class DictDataFrame(
         return cls(native, version=context._version)
 
     def __narwhals_namespace__(self) -> DictNamespace:
-        from narwhals_dict.namespace import DictNamespace
+        from pizzlies._plugin.namespace import DictNamespace
 
         return DictNamespace(version=self._version)
 
     def __native_namespace__(self) -> ModuleType:
         # The plugin module, not `builtins`: Narwhals resolves it back as a
         # backend, e.g. `nw.from_numpy(arr, backend=nw.get_native_namespace(df))`.
-        import narwhals_dict
+        import pizzlies
 
-        return narwhals_dict
+        return pizzlies
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -202,6 +203,9 @@ class DictDataFrame(
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
+
+    def native_repr(self) -> str:
+        return frame_repr(self.native, self.schema)
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -544,7 +548,7 @@ class DictDataFrame(
     def group_by(
         self, keys: Sequence[str] | Sequence[DictExpr], *, drop_null_keys: bool
     ) -> DictGroupBy:
-        from narwhals_dict.group_by import DictGroupBy
+        from pizzlies._plugin.group_by import DictGroupBy
 
         return DictGroupBy(self, keys, drop_null_keys=drop_null_keys)
 

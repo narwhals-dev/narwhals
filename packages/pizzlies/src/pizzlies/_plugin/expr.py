@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import EagerExpr
 from narwhals.utils import Implementation
-from narwhals_dict._vendored import evaluate_output_names_and_aliases
-from narwhals_dict.series import DictSeries
-from narwhals_dict.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
+from pizzlies._plugin._vendored import evaluate_output_names_and_aliases
+from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals.utils import Version
-    from narwhals_dict._vendored import AliasNames, EvalNames, EvalSeries
-    from narwhals_dict.dataframe import DictDataFrame
-    from narwhals_dict.namespace import DictNamespace
-    from narwhals_dict.typing import Context
+    from pizzlies._plugin._vendored import AliasNames, EvalNames, EvalSeries
+    from pizzlies._plugin.dataframe import DictDataFrame
+    from pizzlies._plugin.namespace import DictNamespace
+    from pizzlies._plugin.typing import Context
 
 
 class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
@@ -77,7 +77,7 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         )
 
     def __narwhals_namespace__(self) -> DictNamespace:
-        from narwhals_dict.namespace import DictNamespace
+        from pizzlies._plugin.namespace import DictNamespace
 
         return DictNamespace(version=self._version)
 

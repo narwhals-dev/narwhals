@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING, Any
 from narwhals.compliant import EagerSeries
 from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 from narwhals.utils import NO_DEFAULT, Implementation
-from narwhals_dict._vendored import assert_never, not_implemented
-from narwhals_dict.utils import (
+from pizzlies._plugin._vendored import assert_never, not_implemented
+from pizzlies._plugin.repr import series_repr
+from pizzlies._plugin.utils import (
     binary_op,
     cast_values,
     first_non_null,
@@ -51,14 +52,14 @@ if TYPE_CHECKING:
         _SliceIndex,
     )
     from narwhals.utils import Version
-    from narwhals_dict.dataframe import DictDataFrame
-    from narwhals_dict.namespace import DictNamespace
-    from narwhals_dict.series_cat import DictSeriesCatNamespace
-    from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
-    from narwhals_dict.series_list import DictSeriesListNamespace
-    from narwhals_dict.series_str import DictSeriesStringNamespace
-    from narwhals_dict.series_struct import DictSeriesStructNamespace
-    from narwhals_dict.typing import Context, DictFrame, NativeSeries
+    from pizzlies._plugin.dataframe import DictDataFrame
+    from pizzlies._plugin.namespace import DictNamespace
+    from pizzlies._plugin.series_cat import DictSeriesCatNamespace
+    from pizzlies._plugin.series_dt import DictSeriesDateTimeNamespace
+    from pizzlies._plugin.series_list import DictSeriesListNamespace
+    from pizzlies._plugin.series_str import DictSeriesStringNamespace
+    from pizzlies._plugin.series_struct import DictSeriesStructNamespace
+    from pizzlies._plugin.typing import Context, DictFrame, NativeSeries
 
 
 class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
@@ -86,14 +87,17 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def dtype(self) -> DType:
         return infer_dtype(self.native, self._version)
 
+    def native_repr(self) -> str:
+        return series_repr(self.name, self.native, self.dtype)
+
     def __native_namespace__(self) -> ModuleType:
         # See `DictDataFrame.__native_namespace__`.
-        import narwhals_dict
+        import pizzlies
 
-        return narwhals_dict
+        return pizzlies
 
     def __narwhals_namespace__(self) -> DictNamespace:
-        from narwhals_dict.namespace import DictNamespace
+        from pizzlies._plugin.namespace import DictNamespace
 
         return DictNamespace(version=self._version)
 
@@ -1097,7 +1101,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return list(self.native)
 
     def to_frame(self) -> DictDataFrame:
-        from narwhals_dict.dataframe import DictDataFrame
+        from pizzlies._plugin.dataframe import DictDataFrame
 
         return DictDataFrame({self.name: self.native}, version=self._version)
 
@@ -1105,7 +1109,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
     ) -> DictDataFrame:
         """`parallel` is unused, exists for compatibility."""
-        from narwhals_dict.dataframe import DictDataFrame
+        from pizzlies._plugin.dataframe import DictDataFrame
 
         value_name = name or ("proportion" if normalize else "count")
         counter = Counter(self.native)
@@ -1120,7 +1124,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         )
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> DictDataFrame:
-        from narwhals_dict.dataframe import DictDataFrame
+        from pizzlies._plugin.dataframe import DictDataFrame
 
         null_name = f"{self.name}{separator}null"
         length = len(self.native)
@@ -1167,7 +1171,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> DictDataFrame:
-        from narwhals_dict.dataframe import DictDataFrame
+        from pizzlies._plugin.dataframe import DictDataFrame
 
         data: DictFrame
         if len(bins) <= 1:
@@ -1183,7 +1187,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> DictDataFrame:
-        from narwhals_dict.dataframe import DictDataFrame
+        from pizzlies._plugin.dataframe import DictDataFrame
 
         if bin_count == 0:
             data: DictFrame = (
@@ -1254,31 +1258,31 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     # Namespaces
     @property
     def str(self) -> DictSeriesStringNamespace:
-        from narwhals_dict.series_str import DictSeriesStringNamespace
+        from pizzlies._plugin.series_str import DictSeriesStringNamespace
 
         return DictSeriesStringNamespace(self)
 
     @property
     def dt(self) -> DictSeriesDateTimeNamespace:
-        from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
+        from pizzlies._plugin.series_dt import DictSeriesDateTimeNamespace
 
         return DictSeriesDateTimeNamespace(self)
 
     @property
     def list(self) -> DictSeriesListNamespace:
-        from narwhals_dict.series_list import DictSeriesListNamespace
+        from pizzlies._plugin.series_list import DictSeriesListNamespace
 
         return DictSeriesListNamespace(self)
 
     @property
     def struct(self) -> DictSeriesStructNamespace:
-        from narwhals_dict.series_struct import DictSeriesStructNamespace
+        from pizzlies._plugin.series_struct import DictSeriesStructNamespace
 
         return DictSeriesStructNamespace(self)
 
     @property
     def cat(self) -> DictSeriesCatNamespace:
-        from narwhals_dict.series_cat import DictSeriesCatNamespace
+        from pizzlies._plugin.series_cat import DictSeriesCatNamespace
 
         return DictSeriesCatNamespace(self)
 

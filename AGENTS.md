@@ -56,8 +56,9 @@ Outside `src/`, the project has:
 - `packages/`: packages built and installed independently of `src/narwhals`. `test-plugin` is a uv workspace
   member and a minimal fake backend used to test `narwhals.plugins`. `narwhals-dask` is the Dask backend being
   moved out of core; it is excluded from the workspace and has its own `uv.lock`, see its README.
-  `narwhals-dict` is a pure-Python eager backend for dicts of lists, set up the same way; run
-  Narwhals' test suite against it with `python packages/narwhals-dict/run_tests.py`.
+  `pizzlies` is a pure-Python eager dataframe library on dicts of lists, usable standalone and as
+  a plugin, set up the same way; run Narwhals' test suite against it with
+  `python packages/pizzlies/run_tests.py`.
 
 ## Hard rules
 

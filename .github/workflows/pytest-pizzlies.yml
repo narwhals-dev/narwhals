@@ -1,12 +1,12 @@
-name: PyTest narwhals-dict
+name: PyTest pizzlies
 
 on:
   pull_request:
     paths:
       - src/narwhals/**
       - tests/**
-      - packages/narwhals-dict/**
-      - .github/workflows/pytest-narwhals-dict.yml
+      - packages/pizzlies/**
+      - .github/workflows/pytest-pizzlies.yml
       - pyproject.toml
   workflow_call:
 
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 jobs:
-  pytest-narwhals-dict:
+  pytest-pizzlies:
     if: github.head_ref != 'bump-version'
     strategy:
       matrix:
@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: "true"
-          cache-suffix: narwhals-dict-${{ matrix.python-version }}
-          cache-dependency-glob: "packages/narwhals-dict/pyproject.toml"
-      - name: Run Narwhals' test suite against narwhals-dict
-        run: python packages/narwhals-dict/run_tests.py
+          cache-suffix: pizzlies-${{ matrix.python-version }}
+          cache-dependency-glob: "packages/pizzlies/pyproject.toml"
+      - name: Run Narwhals' test suite against pizzlies
+        run: python packages/pizzlies/run_tests.py

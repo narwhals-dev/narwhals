@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals.compliant import CompliantSelector, CompliantSelectorNamespace
-from narwhals_dict.expr import DictExpr
+from pizzlies._plugin.expr import DictExpr
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals.dtypes import DType
-    from narwhals_dict.dataframe import DictDataFrame
-    from narwhals_dict.series import DictSeries
+    from pizzlies._plugin.dataframe import DictDataFrame
+    from pizzlies._plugin.series import DictSeries
 
 
 class DictSelectorNamespace(CompliantSelectorNamespace["DictDataFrame", "DictSeries"]):

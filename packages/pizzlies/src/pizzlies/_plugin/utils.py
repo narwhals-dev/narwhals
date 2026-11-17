@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 from narwhals.dependencies import get_numpy
 from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 from narwhals.utils import Version
-from narwhals_dict._vendored import (
+from pizzlies._plugin._vendored import (
     DATE_FORMATS,
     FULL_RE,
     TIME_FORMATS,
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
-    from narwhals_dict.typing import DictFrame, NativeSeries
+    from pizzlies._plugin.typing import DictFrame, NativeSeries
 
 __all__ = [
     "binary_op",

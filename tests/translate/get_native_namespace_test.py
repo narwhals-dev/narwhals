@@ -59,9 +59,9 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import sqlframe
 
         return sqlframe
-    # narwhals-dict is not installed in CI.
+    # pizzlies is not installed in CI.
     if "dict" in constructor_name:  # pragma: no cover
-        return pytest.importorskip("narwhals_dict")
+        return pytest.importorskip("pizzlies")
     return None  # pragma: no cover
 
 

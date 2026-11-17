@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import ListNamespace
 from narwhals.exceptions import InvalidOperationError
-from narwhals_dict._vendored import SeriesNamespace
-from narwhals_dict.utils import infer_dtype, non_null, sort_with_nulls
+from pizzlies._plugin._vendored import SeriesNamespace
+from pizzlies._plugin.utils import infer_dtype, non_null, sort_with_nulls
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from narwhals.typing import NonNestedLiteral
-    from narwhals_dict.series import DictSeries
+    from pizzlies._plugin.series import DictSeries
 
 
 class DictSeriesListNamespace(SeriesNamespace["DictSeries"], ListNamespace["DictSeries"]):

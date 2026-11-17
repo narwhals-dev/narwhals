@@ -119,3 +119,17 @@ def test_polars_series_repr() -> None:
 )
 def test_expr_repr(expr: nw.Expr, expected: str) -> None:
     assert repr(expr) == expected
+
+
+def test_native_repr_hook() -> None:
+    from narwhals._utils import native_repr
+
+    class Default:
+        native = (1, 2)
+
+    class Custom(Default):
+        def native_repr(self) -> str:
+            return "custom"
+
+    assert native_repr(Default()) == "(1, 2)"
+    assert native_repr(Custom()) == "custom"

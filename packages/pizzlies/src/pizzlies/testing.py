@@ -1,6 +1,6 @@
-"""Pytest plugin to run narwhals' own test suite against `narwhals-dict`.
+"""Pytest plugin to run narwhals' own test suite against `pizzlies`.
 
-Usage: `python packages/narwhals-dict/run_tests.py`, see the package README.
+Usage: `python packages/pizzlies/run_tests.py`, see the package README.
 
 `--use-external-constructor` makes narwhals' `tests/conftest.py` skip its own
 constructor parametrization; the hooks below then parametrize the `constructor`
@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 if TYPE_CHECKING:
-    from narwhals_dict.typing import DictFrame
+    from pizzlies._plugin.typing import DictFrame
 
 CONSTRUCTORS_TO_SKIP = ("constructor_pandas_like",)
 

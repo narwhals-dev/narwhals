@@ -79,8 +79,8 @@ def test_is_into_dataframe_numpy() -> None:
 
 
 def test_is_into_dataframe_other(always_has_attr: AlwaysHasAttr) -> None:
-    # If `narwhals_dict` is installed, a plain `dict` is convertible to a DataFrame.
-    expected = find_spec("narwhals_dict") is not None
+    # If `pizzlies` is installed, a plain `dict` is convertible to a DataFrame.
+    expected = find_spec("pizzlies") is not None
     assert is_into_dataframe(data) is expected
     assert v1_is_into_dataframe(data) is expected
     assert v2_is_into_dataframe(data) is expected

@@ -5,8 +5,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import DateTimeNamespace
-from narwhals_dict._vendored import Interval, SeriesNamespace
-from narwhals_dict.utils import (
+from pizzlies._plugin._vendored import Interval, SeriesNamespace
+from pizzlies._plugin.utils import (
     EPOCH_NAIVE,
     MICROSECONDS_PER_UNIT,
     datetime_to_us,
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from narwhals.typing import TimeUnit
-    from narwhals_dict.series import DictSeries
+    from pizzlies._plugin.series import DictSeries
 
 _NS_PER_MINUTE = 60_000_000_000
 _US_PER_DAY = 86_400_000_000

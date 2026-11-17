@@ -6,17 +6,17 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import EagerNamespace
 from narwhals.utils import Implementation
-from narwhals_dict._vendored import (
+from pizzlies._plugin._vendored import (
     check_column_names_are_unique,
     combine_alias_output_names,
     combine_evaluate_output_names,
     not_implemented,
 )
-from narwhals_dict.dataframe import DictDataFrame
-from narwhals_dict.expr import DictExpr
-from narwhals_dict.selectors import DictSelectorNamespace
-from narwhals_dict.series import DictSeries
-from narwhals_dict.utils import csv_to_native
+from pizzlies._plugin.dataframe import DictDataFrame
+from pizzlies._plugin.expr import DictExpr
+from pizzlies._plugin.selectors import DictSelectorNamespace
+from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.utils import csv_to_native
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
         NormalizedSource,
     )
     from narwhals.utils import Version
-    from narwhals_dict.typing import DictFrame, NativeSeries
+    from pizzlies._plugin.typing import DictFrame, NativeSeries
 
 
 class DictNamespace(
