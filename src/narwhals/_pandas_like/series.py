@@ -591,8 +591,11 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _float_or_nan(self, value: Any) -> Any:
         # `NA` carries no dtype, and `_from_scalar` would give it the (integer) input dtype.
+        # Float inputs keep `NA`, so Float32 stays Float32.
         na = getattr(self._implementation.to_native_namespace(), "NA", None)
-        return float("nan") if value is na else value
+        if value is na and self.native.dtype.kind != "f":
+            return float("nan")
+        return value
 
     def min(self) -> Any:
         return self.native.min()
