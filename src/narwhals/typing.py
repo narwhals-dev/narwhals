@@ -14,7 +14,7 @@ from narwhals._native import (
     IntoSeries,
     IntoSeriesT,
 )
-from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
+from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed, NoDefault
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -438,6 +438,7 @@ __all__ = [
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",
+    "NoDefault",
     "NormalizedPath",
     "NormalizedSource",
 ]
