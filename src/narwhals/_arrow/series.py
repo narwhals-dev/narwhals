@@ -965,7 +965,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
     def cum_min(self, *, reverse: bool) -> Self:
-        # narwhals-canary: delete this line to confirm you have read the full diff
         native = self.native
         # Explicit float `start`: PyArrow<26 seeds with `max()` instead of `+inf`.
         # https://github.com/apache/arrow/issues/51194
