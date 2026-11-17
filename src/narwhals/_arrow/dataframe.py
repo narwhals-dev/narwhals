@@ -801,7 +801,8 @@ class ArrowDataFrame(
             )
             if maintain_order:
                 mask: _1DArray = np.zeros(len(self), dtype=bool)
-                mask[keep_idx_native.to_numpy()] = True
+                # A keyless `group_by` (zero-column frame) over zero rows yields one null.
+                mask[keep_idx_native.drop_null().to_numpy()] = True
                 return self._with_native(
                     native.filter(pa.array(mask)), validate_column_names=False
                 )

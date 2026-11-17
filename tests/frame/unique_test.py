@@ -173,6 +173,11 @@ def test_unique_maintain_order_4156(
     assert_equal_data(result, expected)
 
 
+def test_unique_maintain_order_no_columns(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({}))
+    assert df.unique(maintain_order=True).shape == (0, 0)
+
+
 def test_unique_3069(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
