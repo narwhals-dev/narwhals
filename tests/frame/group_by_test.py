@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from contextlib import nullcontext as does_not_raise
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -30,24 +29,56 @@ if TYPE_CHECKING:
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 
-def test_group_by_complex(constructor: Constructor) -> None:
-    name = str(constructor)
-    context = (
-        pytest.warns(UserWarning, match="complex group-by")
-        if any(x in name for x in ("pandas", "modin", "cudf"))
-        else pytest.raises(ValueError, match="complex aggregation")
-        if "pyarrow" in name
-        else pytest.raises(ValueError, match=r"Non-trivial complex aggregation found")
-        if "dask" in name
-        else does_not_raise()
-    )
+def test_group_by_complex() -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+    import pyarrow as pa
 
     expected = {"a": [1, 3], "b": [-3.5, -3.0]}
+
+    df = nw.from_native(pd.DataFrame(data))
+    with pytest.warns(UserWarning, match="complex group-by"):
+        result_pd = nw.to_native(
+            df.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+        )
+    assert_equal_data(result_pd, expected)
+    with pytest.raises(ValueError, match="complex aggregation"):
+        nw.from_native(pa.table({"a": [1, 1, 2], "b": [4, 5, 6]})).group_by("a").agg(
+            (nw.col("b") - nw.col("c").mean()).mean()
+        )
+
+
+def test_group_by_complex_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    expected = {"a": [1, 3], "b": [-3.5, -3.0]}
+
+    df_lazy = pl.LazyFrame(data)
+    lf = nw.from_native(df_lazy).lazy()
+    result_pl = lf.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+    assert_equal_data(result_pl, expected)
+
+
+def test_invalid_group_by_dask() -> None:
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+
+    df_dask = dd.from_dict(data, npartitions=1)
+
+    with pytest.raises(ValueError, match=r"Non-trivial complex aggregation found"):
+        nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
+
+
+def test_group_by_complex_native(constructor: Constructor) -> None:
+    # Backends which evaluate complex aggregations themselves. Built-in backends which
+    # don't are covered above, and SQL-like ones raise their own native errors.
     frame = nw.from_native(constructor(data))
-    agg_expr = (nw.col("b") - nw.col("c").mean()).mean()
-    with context:
-        result = frame.group_by("a").agg(agg_expr).sort("a")
-        assert_equal_data(result, expected)
+    if frame.implementation not in {nw.Implementation.POLARS, nw.Implementation.UNKNOWN}:
+        pytest.skip("complex group-by is not evaluated natively by this backend")
+    result = frame.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
+    assert_equal_data(result, {"a": [1, 3], "b": [-3.5, -3.0]})
 
 
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
