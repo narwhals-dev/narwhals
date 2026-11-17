@@ -29,11 +29,15 @@ def test_to_dict_as_series(constructor_eager: ConstructorEager) -> None:
 def test_to_dict_pyarrow_backed_pandas_nulls() -> None:
     pd = pytest.importorskip("pandas", minversion="1.5.0")
     pa = pytest.importorskip("pyarrow")
-    tbl = pa.table({"i": [1, None, 3], "f": [1.5, float("nan"), None]})
+    tbl = pa.table(
+        {"i": [1, None, 3], "f": [1.5, float("nan"), None], "l": [[1, 2], None, [3]]}
+    )
     native = tbl.to_pandas(types_mapper=pd.ArrowDtype)
     df = nw.from_native(native, eager_only=True)
     result = df.to_dict(as_series=False)
     assert result["i"] == [1, None, 3]
+    assert all(isinstance(v, int) for v in result["i"] if v is not None)
+    assert result["l"] == [[1, 2], None, [3]]
     assert result["f"][0] == 1.5
     assert result["f"][1] != result["f"][1]  # NaN
     assert result["f"][2] is None

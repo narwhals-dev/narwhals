@@ -955,7 +955,10 @@ class PandasLikeDataFrame(
         result: dict[str, Any] = {}
         for col, ser in self.native.items():
             if hasattr(ser.dtype, "pyarrow_dtype"):
-                result[col] = ser.astype(object).where(ser.notna(), None).tolist()
+                result[col] = [
+                    None if null else v
+                    for v, null in zip(ser.tolist(), ser.isna(), strict=True)
+                ]
             else:
                 result[col] = PandasLikeSeries.from_native(ser, context=self).to_list()
         return result
