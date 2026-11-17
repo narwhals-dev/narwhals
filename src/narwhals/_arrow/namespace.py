@@ -166,7 +166,6 @@ class ArrowNamespace(
             series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
             non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
             denominator = reduce(operator.add, non_na)
-            # A row where every value is null must give null, not 0 / 0 = NaN.
             denominator = denominator._with_native(
                 pc.if_else(pc.equal(denominator.native, lit(0)), None, denominator.native)
             )

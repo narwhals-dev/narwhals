@@ -7,17 +7,13 @@ from tests.utils import Constructor, assert_equal_data
 def test_meanh(constructor: Constructor) -> None:
     data = {"a": [1, 3, None, None], "b": [4, None, 6, None]}
     df = nw.from_native(constructor(data))
-    result = df.select(horizontal_mean=nw.mean_horizontal(nw.col("a"), nw.col("b")))
-    expected = {"horizontal_mean": [2.5, 3.0, 6.0, None]}
-    assert_equal_data(result, expected)
-
-
-def test_meanh_all_null_row_is_null(constructor: Constructor) -> None:
+    mean = nw.mean_horizontal(nw.col("a"), nw.col("b"))
     # `assert_equal_data` treats NaN and None as equal, so check `is_null` explicitly
-    data = {"a": [1, None], "b": [3, None]}
-    df = nw.from_native(constructor(data))
-    result = df.select(is_null=nw.mean_horizontal("a", "b").is_null())
-    expected = {"is_null": [False, True]}
+    result = df.select(horizontal_mean=mean, is_null=mean.is_null())
+    expected = {
+        "horizontal_mean": [2.5, 3.0, 6.0, None],
+        "is_null": [False, False, False, True],
+    }
     assert_equal_data(result, expected)
 
 

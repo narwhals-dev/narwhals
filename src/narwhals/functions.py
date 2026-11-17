@@ -1563,7 +1563,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
-    Null values are ignored.
+    Null values are ignored. If all values in a row are null, the result is null.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts

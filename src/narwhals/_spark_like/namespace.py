@@ -16,7 +16,6 @@ from narwhals._spark_like.utils import (
     import_functions,
     import_native_dtypes,
     narwhals_to_native_dtype,
-    true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import (
@@ -215,7 +214,7 @@ class SparkLikeNamespace(
                 operator.add,
                 (col.isNotNull().cast(self._native_dtypes.IntegerType()) for col in cols),
             )
-            return F.when(denominator > F.lit(0), true_divide(F, numerator, denominator))
+            return F.when(denominator > F.lit(0), numerator / denominator)
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
