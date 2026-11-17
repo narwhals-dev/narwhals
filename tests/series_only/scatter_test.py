@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from narwhals.exceptions import ShapeError
-from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
+from narwhals.exceptions import ComputeError, ShapeError
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+    assert_equal_series,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Collection
@@ -83,10 +91,8 @@ def test_scatter_scalar_broadcast(constructor_eager: ConstructorEager) -> None:
 def test_scatter_broadcast_nested(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("polars", "pyarrow_table")):
-        reason = (
-            "Neither Polars' scatter nor pyarrow's replace_with_mask support list types."
-        )
+    if "polars" in str(constructor_eager):
+        reason = "Polars' scatter doesn't support list types."
         request.applymarker(pytest.mark.xfail(reason=reason))
     if "cudf" in str(constructor_eager):
         reason = "cuDF ListColumn._cast_setitem_value rejects Series values."
@@ -177,3 +183,71 @@ def test_scatter_scalar_narrow_int_pyarrow(
     output = s.scatter(indices, values)
     assert output.dtype == nw.Int8
     assert_equal_series(output, expected, "")
+
+
+def test_scatter_null_indices(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3, 4])
+    indices = series(constructor_eager, "i", [0, None])
+    with pytest.raises(ComputeError, match="should not be null"):
+        s.scatter(indices, [7, 8])
+
+
+@pytest.mark.parametrize("dtype", [nw.Int8, nw.Int32, nw.UInt8])
+def test_scatter_keeps_narrow_int_dtype(
+    dtype: type[nw.Int8 | nw.Int32 | nw.UInt8], constructor_eager: ConstructorEager
+) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3]).cast(dtype)
+    result = s.scatter([0, 1], [7, 8])
+    assert result.dtype == dtype
+    assert_equal_series(result, [7, 8, 3], "a")
+    result = s.scatter([0, 2], 9)
+    assert result.dtype == dtype
+    assert_equal_series(result, [9, 2, 9], "a")
+
+
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("3"), reason="pandas<3 upcasts the column"
+)
+def test_scatter_int_overflow_pandas() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = nw.from_native(pd.Series([1, 2, 3], dtype="int8"), series_only=True)
+    # Out-of-range values must not be wrapped around by the cast to the column dtype.
+    with pytest.raises(TypeError, match="Invalid value"):
+        s.scatter([0], [300])
+
+
+@pytest.mark.parametrize(
+    ("data", "pa_type", "value", "expected"),
+    [
+        pytest.param(
+            ["a", "b", "a"],
+            "dictionary",
+            "b",
+            ["b", "b", "b"],
+            marks=pytest.mark.skipif(
+                PYARROW_VERSION < PkgVersion("15"),
+                reason="pyarrow<15 can't cast string to dictionary",
+            ),
+        ),
+        ([timedelta(1), timedelta(1), timedelta(3)], "duration", timedelta(2), None),
+        ([{"x": 1}, {"x": 2}, {"x": 3}], "struct", {"x": 9}, None),
+    ],
+    ids=["dictionary", "duration", "struct"],
+)
+def test_scatter_pyarrow_types_without_replace_with_mask(
+    data: list[Any], pa_type: str, value: Any, expected: list[Any] | None
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    arr = pa.array(data)
+    if pa_type == "dictionary":
+        arr = arr.dictionary_encode()
+    s = nw.from_native(pa.chunked_array([arr[:2], arr[2:]]), series_only=True)
+    result = s.scatter([2, 0], [value, value])
+    assert result.dtype == s.dtype
+    if expected is None:
+        expected = [value, data[1], value]
+    assert result.to_list() == expected
