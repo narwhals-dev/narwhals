@@ -776,6 +776,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     # namespaces
     cat: Any = not_implemented()
+    map: Any = not_implemented()
     struct: Any = not_implemented()
 
 
