@@ -205,9 +205,11 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _from_scalar(self, value: Any) -> Self:
         # narwhals-canary: delete this line to confirm you have read the full diff
         ns = self._implementation.to_native_namespace()
-        if value is getattr(ns, "NA", None):
+        dtype = self.native.dtype
+        if value is getattr(ns, "NA", None) and hasattr(dtype, "na_value"):
             # A lone `NA` would be inferred as `object`, i.e. String.
-            native = ns.Series([value], name=self.name, dtype=self.native.dtype)
+            # Only extension dtypes can hold it; numpy dtypes keep the inference.
+            native = ns.Series([value], name=self.name, dtype=dtype)
             return self.from_native(native, context=self)
         return super()._from_scalar(value)
 
@@ -587,6 +589,11 @@ class PandasLikeSeries(EagerSeries[Any]):
     def all(self) -> bool:
         return self.native.all()
 
+    def _float_or_nan(self, value: Any) -> Any:
+        # `NA` carries no dtype, and `_from_scalar` would give it the (integer) input dtype.
+        na = getattr(self._implementation.to_native_namespace(), "NA", None)
+        return float("nan") if value is na else value
+
     def min(self) -> Any:
         return self.native.min()
 
@@ -600,19 +607,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self.native.count()
 
     def mean(self) -> float:
-        return self.native.mean()
+        return self._float_or_nan(self.native.mean())
 
     def median(self) -> float:
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
-        return self.native.median()
+        return self._float_or_nan(self.native.median())
 
     def std(self, *, ddof: int) -> float:
-        return self.native.std(ddof=ddof)
+        return self._float_or_nan(self.native.std(ddof=ddof))
 
     def var(self, *, ddof: int) -> float:
-        return self.native.var(ddof=ddof)
+        return self._float_or_nan(self.native.var(ddof=ddof))
 
     def skew(self) -> float | None:
         ser_not_null = self.native.dropna()

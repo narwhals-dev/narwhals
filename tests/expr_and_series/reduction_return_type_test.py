@@ -149,10 +149,29 @@ def test_expr_aggregation_keeps_dtype(
     assert df.select(expr).schema == {"a": dtype}
 
 
-@pytest.mark.parametrize("reduction", ["mean", "min", "max", "median", "std", "var"])
-def test_reduction_all_null_int64_is_numeric_pandas_nullable(reduction: str) -> None:
+@pytest.mark.parametrize(
+    ("reduction", "expected"),
+    [
+        ("mean", nw.Float64()),
+        ("median", nw.Float64()),
+        ("std", nw.Float64()),
+        ("var", nw.Float64()),
+        ("min", nw.Int64()),
+        ("max", nw.Int64()),
+    ],
+)
+def test_reduction_all_null_int64_pandas_nullable(
+    reduction: str, expected: DType
+) -> None:
     pd = pytest.importorskip("pandas")
     df = nw.from_native(pd.DataFrame({"a": pd.Series([None, None], dtype="Int64")}))
     result = df.select(getattr(nw.col("a"), reduction)())
-    assert result.collect_schema()["a"].is_numeric()
+    assert result.collect_schema()["a"] == expected
     assert result.select(nw.col("a").is_null())["a"].to_list() == [True]
+
+
+def test_map_batches_scalar_na_numpy_input() -> None:
+    pd = pytest.importorskip("pandas")
+    df = nw.from_native(pd.DataFrame({"a": [1, 2]}), eager_only=True)
+    result = df.select(nw.col("a").map_batches(lambda _: pd.NA, returns_scalar=True))
+    assert result["a"].is_null().to_list() == [True]
