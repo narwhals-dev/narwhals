@@ -16,11 +16,8 @@ from datetime import timezone
 from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
-from inspect import getattr_static, getdoc
 from io import IOBase
 from operator import attrgetter
-from pathlib import Path
-from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1251,6 +1248,8 @@ def generate_temporary_column_name(
         >>> temp_name not in columns and temp_name.startswith("foo")
         True
     """
+    from secrets import token_hex
+
     counter = 0
     while True:
         if (token := f"{prefix}{token_hex(n_bytes - 1)}") not in columns:
@@ -1599,6 +1598,8 @@ _SENTINEL: Final = object()
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
+    from inspect import getattr_static
+
     return getattr_static(obj, attr, _SENTINEL) is not _SENTINEL
 
 
@@ -1683,6 +1684,8 @@ def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
         `not_implemented` descriptors, which exist statically but raise on instance
         access, or the protocol's own stubs inherited unchanged, which return `None`.
     """
+    from inspect import getattr_static
+
     from narwhals._compliant import EagerNamespace
 
     return all(
@@ -2152,6 +2155,8 @@ def inherit_doc(
     """
 
     def decorate(init_child: _Constructor[_T, P, R2], /) -> _Constructor[_T, P, R2]:
+        from inspect import getdoc
+
         if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
             init_child.__doc__ = getdoc(tp_parent)
             return init_child
@@ -2399,6 +2404,8 @@ def ensure_path_source(
 if sys.platform != "win32":
 
     def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
+        from pathlib import Path
+
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
@@ -2410,6 +2417,8 @@ else:  # pragma: no cover
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
     def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
+        from pathlib import Path
+
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(Path(source).as_posix())
