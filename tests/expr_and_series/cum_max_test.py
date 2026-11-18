@@ -229,7 +229,7 @@ def test_cum_max_non_positive_floats(
         pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`
-        request.applymarker(pytest.mark.xfail)
+        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
 
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
     result = df.select(nw.col("a").cum_max(reverse=reverse))
