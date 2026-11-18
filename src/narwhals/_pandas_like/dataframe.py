@@ -949,7 +949,6 @@ class PandasLikeDataFrame(
                 col: PandasLikeSeries.from_native(self.native[col], context=self)
                 for col in self.columns
             }
-        # narwhals-canary: delete this line to confirm you have read the full diff
         # `DataFrame.to_dict` goes through NumPy and turns nulls into NaN for
         # pyarrow-backed columns, so convert those column by column instead.
         result: dict[str, Any] = {}
