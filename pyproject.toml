@@ -194,6 +194,9 @@ min-pyspark-version = [
 source-include = ["tests/**"]
 
 [tool.uv]
+# `narwhals-dask` (pulled in by the `dask` extra) replaces the built-in Dask backend, which
+# would leave `src/narwhals/_dask` untested. It is tested separately, see `packages/narwhals-dask`.
+exclude-dependencies = ["narwhals-dask"]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
 # See https://docs.astral.sh/uv/reference/settings/#conflicts.
