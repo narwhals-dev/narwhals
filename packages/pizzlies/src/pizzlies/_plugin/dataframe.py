@@ -169,7 +169,6 @@ class DictDataFrame(
         context: Context,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
-        # narwhals-canary: delete this line to confirm you have read the full diff
         names = list(schema) if schema else list(dict.fromkeys(chain.from_iterable(data)))
         native: DictFrame = {name: [row.get(name) for row in data] for name in names}
         if schema:
