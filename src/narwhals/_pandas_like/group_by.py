@@ -179,7 +179,6 @@ class AggExpr:
     def _keep_pyarrow_dtype(
         self, result: Any, group_by: PandasLikeGroupBy
     ) -> pd.DataFrame | pd.Series[Any]:
-        # narwhals-canary: delete this line to confirm you have read the full diff
         # pandas returns NumPy `int64` for `size`/`nunique`, but `count` keeps pyarrow.
         dtypes = group_by.compliant.native.dtypes
         if self.is_len():
