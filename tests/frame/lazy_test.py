@@ -50,7 +50,9 @@ def test_lazy_to_default(constructor_eager: ConstructorEager) -> None:
         cudf = get_cudf()
         expected_cls = cudf.DataFrame
     elif "dict" in str(constructor_eager):
-        expected_cls = dict
+        from pizzlies._plugin.lazy import LazyPlan
+
+        expected_cls = LazyPlan
     else:  # pyarrow
         import pyarrow as pa
 

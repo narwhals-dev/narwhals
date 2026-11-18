@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from functools import partial
 from itertools import chain
-from operator import itemgetter
+from operator import is_not, itemgetter
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals.compliant import CompliantGroupBy
@@ -63,6 +64,41 @@ _NULL_FREE_AGGS: Mapping[str, Callable[[list[Any]], Any]] = {
     "count": len,
     "any": any,
     "all": all,
+}
+
+
+_is_not_null = partial(is_not, None)
+
+
+def _non_null(values: list[Any]) -> list[Any]:
+    return list(filter(_is_not_null, values))
+
+
+def _sum_skipping_nulls(values: list[Any]) -> Any:
+    return sum(filter(_is_not_null, values))
+
+
+def _mean_skipping_nulls(values: list[Any]) -> Any:
+    return _mean(present) if (present := _non_null(values)) else None
+
+
+def _min_skipping_nulls(values: list[Any]) -> Any:
+    return min(present) if (present := _non_null(values)) else None
+
+
+def _max_skipping_nulls(values: list[Any]) -> Any:
+    return max(present) if (present := _non_null(values)) else None
+
+
+# The same aggregations, for columns with nulls: filtering them out still runs in C.
+_NULL_SKIPPING_AGGS: Mapping[str, Callable[[list[Any]], Any]] = {
+    "sum": _sum_skipping_nulls,
+    "mean": _mean_skipping_nulls,
+    "min": _min_skipping_nulls,
+    "max": _max_skipping_nulls,
+    "count": lambda values: len(values) - values.count(None),
+    "any": lambda values: any(filter(_is_not_null, values)),
+    "all": lambda values: all(filter(_is_not_null, values)),
 }
 
 
@@ -293,8 +329,8 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                 else groups.split(native, order_by)
             )
             fast = _NULL_SAFE_AGGS.get(method_name) or (
-                _NULL_FREE_AGGS.get(method_name) if None not in native else None
-            )
+                _NULL_FREE_AGGS if None not in native else _NULL_SKIPPING_AGGS
+            ).get(method_name)
             if fast is not None and not kwargs:
                 result[alias] = list(map(fast, values))
             else:

@@ -25,6 +25,26 @@ objects. Everything else (`pz.col`,
 `pz.when`, `pz.concat`, `pz.selectors`, the dtypes, ...) is Narwhals' own, so see the
 [Narwhals docs](https://narwhals-dev.github.io/narwhals/) for the full API.
 
+## Lazy frames
+
+`df.lazy()`, `pz.scan_parquet` and `pz.scan_csv` return lazy frames, which record
+operations in a query plan instead of running them. `collect()` first prunes the
+columns that nothing reads (projection pushdown), so that `scan_parquet` only decodes
+the columns a query uses, and then runs the plan eagerly:
+
+```python
+lf = pz.scan_parquet("lineitem.parquet")  # reads only the footer
+result = lf.filter(pz.col("l_quantity") > 45).select(pz.col("l_extendedprice").sum())
+print(result.to_native().explain())  # the plan, as a tree
+result.collect()  # reads `l_quantity` and `l_extendedprice` only
+```
+
+Operations are checked when they're defined, by running them on empty frames, so e.g.
+selecting a missing column raises straight away. Some errors which depend on dtypes
+(which `pizzlies` infers from values) only show up on `collect()`. Expressions whose
+columns depend on the input's dtypes or order (selectors, `all()`, `nth`, ...) keep
+every column, and resolving dtype selectors runs the plan to get its schema.
+
 ## As a Narwhals plugin
 
 Narwhals discovers the plugin automatically, so a dict of lists can be passed straight to

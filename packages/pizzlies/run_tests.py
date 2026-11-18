@@ -52,7 +52,10 @@ BASE_COMMAND = [
 # The parametrization id is part of the node id, so one failing case does not
 # deselect every other case of the same test.
 FAILED_PATTERN = re.compile(
-    r"^(?:FAILED|ERROR) (tests/\S+?::\w+(?:\[[^\]]*\])?)", re.MULTILINE
+    # Parameter ids may nest brackets (e.g. `[dict[lazy]-x]`) or contain spaces, so
+    # the id runs up to the ` - ` before the message (or the end of the line).
+    r"^(?:FAILED|ERROR) (tests/\S+?::\w+(?:\[.*?\])?)(?: - |$)",
+    re.MULTILINE,
 )
 
 

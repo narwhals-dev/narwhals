@@ -737,8 +737,10 @@ def _sample_strings(values: Iterable[Any]) -> list[str]:
 def parse_datetime_format(values: Iterable[Any]) -> str:
     """Try to infer a datetime `strptime` format from string values."""
     sample = _sample_strings(values)
+    if not sample:  # nothing to parse, so any format will do
+        return "%Y-%m-%d"
     matches = [_FULL_DATETIME_RE.match(value) for value in sample]
-    if not sample or not all(matches):
+    if not all(matches):
         msg = "Unable to infer datetime format, provided format is not supported."
         raise NotImplementedError(msg)
     if len({match["sep"] for match in matches if match}) > 1:

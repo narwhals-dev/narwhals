@@ -533,18 +533,42 @@ def _read_column_chunk(buf: bytes, meta: dict[int, Any], column: _Column) -> lis
     return out
 
 
+def _check_magic(head: bytes, tail: bytes) -> None:
+    if head != MAGIC or tail != MAGIC:
+        msg = "Not a Parquet file (or an encrypted one, which is not supported)."
+        raise ValueError(msg)
+
+
+def read_parquet_columns(source: str | bytes) -> list[str]:
+    """The column names of a flat Parquet file, reading only its footer."""
+    if isinstance(source, str):
+        with open(source, "rb") as stream:  # noqa: PTH123
+            head = stream.read(4)
+            stream.seek(-8, 2)
+            tail = stream.read(8)
+            _check_magic(head, tail[4:])
+            metadata_length = int.from_bytes(tail[:4], "little")
+            stream.seek(-8 - metadata_length, 2)
+            footer = stream.read(metadata_length)
+    else:
+        _check_magic(source[:4], source[-4:])
+        metadata_length = int.from_bytes(source[-8:-4], "little")
+        footer = source[-8 - metadata_length : -8]
+    return [column.name for column in _columns(_read_struct(_Reader(footer))[2])]
+
+
 def read_parquet(
-    source: str | BinaryIO, columns: Sequence[str] | None = None
+    source: str | bytes | BinaryIO, columns: Sequence[str] | None = None
 ) -> dict[str, list[Any]]:
     """Read a flat Parquet file into a dict of lists, optionally only some `columns`."""
     if isinstance(source, str):
         with open(source, "rb") as stream:  # noqa: PTH123
             buf = stream.read()
+    elif isinstance(source, bytes):
+        buf = source
     else:
         buf = source.read()
-    if buf[:4] != MAGIC or buf[-4:] != MAGIC:
-        msg = "Not a Parquet file (or an encrypted one, which is not supported)."
-        raise ValueError(msg)
+    _check_magic(buf[:4], buf[-4:])
     metadata_length = int.from_bytes(buf[-8:-4], "little")
     metadata = _read_struct(_Reader(buf, len(buf) - 8 - metadata_length))
     all_columns = _columns(metadata[2])

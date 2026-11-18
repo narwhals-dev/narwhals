@@ -91,7 +91,8 @@ class DictSeriesDateTimeNamespace(
     def timestamp(self, time_unit: TimeUnit) -> DictSeries:
         dtypes = self.version.dtypes
         dtype = self.compliant.dtype
-        if not isinstance(dtype, (dtypes.Datetime, dtypes.Date)):
+        # `Unknown`: no non-null values to infer the dtype from, so nothing to convert.
+        if not isinstance(dtype, (dtypes.Datetime, dtypes.Date, dtypes.Unknown)):
             msg = "Input should be either of Date or Datetime type."
             raise TypeError(msg)
 

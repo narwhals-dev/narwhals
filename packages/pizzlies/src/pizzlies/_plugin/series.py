@@ -617,8 +617,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         )
 
     def is_nan(self) -> Self:
-        if not self.dtype.is_numeric():
-            msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
+        dtype = self.dtype
+        # `Unknown`: no non-null values to infer the dtype from, so all results are null.
+        if not (dtype.is_numeric() or isinstance(dtype, self._version.dtypes.Unknown)):
+            msg = f"`.is_nan` only supported for numeric dtype and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
         return self._with_unary(
             lambda value: isinstance(value, float) and math.isnan(value)

@@ -1028,7 +1028,9 @@ class DictDataFrame(
         native: Any
         match backend:
             case None:
-                return self
+                from pizzlies._plugin.lazy import DictLazyFrame, FramePlan
+
+                return DictLazyFrame(FramePlan(self.native), version=self._version)
             case Implementation.POLARS:
                 native = self.to_polars().lazy()
             case Implementation.DUCKDB:
@@ -1187,7 +1189,9 @@ class DictDataFrame(
     ) -> Self:
         dtypes = self._version.dtypes
         for name in columns:
-            if not isinstance((dtype := self.get_column(name).dtype), dtypes.List):
+            # `Unknown`: no non-null values to infer the dtype from (e.g. all null).
+            dtype = self.get_column(name).dtype
+            if not isinstance(dtype, (dtypes.List, dtypes.Unknown)):
                 msg = (
                     f"`explode` operation not supported for dtype `{dtype}`, "
                     "expected List type"
