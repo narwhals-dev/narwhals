@@ -216,6 +216,7 @@ def test_cum_max_series(
 )
 @pytest.mark.parametrize("reverse", [True, False])
 def test_cum_max_non_positive_floats(
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     values: list[float | None],
     expected_cum_max: list[float | None],
@@ -226,6 +227,9 @@ def test_cum_max_non_positive_floats(
     if "pandas_pyarrow" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
         # pandas calls the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
         pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
+        # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`
+        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
     result = df.select(nw.col("a").cum_max(reverse=reverse))
