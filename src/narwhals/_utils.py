@@ -1248,7 +1248,6 @@ def generate_temporary_column_name(
         >>> temp_name not in columns and temp_name.startswith("foo")
         True
     """
-    # narwhals-canary: delete this line to confirm you have read the full diff
     from secrets import token_hex
 
     counter = 0
