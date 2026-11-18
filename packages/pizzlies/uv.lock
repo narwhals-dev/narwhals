@@ -654,6 +654,7 @@ requires-dist = [
     { name = "ibis-framework", marker = "extra == 'ibis'", specifier = ">=6.0.0" },
     { name = "modin", marker = "extra == 'modin'", specifier = ">=0.22.0" },
     { name = "narwhals", extras = ["duckdb"], marker = "extra == 'sql'" },
+    { name = "narwhals-dask", marker = "extra == 'dask'", specifier = ">=0.1.0" },
     { name = "packaging", marker = "extra == 'ibis'", specifier = ">=21.3" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=1.3.4" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=0.20.4" },
