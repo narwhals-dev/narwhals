@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import MapNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
 class SparkLikeExprMapNamespace(
     LazyExprNamespace["SparkLikeExpr"], MapNamespace["SparkLikeExpr"]
 ):
+    len = not_implemented()
+
     def get(self, key: NonNestedLiteral) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F

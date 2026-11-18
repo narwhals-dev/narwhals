@@ -6,6 +6,7 @@ import pandas as pd
 
 from narwhals._compliant.any_namespace import MapNamespace
 from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
 class PandasLikeSeriesMapNamespace(
     PandasLikeSeriesNamespace, MapNamespace["PandasLikeSeries"]
 ):
+    len = not_implemented()
+
     def get(self, key: NonNestedLiteral) -> PandasLikeSeries:
         from narwhals._arrow.utils import map_get
 

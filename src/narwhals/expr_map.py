@@ -15,6 +15,26 @@ class ExprMapNamespace(Generic[ExprT]):
     def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
+    def len(self) -> ExprT:
+        """Return the number of entries in each map.
+
+        Null maps return null. Entries with null values count towards the total.
+        The result has dtype `UInt32`. Requires Polars 2.0 or newer.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.Series(
+            ...     "a",
+            ...     [{"x": 1, "y": 2}, {}, None, {"x": None}],
+            ...     dtype=pl.Map(pl.String, pl.Int64),
+            ... ).to_frame()
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").map.len()).get_column("a").to_list()
+            [2, 0, None, 1]
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "map.len"))
+
     def get(self, key: NonNestedLiteral) -> ExprT:
         """Return the value for `key` in each map.
 
