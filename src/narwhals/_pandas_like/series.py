@@ -203,7 +203,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
 
     def _from_scalar(self, value: Any) -> Self:
-        # narwhals-canary: delete this line to confirm you have read the full diff
         ns = self._implementation.to_native_namespace()
         dtype = self.native.dtype
         if value is getattr(ns, "NA", None) and hasattr(dtype, "na_value"):
