@@ -6,6 +6,7 @@ import random
 from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping
+from functools import cache
 from itertools import chain, compress, islice, repeat
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
@@ -106,6 +107,9 @@ class DictDataFrame(
     EagerDataFrame["DictSeries", "DictExpr", "DictFrame", "NativeSeries"]  # type: ignore[type-var]
 ):
     _implementation = Implementation.UNKNOWN
+    # Set on the sub-frames of `over` partitions and `group_by` groups, so that dtype
+    # selectors pick the same columns in each (e.g. an all-null slice infers `Unknown`).
+    _parent_schema: Callable[[], Mapping[str, DType]] | None = None
 
     def __init__(
         self,
@@ -165,7 +169,8 @@ class DictDataFrame(
         context: Context,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
-        names = list(schema) if schema else (list(data[0]) if data else [])
+        # narwhals-canary: delete this line to confirm you have read the full diff
+        names = list(schema) if schema else list(dict.fromkeys(chain.from_iterable(data)))
         native: DictFrame = {name: [row.get(name) for row in data] for name in names}
         if schema:
             return cls.from_dict(native, context=context, schema=schema)
@@ -185,6 +190,7 @@ class DictDataFrame(
             if isinstance(schema, Mapping)
             else cls._numpy_column_names(data, schema)
         )
+        check_column_names_are_unique(names)
         native = {
             name: column.tolist() for name, column in zip(names, data.T, strict=True)
         }
@@ -252,6 +258,10 @@ class DictDataFrame(
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
+
+    def _schema_for_sub_frames(self) -> Callable[[], Mapping[str, DType]]:
+        """This frame's schema, inferred on first call, for its sub-frames' `_parent_schema`."""
+        return self._parent_schema or cache(lambda: self.schema)
 
     def native_repr(self) -> str:
         return frame_repr(self.native, self.schema)
@@ -1191,6 +1201,7 @@ class DictDataFrame(
             on = list(on)
         if error := self._check_columns_exist([*index, *on]):
             raise error
+        check_column_names_are_unique([*index, variable_name, value_name])
         n = len(self)
         native = self.native
 

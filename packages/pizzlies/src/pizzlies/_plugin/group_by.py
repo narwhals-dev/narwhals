@@ -182,6 +182,9 @@ class _GroupedRows:
                 )
                 for position in range(len(self.keys))
             ]
+            parent_schema = self._frame._schema_for_sub_frames()
+            for frame in frames:
+                frame._parent_schema = parent_schema
         return frames
 
 
@@ -370,9 +373,10 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     def agg(self, *exprs: DictExpr) -> DictDataFrame:
         frame = self.compliant
         groups = _GroupedRows(frame, self._keys)
+        # Keyed by output names: an aggregation may be aliased to a temporary key name.
         result: DictFrame = {
             key_name: groups.key_column(position)
-            for position, key_name in enumerate(self._keys)
+            for position, key_name in enumerate(self._output_key_names)
         }
         exclude = (*self._keys, *self._output_key_names)
         names = list(self._output_key_names)
@@ -411,9 +415,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                     self._agg_complex(expr, groups.frames(order_by, columns), aliases)
                 )
 
-        return frame._with_native(result, validate_column_names=False).rename(
-            dict(zip(self._keys, self._output_key_names, strict=True))
-        )
+        return frame._with_native(result, validate_column_names=False)
 
     def __iter__(self) -> Iterator[tuple[tuple[Any, ...], DictDataFrame]]:
         frame = self.compliant

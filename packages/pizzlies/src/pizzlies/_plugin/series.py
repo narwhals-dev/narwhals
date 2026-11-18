@@ -11,7 +11,11 @@ from typing import TYPE_CHECKING, Any
 from narwhals.compliant import EagerSeries
 from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 from narwhals.utils import NO_DEFAULT, Implementation
-from pizzlies._plugin._vendored import assert_never, not_implemented
+from pizzlies._plugin._vendored import (
+    assert_never,
+    check_column_names_are_unique,
+    not_implemented,
+)
 from pizzlies._plugin.repr import series_repr
 from pizzlies._plugin.utils import (
     binary_op,
@@ -1150,6 +1154,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         from pizzlies._plugin.dataframe import DictDataFrame
 
         value_name = name or ("proportion" if normalize else "count")
+        check_column_names_are_unique([self.name, value_name])
         counter = Counter(self.native)
         items = counter.most_common() if sort else list(counter.items())
         total = len(self.native)
@@ -1176,6 +1181,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                     null_name if value is None else f"{self.name}{separator}{value}"
                 )
             column[index] = 1
+        # e.g. `None` and `"null"`, or `1` and `"1"`, would share a column.
+        check_column_names_are_unique(list(names.values()))
         columns = {names[value]: column for value, column in columns.items()}
         non_null = sorted(name for name in columns if name != null_name)
         ordered = ([null_name] if null_name in columns else []) + non_null[

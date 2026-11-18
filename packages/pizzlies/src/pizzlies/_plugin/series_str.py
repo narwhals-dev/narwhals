@@ -11,7 +11,7 @@ from pizzlies._plugin._vendored import SeriesNamespace
 from pizzlies._plugin.utils import parse_datetime_format, parse_time_format
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from pizzlies._plugin.series import DictSeries
 
@@ -49,6 +49,13 @@ class DictSeriesStringNamespace(
             [None if value is None else fn(value) for value in self.native]
         )
 
+    def _receiver(self, length: int) -> Sequence[Any]:
+        """The values, repeated to `length` if this is a broadcast scalar (e.g. `nw.lit`)."""
+        native = self.native
+        if self.compliant._broadcast and len(native) != length:
+            return [native[0] if native else None] * length
+        return native
+
     def _with_other(self, fn: Callable[[str, str], Any], other: Any) -> DictSeries:
         """Apply `fn` elementwise, `other` being a scalar or a (broadcastable) series."""
         values, is_scalar = self.compliant._extract_comparand(other)
@@ -59,7 +66,7 @@ class DictSeriesStringNamespace(
         return self.with_native(
             [
                 None if (lhs is None or rhs is None) else fn(lhs, rhs)
-                for lhs, rhs in zip(self.native, values, strict=True)
+                for lhs, rhs in zip(self._receiver(len(values)), values, strict=True)
             ]
         )
 
@@ -103,7 +110,9 @@ class DictSeriesStringNamespace(
                 string
                 if string is None or replacement is None
                 else fn(string, replacement)
-                for string, replacement in zip(self.native, replacements, strict=True)
+                for string, replacement in zip(
+                    self._receiver(len(replacements)), replacements, strict=True
+                )
             ]
         )
 

@@ -115,3 +115,49 @@ def test_backend_name() -> None:
     df = nw.from_dict({"a": [1]}, backend=pz.BACKEND)
     assert_pizzlies_frame(df, {"a": [1]})
     assert_pizzlies_frame(nw.from_native({"a": [1]}, eager_only=True), {"a": [1]})
+
+
+def test_from_dicts_keys_first_seen_after_first_row() -> None:
+    df = pz.from_dicts([{"a": 1}, {"a": 2, "b": 3}])
+    assert df.to_native() == {"a": [1, 2], "b": [None, 3]}
+
+
+def test_from_numpy_duplicate_names() -> None:
+    np = pytest.importorskip("numpy")
+    with pytest.raises(nw.exceptions.DuplicateError):
+        pz.from_numpy(np.array([[1, 2]]), ["a", "a"])
+
+
+@pytest.mark.parametrize(
+    ("index", "variable_name", "value_name"),
+    [("variable", "variable", "value"), ("i", "v", "v")],
+)
+def test_unpivot_duplicate_output_names(
+    index: str, variable_name: str, value_name: str
+) -> None:
+    df = pz.from_dict({index: [1], "x": [2]})
+    with pytest.raises(nw.exceptions.DuplicateError):
+        df.unpivot(["x"], index=index, variable_name=variable_name, value_name=value_name)
+
+
+def test_over_dtype_selector_all_null_partition() -> None:
+    df = pz.from_dict({"g": ["a", "b"], "x": [1, None]})
+    result = df.select(pz.selectors.numeric().rank().over("g"))
+    assert result.to_native() == {"x": [1.0, None]}
+
+
+def test_horizontal_cov_corr_with_scalar_and_big_ints() -> None:
+    df = pz.from_dict({"x": [1, 2]})
+    assert df.select(pz.cov("x", pz.lit(3))).to_native() == {"x": [0.0]}
+    big = pz.from_dict({"x": [2**53, 2**53 + 1], "y": [2**53, 2**53 + 1]})
+    assert big.select(pz.cov("x", "y", ddof=1)).to_native() == {"x": [0.5]}
+    assert big.select(pz.corr("x", "y")).item() == pytest.approx(1.0)
+
+
+def test_str_ops_with_scalar_receiver() -> None:
+    df = pz.from_dict({"p": ["a", "z"], "r": ["X", "Y"]})
+    result = df.select(
+        starts=pz.lit("abc").str.starts_with(pz.col("p")),
+        replaced=pz.lit("abc").str.replace("b", pz.col("r"), literal=True),
+    )
+    assert result.to_native() == {"starts": [True, False], "replaced": ["aXc", "aYc"]}

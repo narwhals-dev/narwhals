@@ -530,17 +530,34 @@ def _read_data_page_v2(
         else None
     )
     body = raw[levels_end:]
-    page = _decompress(codec, body) if header.get(7, True) else body
+    # An all-null page may have an empty body, which e.g. snappy can't decompress.
+    page = _decompress(codec, body) if body and header.get(7, True) else body
     values = _decode_values(
         page, 0, encoding, count - n_nulls, column=column, dictionary=dictionary
     )
     return _with_nulls(values, levels)
 
 
-def _read_column_chunk(buf: bytes, meta: dict[int, Any], column: _Column) -> list[Any]:
+def _chunk_range(meta: dict[int, Any]) -> tuple[int, int]:
+    """The `(file offset, size)` of a column chunk's pages."""
+    # Dictionary page, if any, else first data page.
+    start: int = meta.get(11) or meta[9]
+    size: int = meta[7]
+    if start < 0 or size < 0:
+        _raise_corrupt()
+    return start, size
+
+
+def _read_column_chunk(
+    buf: bytes, meta: dict[int, Any], column: _Column, *, offset: int = 0
+) -> list[Any]:
+    """Decode a column chunk from `buf`, which starts at file position `offset`."""
     codec: int = meta[4]
-    start: int = meta.get(11) or meta[9]  # dictionary page, if any, else first data page
-    pos, end = start, start + meta[7]
+    start, size = _chunk_range(meta)
+    pos = start - offset
+    end = pos + size
+    if end > len(buf):
+        _raise_corrupt()
     dictionary: list[Any] | None = None
     out: list[Any] = []
     while pos < end:
@@ -569,22 +586,30 @@ def _check_magic(head: bytes, tail: bytes) -> None:
         raise ValueError(msg)
 
 
+def _read_footer(stream: BinaryIO) -> dict[int, Any]:
+    head = stream.read(4)
+    stream.seek(-8, 2)
+    tail = stream.read(8)
+    _check_magic(head, tail[4:])
+    metadata_length = int.from_bytes(tail[:4], "little")
+    stream.seek(-8 - metadata_length, 2)
+    return _read_struct(_Reader(stream.read(metadata_length)))
+
+
+def _buffer_footer(buf: bytes) -> dict[int, Any]:
+    _check_magic(buf[:4], buf[-4:])
+    metadata_length = int.from_bytes(buf[-8:-4], "little")
+    return _read_struct(_Reader(buf, len(buf) - 8 - metadata_length))
+
+
 def read_parquet_columns(source: str | bytes) -> list[str]:
     """The column names of a flat Parquet file, reading only its footer."""
     if isinstance(source, str):
         with open(source, "rb") as stream:  # noqa: PTH123
-            head = stream.read(4)
-            stream.seek(-8, 2)
-            tail = stream.read(8)
-            _check_magic(head, tail[4:])
-            metadata_length = int.from_bytes(tail[:4], "little")
-            stream.seek(-8 - metadata_length, 2)
-            footer = stream.read(metadata_length)
+            metadata = _read_footer(stream)
     else:
-        _check_magic(source[:4], source[-4:])
-        metadata_length = int.from_bytes(source[-8:-4], "little")
-        footer = source[-8 - metadata_length : -8]
-    return [column.name for column in _columns(_read_struct(_Reader(footer))[2])]
+        metadata = _buffer_footer(source)
+    return [column.name for column in _columns(metadata[2])]
 
 
 def read_parquet(
@@ -592,15 +617,29 @@ def read_parquet(
 ) -> dict[str, list[Any]]:
     """Read a flat Parquet file into a dict of lists, optionally only some `columns`."""
     if isinstance(source, str):
+        # Read only the footer and the wanted column chunks, not the whole file.
         with open(source, "rb") as stream:  # noqa: PTH123
-            buf = stream.read()
-    elif isinstance(source, bytes):
-        buf = source
-    else:
-        buf = source.read()
-    _check_magic(buf[:4], buf[-4:])
-    metadata_length = int.from_bytes(buf[-8:-4], "little")
-    metadata = _read_struct(_Reader(buf, len(buf) - 8 - metadata_length))
+
+            def read_chunk(meta: dict[int, Any], column: _Column) -> list[Any]:
+                start, size = _chunk_range(meta)
+                stream.seek(start)
+                buf = stream.read(size)
+                return _read_column_chunk(buf, meta, column, offset=start)
+
+            return _read_parquet(_read_footer(stream), columns, read_chunk)
+    buf = source if isinstance(source, bytes) else source.read()
+    return _read_parquet(
+        _buffer_footer(buf),
+        columns,
+        lambda meta, column: _read_column_chunk(buf, meta, column),
+    )
+
+
+def _read_parquet(
+    metadata: dict[int, Any],
+    columns: Sequence[str] | None,
+    read_chunk: Callable[[dict[int, Any], _Column], list[Any]],
+) -> dict[str, list[Any]]:
     all_columns = _columns(metadata[2])
     names = [column.name for column in all_columns]
     if columns is not None and (missing := set(columns).difference(names)):
@@ -617,5 +656,5 @@ def read_parquet(
             if 1 in chunk:
                 msg = "Parquet column chunks stored in other files are not supported."
                 raise NotImplementedError(msg)
-            result[column.name] += _read_column_chunk(buf, chunk[3], column)
+            result[column.name] += read_chunk(chunk[3], column)
     return result

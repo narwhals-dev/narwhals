@@ -312,14 +312,22 @@ class DictNamespace(
         }
 
     @staticmethod
+    def _shift_ints(values: Sequence[Any]) -> Sequence[Any]:
+        # Integers beyond 2**53 lose their differences when centred on a float mean,
+        # so shift them (exactly) towards zero first: (co)variance is shift-invariant.
+        if values and all(isinstance(value, int) for value in values):
+            ref = values[0]
+            return [value - ref for value in values]
+        return values
+
     def _pairwise_not_null(
-        a: DictSeries, b: DictSeries
+        self, a: DictSeries, b: DictSeries
     ) -> tuple[Sequence[Any], Sequence[Any]]:
-        xs, ys = a.native, b.native
-        if None not in xs and None not in ys:
-            return xs, ys
-        mask = [x is not None and y is not None for x, y in zip(xs, ys, strict=True)]
-        return list(compress(xs, mask)), list(compress(ys, mask))
+        xs, ys = (s.native for s in self._series._align_full_broadcast(a, b))
+        if None in xs or None in ys:
+            mask = [x is not None and y is not None for x, y in zip(xs, ys, strict=True)]
+            xs, ys = list(compress(xs, mask)), list(compress(ys, mask))
+        return self._shift_ints(xs), self._shift_ints(ys)
 
     def _binary_scalar_expr(
         self, a: DictExpr, b: DictExpr, func: Callable[[DictSeries, DictSeries], Any]

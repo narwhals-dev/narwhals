@@ -172,3 +172,18 @@ def test_enum_class_not_evicted() -> None:
     for i in range(100):
         _enum_class((str(i),))
     assert _enum_class(("a", "b")) is first
+
+
+@pytest.mark.parametrize("normalize", [False, True])
+def test_value_counts_name_collision(normalize: bool) -> None:  # noqa: FBT001
+    name = "proportion" if normalize else "count"
+    s = pz.new_series(name, [7, 7, 8])
+    with pytest.raises(pz.exceptions.DuplicateError):
+        s.value_counts(normalize=normalize)
+    assert s.value_counts(name="n", sort=True).to_native() == {name: [7, 8], "n": [2, 1]}
+
+
+@pytest.mark.parametrize("values", [[None, "null"], [1, "1"]])
+def test_to_dummies_name_collision(values: list[Any]) -> None:
+    with pytest.raises(pz.exceptions.DuplicateError):
+        pz.new_series("a", values).to_dummies()

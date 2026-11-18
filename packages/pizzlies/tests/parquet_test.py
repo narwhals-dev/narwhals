@@ -16,8 +16,13 @@ from pizzlies._plugin.parquet import (
     BYTE_ARRAY,
     FIXED_LEN_BYTE_ARRAY,
     INT64,
+    OPTIONAL,
+    PLAIN,
+    SNAPPY,
+    _Column,
     _decode_plain,
     _decode_rle_bitpacked,
+    _read_data_page_v2,
     read_parquet,
 )
 
@@ -311,3 +316,30 @@ def test_zstd_without_backport(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delattr(backports, "zstd", raising=False)
     with pytest.raises(NotImplementedError, match=r"pizzlies\[zstd\]"):
         read_parquet(buf)
+
+
+def test_all_null_v2_page_with_empty_body() -> None:
+    # parquet-java can write all-null V2 pages with no (compressed) value bytes at all.
+    column = _Column({1: INT64, 3: OPTIONAL, 4: b"a"})
+    levels = b"\x06\x00"  # an RLE run of three 0s: three nulls
+    header = {1: 3, 2: 3, 4: PLAIN, 5: len(levels), 6: 0}
+    assert _read_data_page_v2(levels, header, SNAPPY, column, None) == [None] * 3
+
+
+def test_path_reads_only_selected_column_chunks(tmp_path: Path) -> None:
+    path = tmp_path / "data.parquet"
+    table = pa.table({"a": [1, 2], "b": ["x", None], "c": [1.5, 2.5]})
+    pq.write_table(table, path, row_group_size=1)
+    assert read_parquet(str(path), ["c", "a"]) == {"c": [1.5, 2.5], "a": [1, 2]}
+    # Corrupt the bytes of `b`'s chunks: they're never read.
+    raw = bytearray(path.read_bytes())
+    for row_group in range(2):
+        meta = pq.ParquetFile(path).metadata.row_group(row_group).column(1)
+        start = meta.dictionary_page_offset or meta.data_page_offset
+        raw[start : start + meta.total_compressed_size] = (
+            b"\xff" * meta.total_compressed_size
+        )
+    path.write_bytes(bytes(raw))
+    assert read_parquet(str(path), ["c", "a"]) == {"c": [1.5, 2.5], "a": [1, 2]}
+    with pytest.raises(ValueError, match="may be corrupt"):
+        read_parquet(str(path), ["b"])

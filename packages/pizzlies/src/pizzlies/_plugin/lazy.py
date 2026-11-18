@@ -314,7 +314,9 @@ def _requirements(  # noqa: C901, PLR0911, PLR0912
         return [needed]
     if name == "drop":
         # Dropped columns aren't needed: `optimize` makes the drop non-strict.
-        return [needed - set(args[0])]
+        # If nothing is needed (e.g. only the row count), the column `_prune_leaf`
+        # keeps to carry the length could be one that's dropped, so keep them all.
+        return [needed - set(args[0]) if needed else None]
     if name in {"explode", "drop_nulls", "unique"}:
         subset = args[0]
         if not subset:  # e.g. `unique()` compares whole rows

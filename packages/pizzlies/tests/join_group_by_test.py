@@ -164,3 +164,17 @@ def test_group_by_duplicate_output_names(aggs: list[nw.Expr]) -> None:
     df = pz.from_dict({"g": [1, 1], "a": [2, 3]})
     with pytest.raises(pz.exceptions.DuplicateError):
         df.group_by("g").agg(*aggs)
+
+
+def test_group_by_dtype_selector_all_null_group() -> None:
+    df = pz.from_dict({"g": ["a", "b"], "x": [1, None]})
+    result = df.group_by("g").agg(pz.selectors.numeric().drop_nulls().sum()).sort("g")
+    assert result.to_native() == {"g": ["a", "b"], "x": [1, 0]}
+
+
+def test_group_by_expr_key_alias_matches_temporary_name() -> None:
+    df = pz.from_dict({"g": ["a", "a"], "x": [2, 3]})
+    result = df.group_by(pz.col("g").str.to_uppercase()).agg(
+        pz.col("x").sum().alias("_g_tmp")
+    )
+    assert result.to_native() == {"g": ["A"], "_g_tmp": [5]}

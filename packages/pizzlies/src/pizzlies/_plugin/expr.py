@@ -260,12 +260,15 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
 
         # Gather only the columns the expression reads into each sub-frame.
         source = self._pruned(df)
+        parent_schema = source._schema_for_sub_frames()
 
         num_rows = len(df)
         outputs: list[list[Any]] = []
         names: list[str] = []
         for indices in groups.values():
-            results = self(source._gather_positions(indices))
+            partition = source._gather_positions(indices)
+            partition._parent_schema = parent_schema
+            results = self(partition)
             if not outputs:
                 outputs = [[None] * num_rows for _ in results]
                 names = [s.name for s in results]

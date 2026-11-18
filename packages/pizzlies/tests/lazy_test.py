@@ -225,3 +225,8 @@ def test_explain(path: str) -> None:
         f"    SCAN PARQUET {path!r} ['a', 'b', 'c', 'd']",
     ]
     assert "FRAME ['a', 'b', 'c', 'd']" in repr(pz.from_dict(DATA).lazy())
+
+
+def test_drop_then_len() -> None:
+    lf = pz.from_dict({"a": [1, 2], "b": [3, 4]}).lazy()
+    assert lf.drop("a").select(pz.len()).collect().to_native() == {"len": [2]}
