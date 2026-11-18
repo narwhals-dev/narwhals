@@ -64,8 +64,9 @@ Note that, once installed, `pizzlies` claims every plain `dict` passed to `nw.fr
 
 Parquet files are read by a small pure-Python reader, straight into a dict of lists. It
 supports flat columns; data pages V1 and V2; `PLAIN`, dictionary and boolean `RLE` encodings;
-and uncompressed, snappy, gzip and zstd compression, where zstd (Polars' default) needs
-Python 3.14+ for the stdlib's `compression.zstd`. Anything else (nested columns, `DELTA_*`
+and uncompressed, snappy, gzip and zstd compression. Zstd (Polars' default) uses the
+stdlib's `compression.zstd` on Python 3.14+, and on older Pythons needs the optional
+`backports.zstd` package: `pip install pizzlies[zstd]`. Anything else (nested columns, `DELTA_*`
 encodings, brotli/lz4, ...) raises `NotImplementedError`: read such files with pyarrow and
 convert them, `pz.from_arrow(pq.read_table(path))`. Writing Parquet isn't supported.
 `Map` dtypes aren't supported, and dtypes are inferred

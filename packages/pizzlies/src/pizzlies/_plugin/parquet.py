@@ -5,7 +5,8 @@ Supported:
 - flat (non-nested) columns, required or optional;
 - data pages V1 and V2, and dictionary pages;
 - `PLAIN`, `PLAIN_DICTIONARY`/`RLE_DICTIONARY` and (for booleans) `RLE` encodings;
-- uncompressed, snappy and gzip compression, and zstd on Python 3.14+ (`compression.zstd`);
+- uncompressed, snappy and gzip compression, and zstd with `compression.zstd` (Python
+  3.14+) or else the optional `backports.zstd`;
 - strings, enums, JSON, decimals, dates, times, timestamps, and (un)signed integers.
 
 Anything else raises `NotImplementedError`.
@@ -198,14 +199,17 @@ def _decompress(codec: int, data: bytes) -> bytes:
     if codec == ZSTD:
         if sys.version_info >= (3, 14):
             from compression import zstd
-
-            return zstd.decompress(data)
-        msg = (
-            "Reading zstd-compressed Parquet needs Python 3.14+. On older Python "
-            "versions, read it with pyarrow and convert: "
-            "`pz.from_arrow(pyarrow.parquet.read_table(path))`."
-        )
-        raise NotImplementedError(msg)
+        else:
+            try:  # optional: `pip install pizzlies[zstd]`
+                from backports import zstd  # type: ignore[import-not-found,unused-ignore]  # pyright: ignore[reportMissingImports]
+            except ImportError:
+                msg = (
+                    "Reading zstd-compressed Parquet needs Python 3.14+, or the "
+                    "`backports.zstd` package (`pip install pizzlies[zstd]`)."
+                )
+                raise NotImplementedError(msg) from None
+        result: bytes = zstd.decompress(data)
+        return result
     msg = f"Parquet compression codec {_CODEC_NAMES.get(codec, codec)} is not supported."
     raise NotImplementedError(msg)
 

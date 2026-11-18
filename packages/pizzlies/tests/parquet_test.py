@@ -5,6 +5,7 @@ import random
 import string
 import sys
 from decimal import Decimal
+from importlib.util import find_spec
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
@@ -20,12 +21,14 @@ pq = pytest.importorskip("pyarrow.parquet")
 
 CODECS = ["none", "snappy", "gzip", "zstd"]
 UTC = dt.timezone.utc
+# The stdlib has zstd from Python 3.14, and the `backports.zstd` package before that.
+HAS_ZSTD = sys.version_info >= (3, 14) or find_spec("backports.zstd") is not None
 
 
 def _codec_param(codec: str) -> Any:
     marks = []
-    if codec == "zstd" and sys.version_info < (3, 14):
-        marks.append(pytest.mark.skip(reason="stdlib zstd needs Python 3.14+"))
+    if codec == "zstd" and not HAS_ZSTD:
+        marks.append(pytest.mark.skip(reason="needs Python 3.14+ or backports.zstd"))
     return pytest.param(codec, marks=marks)
 
 
@@ -162,9 +165,7 @@ def test_written_by_polars() -> None:
     df = pl.DataFrame(
         {"a": [1, None, 3], "b": ["x", "y", None], "c": [True, None, False]}
     )
-    for codec in ("uncompressed", "snappy", "gzip") + (
-        ("zstd",) if sys.version_info >= (3, 14) else ()
-    ):
+    for codec in ("uncompressed", "snappy", "gzip") + (("zstd",) if HAS_ZSTD else ()):
         buf = BytesIO()
         df.write_parquet(buf, compression=codec)
         buf.seek(0)
@@ -222,4 +223,15 @@ def test_not_parquet() -> None:
 def test_unsupported(table: Any, kwargs: Any, match: str) -> None:
     buf = _write(pa.table(table), **kwargs)
     with pytest.raises(NotImplementedError, match=match):
+        read_parquet(buf)
+
+
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="the stdlib has zstd")
+def test_zstd_without_backport(monkeypatch: pytest.MonkeyPatch) -> None:
+    buf = _write(pa.table({"a": [1, 2]}), compression="zstd")
+    # Make `from backports import zstd` fail, even if it was imported already.
+    monkeypatch.setitem(sys.modules, "backports.zstd", None)
+    if (backports := sys.modules.get("backports")) is not None:
+        monkeypatch.delattr(backports, "zstd", raising=False)
+    with pytest.raises(NotImplementedError, match=r"pizzlies\[zstd\]"):
         read_parquet(buf)

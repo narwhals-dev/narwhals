@@ -14,7 +14,8 @@ or as a Narwhals plugin, where plain dicts become valid native frames:
     nw.from_native({"a": [1, 2, 3]}, eager_only=True)
 
 Parquet files are read by a small pure-Python reader, which supports flat columns and the
-common encodings and compression codecs (zstd needs Python 3.14+).
+common encodings and compression codecs (zstd needs Python 3.14+, or
+`pip install pizzlies[zstd]` before that).
 """
 
 from __future__ import annotations
