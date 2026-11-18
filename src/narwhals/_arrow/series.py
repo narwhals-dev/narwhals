@@ -41,7 +41,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -515,19 +515,39 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if n_values not in {1, n_indices}:
             msg = f"Expected object of length {n_indices}, got length: {n_values}"
             raise ShapeError(msg)
-        target_type = self._type
         values_native = (
-            values.native.cast(target_type)
-            if values.native.type != target_type
+            values.native.cast(self._type)
+            if values.native.type != self._type
             else values.native
         )
+        if indices.native.null_count:
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
+        n = len(self)
+        indices_native = pc.if_else(
+            pc.less(indices.native, lit(0)),
+            pc.add(indices.native, lit(n)),
+            indices.native,
+        )
+        min_max = pc.min_max(indices_native)
+        if min_max["min"].as_py() < 0 or min_max["max"].as_py() >= n:
+            msg = f"Scatter indices are out of bounds for Series of length {n}."
+            raise IndexError(msg)
+        # `replace_with_mask` fills masked slots in ascending order, so sort (stably)
+        # by index and keep only the last occurrence of each, matching Polars.
+        order = pc.sort_indices(indices_native)
+        sorted_indices = indices_native.take(order)
+        next_indices = pa.concat_arrays(
+            [*sorted_indices[1:].chunks, pa.nulls(1, sorted_indices.type)]
+        )
+        keep = pc.not_equal(sorted_indices, next_indices).fill_null(True)
         if n_values == n_indices:
-            sorted_indices = pc.sort_indices(indices.native)
-            replacements = values_native.take(sorted_indices).combine_chunks()
+            replacements = values_native.take(order).filter(keep).combine_chunks()
         else:
-            replacements = repeat(values_native[0], n_indices)
-        mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
-        return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
+            replacements = repeat(values_native[0], pc.sum(keep).as_py())
+        return self._with_native(
+            _replace_sorted(self.native, indices_native, replacements)
+        )
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
@@ -1277,3 +1297,22 @@ class _ArrowHist(
         if self._breakpoint:
             return {"breakpoint": bins[1:], "count": counts}
         return {"count": counts}
+
+
+def _replace_sorted(
+    native: ChunkedArrayAny, indices: ChunkedArrayAny, replacements: ArrayAny
+) -> ChunkedArrayAny:
+    """Replace `native` at unique, non-negative `indices` (`replacements` sorted by index)."""
+    n = len(native)
+    positions = arange(start=0, end=n, step=1)
+    mask = pc.is_in(positions, indices)
+    try:
+        return pc.replace_with_mask(native, mask, replacements)
+    except pa.ArrowNotImplementedError:
+        # No `replace_with_mask` kernel for dictionary, duration and nested types:
+        # append the replacements and `take` each masked slot's replacement from the
+        # tail instead.
+        offsets = pc.add(pc.cumulative_sum(mask.cast(pa.int64())), lit(n - 1))
+        return pa.chunked_array([*native.chunks, replacements], type=native.type).take(
+            pc.if_else(mask, offsets, positions)
+        )

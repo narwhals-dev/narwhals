@@ -59,18 +59,32 @@ jobs:
           fi
       - name: Build a binary wheel and a source tarball
         run: uv build --out-dir dist
-      - name: Smoke tests (wheel and source distribution)
+      - name: Smoke tests (wheel and source distribution, minimum and latest Narwhals)
         run: |
+          floor="$(grep -oP '"narwhals>=\K[^",]+' pyproject.toml)"
+          if [ -z "$floor" ]; then
+            echo "Could not find the narwhals>= floor in pyproject.toml" >&2
+            exit 1
+          fi
           for dist in dist/*.whl dist/*.tar.gz; do
-            uv run --isolated --no-project --with "$dist" --with pandas python -c '
+          for narwhals in "narwhals==$floor" "narwhals"; do
+            echo "Smoke testing $dist with $narwhals"
+            uv run --isolated --no-project --with "$dist" --with "$narwhals" --with pandas python -c '
           import warnings
           warnings.simplefilter("error")
           import dask.dataframe as dd
           import narwhals as nw
-          df = nw.from_native(dd.from_dict({"a": [1, 2, 3]}, npartitions=1))
+          print("narwhals", nw.__version__)
+          df = nw.from_native(dd.from_dict({"a": [1, 2, 3], "g": [1, 1, 2]}, npartitions=1))
           assert type(df._compliant_frame).__module__.startswith("narwhals_dask")
           assert df.select(nw.col("a").sum()).collect().item() == 6
+          # `group_by` and `over` read `_metadata`, which has no stability guarantee.
+          result = df.group_by("g").agg(nw.col("a").sum()).sort("g").collect()
+          assert result["a"].to_list() == [3, 3]
+          result = df.with_columns(b=nw.col("a").sum().over("g")).sort("a").collect()
+          assert result["b"].to_list() == [3, 3, 3]
           '
+          done
           done
       - name: Store the distribution packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
