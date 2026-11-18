@@ -67,13 +67,13 @@ pandas and much slower than Polars on anything but small data.
 
 | | Installed size | Import time |
 | --- | ---: | ---: |
-| `pizzlies` (+ `narwhals`) | 0.3 MB (+ 2.1 MB) | 47 ms |
-| `polars` (+ `polars-runtime-32`) | 183 MB | 119 ms |
-| `pyarrow` | 171 MB | 139 ms |
-| `pandas` (+ `numpy`) | 96 MB | 349 ms |
+| `pizzlies` (+ `narwhals`) | 0.3 MB (+ 2.1 MB) | 40 ms |
+| `polars` (+ `polars-runtime-32`) | 183 MB | 125 ms |
+| `pyarrow` | 171 MB | 144 ms |
+| `pandas` (+ `numpy`) | 96 MB | 365 ms |
 
-The `pizzlies` wheel is 89 KB. Import times are the median of 20 fresh interpreters, from
-wheel installs; almost all of `pizzlies`' is importing Narwhals (45 ms on its own).
+The `pizzlies` wheel is 89 KB. Import times are the median of 40 fresh interpreters, from
+wheel installs; almost all of `pizzlies`' is importing Narwhals (34 ms on its own).
 
 On the 22 [TPC-H](https://github.com/narwhals-dev/narwhals/tree/main/tpch) queries at
 scale factor 0.1 (`lineitem` has 600,000 rows), run through Narwhals end to end
