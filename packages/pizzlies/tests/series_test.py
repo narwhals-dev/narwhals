@@ -72,6 +72,20 @@ def test_rolling_infinities() -> None:
     assert math.isnan(_values(s.rolling_sum(3))[2])
 
 
+def test_rolling_non_finite_with_subnormal() -> None:
+    s = pz.new_series("a", [math.inf, 5e-324], pz.Float64())
+    assert _values(s.rolling_sum(1)) == [math.inf, 5e-324]
+    assert _values(s.rolling_mean(2)) == [None, math.inf]
+    assert math.isnan(_values(s.rolling_var(2))[1])
+
+
+def test_rolling_overflow_saturates() -> None:
+    s = pz.new_series("a", [1e308, 1e308, -1e308, -1e308], pz.Float64())
+    assert _values(s.rolling_sum(2)) == [None, math.inf, 0.0, -math.inf]
+    assert _values(s.rolling_mean(2)) == [None, 1e308, 0.0, -1e308]
+    assert _values(s.rolling_var(2))[2] == math.inf
+
+
 def test_rolling_floats_match_fsum() -> None:
     rng = random.Random(0)  # noqa: S311
     values = [rng.choice([None, rng.uniform(-1e6, 1e6), 1e-300]) for _ in range(200)]

@@ -919,7 +919,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                     local([value for value in values[start:end] if value is not None])
                 )
             elif (total := _non_finite_total(prefix[3], start, end)) is not None:
-                result.append(exact(count, total, math.inf, prefix[0]))
+                # The total is already a float here: `prefix[0]` would only make
+                # `exact` overflow converting the scale to a float.
+                result.append(exact(count, total, math.inf, 1))
             else:
                 scale, totals, total_sqs, _ = prefix
                 result.append(
@@ -938,7 +940,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             min_samples=min_samples,
             center=center,
             exact=lambda _count, total, _total_sq, scale: (
-                total / scale if scale else total
+                _divide(total, scale) if scale else total
             ),
             local=sum,
         )
@@ -948,7 +950,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             window_size,
             min_samples=min_samples,
             center=center,
-            exact=lambda count, total, _total_sq, scale: total / (count * (scale or 1)),
+            exact=lambda count, total, _total_sq, scale: _divide(
+                total, count * (scale or 1)
+            ),
             local=lambda window: sum(window) / len(window),
         )
 
@@ -959,8 +963,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             if count <= ddof:
                 return None
             scale = scale or 1
-            return (count * total_sq - total * total) / (
-                count * (count - ddof) * scale * scale
+            return _divide(
+                count * total_sq - total * total, count * (count - ddof) * scale * scale
             )
 
         def local(window: list[Any]) -> Any:
@@ -1368,6 +1372,17 @@ def _rolling_prefix_sums(
         [0, *accumulate(value * value for value in observed)] if needs_squares else totals
     )
     return scale, totals, total_sqs, non_finite
+
+
+def _divide(numerator: Any, denominator: int) -> Any:
+    """`numerator / denominator`, saturating to infinity like float arithmetic does.
+
+    Exact integer sums can exceed the float range, where `int / int` raises.
+    """
+    try:
+        return numerator / denominator
+    except OverflowError:
+        return math.inf if numerator > 0 else -math.inf
 
 
 def _non_finite_total(
