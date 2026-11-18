@@ -49,7 +49,10 @@ pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
-dask = ["dask[dataframe]>=2024.8"]
+dask = [
+    "dask[dataframe]>=2024.8",
+    "narwhals-dask>=0.1.0",
+]
 duckdb = ["duckdb>=1.1"]
 ibis = [
     "ibis-framework>=6.0.0",
