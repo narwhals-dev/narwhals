@@ -111,6 +111,7 @@ tests/testing/assert_frame_equal_test.py::test_check_schema_mismatch[dict-left_s
 tests/testing/assert_frame_equal_test.py::test_check_schema_mismatch[dict-left_schema6-right_schema6-True-False-context6]
 tests/testing/assert_frame_equal_test.py::test_check_schema_mismatch[dict[lazy]-left_schema2-right_schema2-True-True-context2]
 tests/testing/assert_frame_equal_test.py::test_check_schema_mismatch[dict[lazy]-left_schema6-right_schema6-True-False-context6]
+tests/testing/assert_series_equal_test.py::test_categorical_as_str[dict-False-context1]
 tests/testing/assert_series_equal_test.py::test_metadata_checks[dict-<lambda>-dtype mismatch]
 tests/testing/assert_series_equal_test.py::test_metadata_checks_with_flags[dict-<lambda>-dtype mismatch-True-False]
 tests/testing/assert_series_equal_test.py::test_metadata_checks_with_flags[dict-<lambda>-dtype mismatch-True-True]
