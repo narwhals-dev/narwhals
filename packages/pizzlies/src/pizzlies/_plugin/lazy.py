@@ -133,6 +133,45 @@ class OpPlan(LazyPlan):
 Memo = dict[int, tuple[LazyPlan, DictDataFrame]]
 """Results by plan `id`. Each entry keeps its plan alive, so that `id` can't be reused."""
 
+_DTYPE_INDEPENDENT_SELECTORS = frozenset({"selectors.all", "selectors.matches"})
+
+
+class _DtypeDependentError(Exception):
+    """A dry run can't tell this plan's output columns: they depend on dtypes."""
+
+
+def _nodes_read_dtypes(nodes: Iterable[Any]) -> bool:
+    for node in nodes:
+        if node.kind.name == "SELECTOR" and node.name not in _DTYPE_INDEPENDENT_SELECTORS:
+            return True
+        for arg in node.exprs:
+            if (sub_nodes := getattr(arg, "_nodes", None)) is not None and (
+                _nodes_read_dtypes(sub_nodes)
+            ):
+                return True
+    return False
+
+
+def _reads_dtypes(plan: OpPlan) -> bool:
+    """Whether `plan`'s output columns may depend on its input's dtypes.
+
+    Dry runs infer every dtype as `Unknown`, so e.g. `with_columns(ncs.numeric())`
+    would select nothing.
+    """
+    values: list[Any] = [*plan.args, *plan.kwargs.values()]
+    while values:
+        value = values.pop()
+        if isinstance(value, (list, tuple)):
+            values.extend(value)
+            continue
+        try:
+            nodes = list(value._metadata.iter_nodes_reversed())
+        except Exception:  # noqa: BLE001, S112
+            continue
+        if _nodes_read_dtypes(nodes):
+            return True
+    return False
+
 
 def _execute(
     plan: LazyPlan, context: Context, memo: Memo, *, dry_run: bool = False
@@ -156,6 +195,8 @@ def _execute(
         )
     else:
         assert isinstance(plan, OpPlan)  # noqa: S101
+        if dry_run and _reads_dtypes(plan):
+            raise _DtypeDependentError
         frames = [
             _execute(child, context, memo, dry_run=dry_run) for child in plan.inputs
         ]
@@ -276,7 +317,7 @@ def _requirements(  # noqa: C901, PLR0911, PLR0912
         return [needed - set(args[0])]
     if name in {"explode", "drop_nulls", "unique"}:
         subset = args[0]
-        if subset is None:  # e.g. `unique()` compares whole rows
+        if not subset:  # e.g. `unique()` compares whole rows
             return [None]
         return [_union(needed, subset, kwargs.get("order_by") or ())]
     if name == "rename":
@@ -354,6 +395,45 @@ def _prune_leaf(plan: LazyPlan, needed: Columns) -> LazyPlan:
     return ScanParquetPlan(plan.source, kept)
 
 
+def _rebuild(
+    node: OpPlan,
+    inputs: tuple[LazyPlan, ...],
+    needed: Columns,
+    input_frame: Callable[[LazyPlan], DictDataFrame],
+) -> OpPlan:
+    """`node`, on its pruned `inputs`."""
+    if node.name == "drop":
+        new_node = node.with_inputs(inputs)
+        # Validated when it was defined: its columns may now be pruned away.
+        new_node.kwargs["strict"] = False
+        return new_node
+    if node.name == "concat" and node.kwargs["how"] == "vertical":
+        return _align_vertical_concat(node, inputs, needed, input_frame)
+    return node.with_inputs(inputs)
+
+
+def _align_vertical_concat(
+    node: OpPlan,
+    inputs: tuple[LazyPlan, ...],
+    needed: Columns,
+    input_frame: Callable[[LazyPlan], DictDataFrame],
+) -> OpPlan:
+    """Select the same columns, in the same order, from each pruned input.
+
+    Pruning only narrows the leaves, so an input which computes its columns (e.g. a
+    `select`) may still provide more of them than one which doesn't.
+    """
+    if not needed:
+        return node
+    try:
+        output = input_frame(node).columns
+    except Exception:  # noqa: BLE001
+        return node
+    columns = tuple(column for column in output if column in needed)
+    aligned = tuple(OpPlan("simple_select", (child,), columns) for child in inputs)
+    return node.with_inputs(aligned)
+
+
 def optimize(plan: LazyPlan, context: Context, dry_runs: Memo | None = None) -> LazyPlan:
     """Projection pushdown: drop columns which nothing downstream reads."""
     dry_runs = {} if dry_runs is None else dry_runs
@@ -390,11 +470,9 @@ def optimize(plan: LazyPlan, context: Context, dry_runs: Memo | None = None) -> 
             changed = any(
                 new is not old for new, old in zip(inputs, node.inputs, strict=True)
             )
-            new_node = node.with_inputs(inputs) if changed else node
-            if changed and node.name == "drop":
-                # Validated when it was defined: its columns may now be pruned away.
-                new_node.kwargs["strict"] = False
-            rebuilt[id(node)] = new_node
+            rebuilt[id(node)] = (
+                _rebuild(node, inputs, needs[id(node)], input_frame) if changed else node
+            )
         else:
             rebuilt[id(node)] = _prune_leaf(node, needs[id(node)])
     return rebuilt[id(plan)]

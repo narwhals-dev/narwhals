@@ -49,7 +49,9 @@ def _floor_time_of_day(
         us = value.microsecond + 1_000_000 * (
             value.second + 60 * (value.minute + 60 * value.hour)
         )
-        return value - timedelta(microseconds=us % every_us)
+        # Arithmetic resets `fold`: keep it so both occurrences of an ambiguous
+        # wall time stay in distinct buckets.
+        return (value - timedelta(microseconds=us % every_us)).replace(fold=value.fold)
 
     return fn
 
@@ -201,13 +203,13 @@ class DictSeriesDateTimeNamespace(
 
         def fn_time(value: datetime | date) -> datetime | date:
             if not isinstance(value, datetime):
-                value = datetime(value.year, value.month, value.day)
-            tzinfo = value.tzinfo
+                us = datetime_to_us(datetime(value.year, value.month, value.day))
+                truncated = EPOCH_NAIVE + timedelta(microseconds=us - us % every_us)
+                return truncated.date()
             # Truncate in local wall time, like Polars.
-            naive = value.replace(tzinfo=None)
-            us = datetime_to_us(naive)
+            us = datetime_to_us(value.replace(tzinfo=None))
             truncated = EPOCH_NAIVE + timedelta(microseconds=us - us % every_us)
-            return truncated.replace(tzinfo=tzinfo)
+            return truncated.replace(tzinfo=value.tzinfo, fold=value.fold)
 
         return self._unary(
             fn_time

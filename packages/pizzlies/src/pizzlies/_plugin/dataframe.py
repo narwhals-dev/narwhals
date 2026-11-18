@@ -56,6 +56,17 @@ if TYPE_CHECKING:
     from pizzlies._plugin.typing import Context, DictFrame, NativeSeries
 
 
+def _pivot_label(value: Any, *, quote: bool) -> str:
+    """Format a pivot key as Polars does in output column names."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return f'"{value}"' if quote else value
+    return str(value)
+
+
 def _row_filter(
     mask: Sequence[Any], *, n_kept: int, n_columns: int
 ) -> Callable[[Sequence[Any]], list[Any]]:
@@ -156,6 +167,8 @@ class DictDataFrame(
     ) -> Self:
         names = list(schema) if schema else (list(data[0]) if data else [])
         native: DictFrame = {name: [row.get(name) for row in data] for name in names}
+        if schema:
+            return cls.from_dict(native, context=context, schema=schema)
         return cls(native, version=context._version)
 
     @classmethod
@@ -185,6 +198,7 @@ class DictDataFrame(
 
         # Accepts both `pa.Table` and any `__arrow_c_stream__` object.
         table = pa.table(data)
+        check_column_names_are_unique(table.column_names)
         native: DictFrame = {
             name: column.to_pylist()
             for name, column in zip(table.column_names, table.columns, strict=True)
@@ -1137,8 +1151,17 @@ class DictDataFrame(
         from io import StringIO
         from pathlib import Path
 
+        class _LFStream:
+            # Before Python 3.12, `csv` only quotes a field containing `\r` if `\r`
+            # is in `lineterminator`, so write `\r\n` and swap it for `\n`.
+            def __init__(self, stream: SupportsWrite[str]) -> None:
+                self._stream = stream
+
+            def write(self, row: str) -> None:
+                self._stream.write(f"{row[:-2]}\n")
+
         def dump(stream: SupportsWrite[str]) -> None:
-            writer = csv.writer(stream, lineterminator="\n")
+            writer = csv.writer(_LFStream(stream), lineterminator="\r\n")
             writer.writerow(self.columns)
             writer.writerows(self.iter_rows(named=False, buffer_size=512))
 
@@ -1271,7 +1294,10 @@ class DictDataFrame(
     def _pivot_output_name(
         value: str, on_combo: tuple[Any, ...], *, n_on: int, n_values: int, separator: str
     ) -> str:
-        label = on_combo[0] if n_on == 1 else '{"' + '","'.join(on_combo) + '"}'
+        if n_on == 1:
+            label = _pivot_label(on_combo[0], quote=False)
+        else:
+            label = "{" + ",".join(_pivot_label(v, quote=True) for v in on_combo) + "}"
         return f"{value}{separator}{label}" if n_values > 1 else label
 
     def _pivot_aggregate(
@@ -1337,18 +1363,21 @@ class DictDataFrame(
             name: [row[position] for row in index_rows]
             for position, name in enumerate(index)
         }
+        names = list(index)
         for value in values:
             column = self.native[value]
             for combo in on_combos:
                 name = self._pivot_output_name(
                     value, combo, n_on=n_on, n_values=n_values, separator=separator
                 )
+                names.append(name)
                 result[name] = [
                     self._pivot_aggregate(column, rows, aggregate_function)
                     if (rows := cells.get((index_row, combo)))
                     else None
                     for index_row in index_rows
                 ]
+        check_column_names_are_unique(names)
         return self._with_native(result)
 
     # Not implemented (yet): fill in incrementally.

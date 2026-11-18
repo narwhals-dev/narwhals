@@ -92,8 +92,10 @@ def run_tests(extra_args: list[str], *, deselect_known_failures: bool) -> int:
 
 def update_known_failures() -> int:
     command = [*BASE_COMMAND, "-p", "no:randomly", "--tb=no", "-q"]
+    # The baseline must come from a full run, which e.g. `-x` or `--lf` would cut short.
+    env = {k: v for k, v in _env().items() if k != "PYTEST_ADDOPTS"}
     result = subprocess.run(  # noqa: S603
-        command, check=False, cwd=REPO_ROOT, env=_env(), capture_output=True, text=True
+        command, check=False, cwd=REPO_ROOT, env=env, capture_output=True, text=True
     )
     # Only rc 0 (all passed) and rc 1 (some failed) describe the suite. Anything
     # else is a crash, and rewriting the baseline from it would destroy it.

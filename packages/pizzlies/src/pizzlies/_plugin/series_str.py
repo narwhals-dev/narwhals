@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 import re
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any
 
@@ -153,7 +153,13 @@ class DictSeriesStringNamespace(
 
     def to_datetime(self, format: str | None) -> DictSeries:
         fmt = parse_datetime_format(self.native) if format is None else format
-        return self._unary(lambda value: datetime.strptime(value, fmt))  # noqa: DTZ007
+
+        def parse(value: str) -> datetime:
+            parsed = datetime.strptime(value, fmt)  # noqa: DTZ007
+            # Like Polars, offset-aware values are converted to UTC.
+            return parsed if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+        return self._unary(parse)
 
     def to_date(self, format: str | None) -> DictSeries:
         fmt = parse_datetime_format(self.native) if format is None else format

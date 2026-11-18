@@ -826,7 +826,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def diff(self) -> Self:
         # One pass over adjacent pairs, no `native[1:]`/`native[:-1]` slice copies;
         # nulls propagate as in `binary_op` (either operand null -> null).
-        result: list[Any] = [None]
+        result: list[Any] = [None] if self.native else []
         result.extend(
             None if (prev is None or curr is None) else curr - prev
             for prev, curr in pairwise(self.native)
@@ -886,42 +886,54 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         *,
         min_samples: int,
         center: bool,
-        agg: Callable[[int, Any, Any], Any],
+        exact: Callable[[int, int, int], Any],
+        local: Callable[[list[Any]], Any],
         needs_squares: bool = False,
     ) -> Self:
-        """Apply `agg(count, total, total_of_squares)` over each rolling window.
+        """Aggregate each rolling window.
 
-        Windows are position-based: nulls occupy a slot but are excluded from
-        `count`/`total`, mirroring `pandas`/Polars semantics. The prefix sum of
-        squares is only accumulated when `needs_squares` is set.
+        Windows are position-based: nulls occupy a slot but are excluded from the
+        window's observations, mirroring `pandas`/Polars semantics. Integer inputs
+        use `exact(count, total, total_of_squares)` on prefix sums, which can't lose
+        precision. Anything else (e.g. floats, where prefix sums would let an
+        earlier NaN or a large value leak into later windows) uses `local` on each
+        window's non-null values.
         """
         values = self.native
-        counts, totals, total_sqs = [0], [0], [0]
-        for value in values:
-            is_obs = value is not None
-            counts.append(counts[-1] + is_obs)
-            totals.append(totals[-1] + (value if is_obs else 0))
-            if needs_squares:
-                total_sqs.append(total_sqs[-1] + (value * value if is_obs else 0))
+        n_values = len(values)
+        counts = [0, *accumulate(value is not None for value in values)]
+        integral = all(value is None or isinstance(value, int) for value in values)
+        if integral:
+            observed = [0 if value is None else value for value in values]
+            totals = [0, *accumulate(observed)]
+            total_sqs = (
+                [0, *accumulate(value * value for value in observed)]
+                if needs_squares
+                else totals
+            )
         if center:
             # Window [i - window_size // 2, i + (window_size - 1) // 2].
             offsets = (-(window_size // 2), (window_size - 1) // 2 + 1)
         else:
             offsets = (-window_size + 1, 1)
         result = []
-        for index in range(len(values)):
+        for index in range(n_values):
             start = max(index + offsets[0], 0)
-            end = min(index + offsets[1], len(values))
+            end = min(index + offsets[1], n_values)
             count = counts[end] - counts[start]
             if count < min_samples:
                 result.append(None)
-            else:
+            elif integral:
                 result.append(
-                    agg(
+                    exact(
                         count,
                         totals[end] - totals[start],
-                        total_sqs[end] - total_sqs[start] if needs_squares else 0,
+                        total_sqs[end] - total_sqs[start],
                     )
+                )
+            else:
+                result.append(
+                    local([value for value in values[start:end] if value is not None])
                 )
         return self._with_native(result)
 
@@ -930,7 +942,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             window_size,
             min_samples=min_samples,
             center=center,
-            agg=lambda _count, total, _total_sq: total,
+            exact=lambda _count, total, _total_sq: total,
+            local=sum,
         )
 
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
@@ -938,22 +951,31 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             window_size,
             min_samples=min_samples,
             center=center,
-            agg=lambda count, total, _total_sq: total / count if count else None,
+            exact=lambda count, total, _total_sq: total / count,
+            local=lambda window: sum(window) / len(window),
         )
 
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
-        def variance(count: int, total: Any, total_sq: Any) -> float | None:
+        def exact(count: int, total: int, total_sq: int) -> float | None:
             if count <= ddof:
                 return None
-            return max(total_sq - total * total / count, 0.0) / (count - ddof)
+            return (count * total_sq - total * total) / (count * (count - ddof))
+
+        def local(window: list[Any]) -> float | None:
+            count = len(window)
+            if count <= ddof:
+                return None
+            mean = sum(window) / count
+            return sum((value - mean) ** 2 for value in window) / (count - ddof)
 
         return self._rolling_agg(
             window_size,
             min_samples=min_samples,
             center=center,
-            agg=variance,
+            exact=exact,
+            local=local,
             needs_squares=True,
         )
 

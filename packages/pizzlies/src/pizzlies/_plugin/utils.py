@@ -6,7 +6,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, time, timedelta, timezone
-from functools import lru_cache, partial
+from functools import cache, lru_cache, partial
 from itertools import islice, repeat
 from operator import itemgetter
 from typing import TYPE_CHECKING, Any, cast
@@ -403,14 +403,15 @@ def _to_binary(value: Any) -> bytes:
     raise InvalidOperationError(msg)
 
 
-@lru_cache(maxsize=16)
+@cache
 def _enum_class(categories: tuple[str, ...]) -> type[enum.Enum]:
     """Build (and memoize) the dynamic Enum class backing a set of categories.
 
     Memoization is load-bearing: `enum.Enum` members compare by identity within
     a single class, so two independent `cast(Enum([...]))` calls must resolve to
     the *same* class or their members would never compare equal. Polars treats
-    equal-category Enums as equal, and caching reproduces that.
+    equal-category Enums as equal, and caching reproduces that. The cache is
+    unbounded so that evicting a class can't split equal values across two classes.
     """
     return cast(
         "type[enum.Enum]",

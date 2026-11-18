@@ -150,3 +150,17 @@ def test_group_by_multi_output() -> None:
     result = pz.from_dict(data).group_by("g").agg(pz.all().sum()).sort("g")
     expected = pl.DataFrame(data).group_by("g").agg(pl.all().sum()).sort("g")
     _assert_close(result, expected)
+
+
+@pytest.mark.parametrize(
+    "aggs",
+    [
+        [pz.col("a").sum().alias("g")],
+        [pz.col("a").sum(), pz.col("a").mean()],
+        [(pz.col("a") - pz.col("a").mean()).sum().alias("g")],
+    ],
+)
+def test_group_by_duplicate_output_names(aggs: list[nw.Expr]) -> None:
+    df = pz.from_dict({"g": [1, 1], "a": [2, 3]})
+    with pytest.raises(pz.exceptions.DuplicateError):
+        df.group_by("g").agg(*aggs)

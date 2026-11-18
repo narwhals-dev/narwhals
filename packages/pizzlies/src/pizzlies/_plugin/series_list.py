@@ -16,6 +16,18 @@ if TYPE_CHECKING:
     from pizzlies._plugin.series import DictSeries
 
 
+def _unique(values: Sequence[Any]) -> list[Any]:
+    try:
+        return list(dict.fromkeys(values))
+    except TypeError:
+        # Unhashable inner values, e.g. nested lists.
+        unique: list[Any] = []
+        for value in values:
+            if value not in unique:
+                unique.append(value)
+        return unique
+
+
 class DictSeriesListNamespace(SeriesNamespace["DictSeries"], ListNamespace["DictSeries"]):
     def _unary(self, fn: Callable[[Sequence[Any]], Any]) -> DictSeries:
         """Apply `fn` to each inner list, propagating outer nulls."""
@@ -51,8 +63,8 @@ class DictSeriesListNamespace(SeriesNamespace["DictSeries"], ListNamespace["Dict
         raise InvalidOperationError(msg)
 
     def unique(self, *, maintain_order: bool) -> DictSeries:
-        # `dict.fromkeys` keeps first-appearance order, which satisfies both settings.
-        return self._unary(lambda values: list(dict.fromkeys(values)))
+        # First-appearance order satisfies both settings.
+        return self._unary(_unique)
 
     def min(self) -> DictSeries:
         return self._unary(

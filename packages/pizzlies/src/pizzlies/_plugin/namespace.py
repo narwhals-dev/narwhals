@@ -361,7 +361,7 @@ class DictNamespace(
                 var_y += dy * dy
             if var_x == 0 or var_y == 0:
                 return None
-            return cov / math.sqrt(var_x * var_y)
+            return cov / (math.sqrt(var_x) * math.sqrt(var_y))
 
         return self._binary_scalar_expr(a, b, pearson)
 

@@ -111,6 +111,8 @@ def test_pruned_queries_match_eager(
         lambda df: df.select(pz.nth(2)),
         lambda df: df.select(pz.exclude("a")),
         lambda df: df.unique(keep="any").sort("a").select("a"),
+        lambda df: df.unique([], keep="any").sort("a").select("a"),
+        lambda df: df.drop_nulls([]).select("a"),
     ],
 )
 def test_unknown_columns_read_everything(
@@ -165,6 +167,29 @@ def test_concat(path: str, reads: list[tuple[str, ...]]) -> None:
 
     assert check(path, query) == {"a": [20]}
     assert reads == [("a",)]
+
+
+def test_vertical_concat_of_pruned_and_computed_inputs(path: str) -> None:
+    computed = pz.scan_parquet(path).select(pz.col("a"), pz.col("b"))
+    lf = pz.concat([pz.scan_parquet(path, columns=["a", "b"]), computed]).select("a")
+    assert lf.collect().to_native() == {"a": [*DATA["a"], *DATA["a"]]}
+
+
+def test_dtype_dependent_output_names(path: str) -> None:
+    def query(df: Any) -> Any:
+        return df.with_columns(pz.selectors.numeric().name.suffix("_n"))
+
+    lf = query(pz.scan_parquet(path))
+    assert lf.columns == [*DATA, "a_n", "c_n"]
+    check(path, query)
+
+    other = pz.from_dict({"a": [1, 2], "x": [0, 1]})
+
+    def join(df: Any) -> Any:
+        right = other.lazy() if isinstance(df, pz.LazyFrame) else other
+        return df.join(query(right), on="a").select("a", "x_n")
+
+    check(path, join, ordered=False)
 
 
 def test_errors_are_raised_when_operations_are_defined(path: str) -> None:

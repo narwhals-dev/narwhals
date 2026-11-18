@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 
 import pizzlies as pz
 import pytest
@@ -19,6 +20,7 @@ def native_repr(
 
 def test_frame_repr(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(repr_module, "available_width", lambda: 200)
+    monkeypatch.setattr(os, "get_terminal_size", lambda: os.terminal_size((200, 24)))
     df = pz.from_dict(
         {
             "a": [1, 2, None],
@@ -43,7 +45,7 @@ def test_frame_repr(monkeypatch: pytest.MonkeyPatch) -> None:
         "└──────┴───────────────────────────┴───────┴───────────┴───────────┴───────────────────────────┴──────────────┘"
     )
     assert native_repr(df) == expected
-    assert expected in repr(df) or "Use `.to_native`" in repr(df)
+    assert all(line in repr(df) for line in expected.splitlines())
 
 
 def test_frame_repr_truncated() -> None:
@@ -62,11 +64,12 @@ def test_frame_repr_empty() -> None:
     assert frame_repr({}, {}) == "shape: (0, 0)\n┌┐\n└┘"
 
 
-def test_series_repr() -> None:
+def test_series_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(os, "get_terminal_size", lambda: os.terminal_size((200, 24)))
     s = pz.new_series("a", [1.5, None, 3.0])
     expected = "shape: (3,)\nSeries: 'a' [f64]\n[\n\t1.5\n\tnull\n\t3.0\n]"
     assert native_repr(s) == expected
-    assert "Series: 'a' [f64]" in repr(s) or "Use `.to_native`" in repr(s)
+    assert "Series: 'a' [f64]" in repr(s)
     long = series_repr("b", [dt.date(2020, 1, i) for i in range(1, 21)], pz.Date())
     assert long.splitlines()[:3] == ["shape: (20,)", "Series: 'b' [date]", "["]
     assert "\t…" in long

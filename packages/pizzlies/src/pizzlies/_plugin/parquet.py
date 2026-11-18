@@ -26,7 +26,7 @@ import zlib
 from decimal import Decimal
 from functools import cache
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -275,9 +275,9 @@ def _decode_rle_bitpacked(
             pos += n_bytes
             runs.append((None, (header >> 1) * 8))
         else:  # a run of one repeated value
-            runs.append(
-                (int.from_bytes(buf[pos : pos + byte_width], "little"), header >> 1)
-            )
+            if (n := header >> 1) > count - n_values:
+                _raise_corrupt()
+            runs.append((int.from_bytes(buf[pos : pos + byte_width], "little"), n))
             pos += byte_width
         n_values += runs[-1][1]
     unpacked = _unpack_bits(b"".join(packed), bit_width) if packed else []
@@ -292,8 +292,20 @@ def _decode_rle_bitpacked(
                 offset += n
             else:
                 out += [value] * n
+    if len(out) < count:
+        _raise_corrupt()
     del out[count:]
     return out
+
+
+def _raise_corrupt() -> NoReturn:
+    msg = "Truncated or invalid Parquet data, the file may be corrupt."
+    raise ValueError(msg)
+
+
+def _check_available(buf: bytes, end: int) -> None:
+    if end > len(buf):
+        _raise_corrupt()
 
 
 _read_uint32 = struct.Struct("<I").unpack_from
@@ -310,11 +322,15 @@ def _decode_byte_arrays(buf: bytes, pos: int, count: int, *, utf8: bool) -> list
     out: list[Any] = []
     append = out.append
     pos = 0
-    for _ in range(count):
-        (length,) = _read_uint32(data, pos)
-        pos += 4
-        append(source[pos : pos + length])
-        pos += length
+    try:
+        for _ in range(count):
+            (length,) = _read_uint32(data, pos)
+            pos += 4
+            append(source[pos : pos + length])
+            pos += length
+    except struct.error:
+        _raise_corrupt()
+    _check_available(data, pos)
     if utf8 and source is data:
         return list(map(bytes.decode, out))
     return out
@@ -331,14 +347,18 @@ def _decode_plain_values(page: bytes, pos: int, count: int, column: _Column) -> 
 def _decode_plain(
     buf: bytes, pos: int, physical: int, count: int, type_length: int | None
 ) -> list[Any]:
-    if fmt := _STRUCT_FORMATS.get(physical):
-        return list(struct.unpack_from(f"<{count}{fmt}", buf, pos))
     if physical == BYTE_ARRAY:
         return _decode_byte_arrays(buf, pos, count, utf8=False)
+    if fmt := _STRUCT_FORMATS.get(physical):
+        fmt = f"<{count}{fmt}"
+        _check_available(buf, pos + struct.calcsize(fmt))
+        return list(struct.unpack_from(fmt, buf, pos))
     if physical == BOOLEAN:
+        _check_available(buf, pos + (count + 7) // 8)
         return [bool((buf[pos + i // 8] >> (i % 8)) & 1) for i in range(count)]
     width = 12 if physical == INT96 else type_length
     assert width is not None  # noqa: S101
+    _check_available(buf, pos + count * width)
     return [buf[pos + i * width : pos + (i + 1) * width] for i in range(count)]
 
 
@@ -389,9 +409,10 @@ def _converter(element: dict[int, Any]) -> Converter | None:  # noqa: C901, PLR0
         scale = (
             logical[_L_DECIMAL].get(1, 0) if _L_DECIMAL in logical else element.get(7, 0)
         )
+        # Built from a string, as `scaleb` would round to the context's precision.
         if physical in {BYTE_ARRAY, FIXED_LEN_BYTE_ARRAY}:
-            return lambda b: Decimal(int.from_bytes(b, "big", signed=True)).scaleb(-scale)
-        return lambda v: Decimal(v).scaleb(-scale)
+            return lambda b: Decimal(f"{int.from_bytes(b, 'big', signed=True)}E-{scale}")
+        return lambda v: Decimal(f"{v}E-{scale}")
     if _L_DATE in logical or converted == _DATE:
         return lambda d: dt.date.fromordinal(_EPOCH_ORDINAL + d)
     if _L_TIMESTAMP in logical:
@@ -523,6 +544,8 @@ def _read_column_chunk(buf: bytes, meta: dict[int, Any], column: _Column) -> lis
         r = _Reader(buf, pos)
         header = _read_struct(r)
         page_type, compressed_size = header[1], header[3]
+        if compressed_size < 0 or r.pos + compressed_size > end:
+            _raise_corrupt()
         raw = buf[r.pos : r.pos + compressed_size]
         pos = r.pos + compressed_size
         if page_type == DICTIONARY_PAGE:

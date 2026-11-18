@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals.compliant import CompliantGroupBy
 from pizzlies._plugin._vendored import (
+    check_column_names_are_unique,
     evaluate_aliases,
     evaluate_output_names_and_aliases,
     is_sequence_of,
@@ -374,10 +375,13 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             for position, key_name in enumerate(self._keys)
         }
         exclude = (*self._keys, *self._output_key_names)
+        names = list(self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, frame, exclude
             )
+            names.extend(aliases)
+            check_column_names_are_unique(names)
             op_nodes = list(expr._metadata.op_nodes_reversed())
             order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1 and op_nodes[0].name == "len":

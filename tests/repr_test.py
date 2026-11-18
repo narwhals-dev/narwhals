@@ -131,5 +131,10 @@ def test_native_repr_hook() -> None:
         def native_repr(self) -> str:
             return "custom"
 
+    class Interchange(Default):
+        def __getattr__(self, attr: str) -> None:
+            raise NotImplementedError
+
     assert native_repr(Default()) == "(1, 2)"
     assert native_repr(Custom()) == "custom"
+    assert native_repr(Interchange()) == "(1, 2)"

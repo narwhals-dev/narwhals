@@ -11,7 +11,15 @@ from typing import TYPE_CHECKING, Any
 
 import pizzlies as pz
 import pytest
-from pizzlies._plugin.parquet import read_parquet
+from pizzlies._plugin.parquet import (
+    BOOLEAN,
+    BYTE_ARRAY,
+    FIXED_LEN_BYTE_ARRAY,
+    INT64,
+    _decode_plain,
+    _decode_rle_bitpacked,
+    read_parquet,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,8 +29,19 @@ pq = pytest.importorskip("pyarrow.parquet")
 
 CODECS = ["none", "snappy", "gzip", "zstd"]
 UTC = dt.timezone.utc
-# The stdlib has zstd from Python 3.14, and the `backports.zstd` package before that.
-HAS_ZSTD = sys.version_info >= (3, 14) or find_spec("backports.zstd") is not None
+
+
+def _has_zstd() -> bool:
+    # The stdlib has zstd from Python 3.14, and the `backports.zstd` package before that.
+    if sys.version_info >= (3, 14):
+        return True
+    try:
+        return find_spec("backports.zstd") is not None
+    except ModuleNotFoundError:  # `backports` itself isn't installed
+        return False
+
+
+HAS_ZSTD = _has_zstd()
 
 
 def _codec_param(codec: str) -> Any:
@@ -198,6 +217,59 @@ def test_public_api(tmp_path: Path) -> None:
 def test_not_parquet() -> None:
     with pytest.raises(ValueError, match="Not a Parquet file"):
         read_parquet(BytesIO(b"definitely not parquet"))
+
+
+def test_decimal_beyond_context_precision() -> None:
+    values = [Decimal("1234567890123456789012345678901234.5678"), Decimal("-0.0010")]
+    for dtype in [pa.decimal128(38, 4), pa.decimal128(9, 4)]:
+        data = values if dtype.precision == 38 else [values[1]]
+        result = read_parquet(_write(pa.table({"a": pa.array(data, dtype)})))["a"]
+        assert result == data
+        assert [v.as_tuple() for v in result] == [v.as_tuple() for v in data]
+
+
+@pytest.mark.parametrize("compressed_size", [-1, 63])
+def test_invalid_page_size(compressed_size: int) -> None:
+    raw = bytearray(
+        _write(
+            pa.table({"a": [1]}),
+            compression="none",
+            use_dictionary=False,
+            write_statistics=False,
+        ).getvalue()
+    )
+    # The first page header: three i32 fields, `type`, `uncompressed_page_size`
+    # and `compressed_page_size`, each a one-byte zigzag varint here.
+    assert raw[4:10:2] == b"\x15\x15\x15"
+    assert raw[9] < 128
+    raw[9] = compressed_size << 1 if compressed_size >= 0 else -2 * compressed_size - 1
+    with pytest.raises(ValueError, match="may be corrupt"):
+        read_parquet(bytes(raw))
+
+
+@pytest.mark.parametrize(
+    ("buf", "physical", "count", "type_length"),
+    [
+        (b"\x00" * 12, INT64, 2, None),
+        (b"\x00", BOOLEAN, 9, None),
+        (b"\x00" * 7, FIXED_LEN_BYTE_ARRAY, 2, 4),
+        (b"\x03\x00\x00\x00ab", BYTE_ARRAY, 1, None),
+        (b"\x00\x00\x00\x00", BYTE_ARRAY, 2, None),
+    ],
+)
+def test_truncated_plain_values(
+    buf: bytes, physical: int, count: int, type_length: int | None
+) -> None:
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decode_plain(buf, 0, physical, count, type_length)
+
+
+def test_truncated_or_oversized_rle_runs() -> None:
+    assert _decode_rle_bitpacked(b"\x06\x01", 0, 2, 1, 3) == [1, 1, 1]
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decode_rle_bitpacked(b"\xfe\xff\xff\xff\x0f\x01", 0, 6, 1, 3)
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decode_rle_bitpacked(b"\x04\x01", 0, 2, 1, 3)
 
 
 @pytest.mark.parametrize(
