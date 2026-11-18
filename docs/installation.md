@@ -84,6 +84,8 @@ Narwhals uses it automatically for all Dask objects.
 python -m pip install narwhals-dask
 ```
 
+The `dask` extra (`narwhals[dask]`) installs it too.
+
 !!! warning "Library authors: prefer keeping backends out of your direct dependencies"
 
     `uv add "narwhals[polars,pyarrow]"` adds the extras to `[project.dependencies]`.
