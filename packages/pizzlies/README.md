@@ -60,6 +60,40 @@ df.select(nw.col("a").sum()).to_native()  # {'a': [6]}
 
 Note that, once installed, `pizzlies` claims every plain `dict` passed to `nw.from_native`.
 
+## Size, import time and performance
+
+`pizzlies` is small and quick to import, but it's pure Python, so it's slower than
+pandas and much slower than Polars on anything but small data.
+
+| | Installed size | Import time |
+| --- | ---: | ---: |
+| `pizzlies` (+ `narwhals`) | 0.3 MB (+ 2.1 MB) | 47 ms |
+| `polars` (+ `polars-runtime-32`) | 183 MB | 119 ms |
+| `pyarrow` | 171 MB | 139 ms |
+| `pandas` (+ `numpy`) | 96 MB | 349 ms |
+
+The `pizzlies` wheel is 89 KB. Import times are the median of 20 fresh interpreters, from
+wheel installs; almost all of `pizzlies`' is importing Narwhals (45 ms on its own).
+
+On the 22 [TPC-H](https://github.com/narwhals-dev/narwhals/tree/main/tpch) queries at
+scale factor 0.1 (`lineitem` has 600,000 rows), run through Narwhals end to end
+(Parquet scan, query, collect):
+
+| | Total | Slowdown vs Polars (geometric mean over queries) |
+| --- | ---: | ---: |
+| `polars` | 0.8 s | 1x |
+| `pandas` | 3.4 s | 3.5x |
+| `pyarrow` | 10.1 s | 7.0x |
+| `pizzlies` | 10.0 s | 10.2x |
+
+Its slowest query takes about a second. On tiny inputs (scale factor 0.014, `lineitem` has
+84,000 rows) fixed overheads dominate, and `pizzlies` (1.3 s for all 22 queries) is in the
+same range as pandas (1.6 s) and Polars (0.9 s).
+
+Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1, Polars
+2.1 and PyArrow 26. Results depend on your hardware and data, so measure your own workload.
+`benchmark.py` reproduces the import times and TPC-H numbers, see its docstring.
+
 ## Limitations
 
 Parquet files are read by a small pure-Python reader, straight into a dict of lists. It
