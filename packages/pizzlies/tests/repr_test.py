@@ -3,7 +3,9 @@ from __future__ import annotations
 import datetime as dt
 
 import pizzlies as pz
-from pizzlies._plugin.repr import frame_repr, series_repr
+import pytest
+from pizzlies._plugin import repr as repr_module
+from pizzlies._plugin.repr import fit_lines, frame_repr, series_repr
 
 
 def native_repr(
@@ -15,7 +17,8 @@ def native_repr(
     return compliant.native_repr()
 
 
-def test_frame_repr() -> None:
+def test_frame_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(repr_module, "available_width", lambda: 200)
     df = pz.from_dict(
         {
             "a": [1, 2, None],
@@ -67,3 +70,37 @@ def test_series_repr() -> None:
     long = series_repr("b", [dt.date(2020, 1, i) for i in range(1, 21)], pz.Date())
     assert long.splitlines()[:3] == ["shape: (20,)", "Series: 'b' [date]", "["]
     assert "\t…" in long
+
+
+WIDE = {f"column_{i}": ["a fairly long string value"] * 3 for i in range(8)}
+SCHEMA = pz.from_dict(WIDE).schema
+
+
+@pytest.mark.parametrize("max_width", [400, 120, 80, 60, 40])
+def test_frame_repr_fits_width(max_width: int) -> None:
+    lines = frame_repr(WIDE, SCHEMA, max_width=max_width).splitlines()
+    assert max(map(len, lines)) <= max_width
+    header = lines[2]
+    # The first and the last columns are always shown, others elided in the middle.
+    assert "column_0" in header
+    assert "column_7" in header
+    assert ("…" in header) == (max_width < 400)
+
+
+def test_frame_repr_shrinks_cells_when_needed() -> None:
+    wide = frame_repr(WIDE, SCHEMA, max_width=80).splitlines()
+    narrow = frame_repr(WIDE, SCHEMA, max_width=40).splitlines()
+    assert '"a fairly long string va…' in wide[6]
+    assert '"a fair…' in narrow[6]  # 15 wide doesn't fit two columns, 8 does
+
+
+def test_frame_repr_single_too_wide_column() -> None:
+    lines = frame_repr(
+        {"a": ["x" * 50]}, {"a": SCHEMA["column_0"]}, max_width=10
+    ).splitlines()
+    assert lines[2].startswith("│ a ")  # shown anyway, at the narrowest cell width
+    assert lines[6] == '│ "xxxxxx… │'
+
+
+def test_fit_lines() -> None:
+    assert fit_lines("short\n" + "x" * 30, 10) == "short\nxxxxxxxxx…"

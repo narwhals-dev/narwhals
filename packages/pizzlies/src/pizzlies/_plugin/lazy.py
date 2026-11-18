@@ -18,6 +18,7 @@ from narwhals.utils import Implementation
 from pizzlies._plugin._vendored import not_implemented
 from pizzlies._plugin.dataframe import DictDataFrame
 from pizzlies._plugin.parquet import read_parquet
+from pizzlies._plugin.repr import fit_lines
 from pizzlies._plugin.series import DictSeries
 
 if TYPE_CHECKING:
@@ -449,7 +450,7 @@ class DictLazyFrame(
         return self._version.lazyframe(self, level="lazy")
 
     def native_repr(self) -> str:
-        return self.native.explain()
+        return fit_lines(self.native.explain())
 
     def _op(
         self, name: str, *args: Any, others: Sequence[DictLazyFrame] = (), **kwargs: Any
