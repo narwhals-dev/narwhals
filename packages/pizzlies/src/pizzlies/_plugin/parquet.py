@@ -265,17 +265,20 @@ def _decode_rle_bitpacked(
     runs: list[tuple[int | None, int]] = []
     packed: list[bytes] = []
     n_values = 0
+    end = min(end, len(buf))
     while n_values < count and pos < end:
         r = _Reader(buf, pos)
         header = r.varint()
         pos = r.pos
         if header & 1:  # bit-packed groups of 8 values, `bit_width` bytes per group
             n_bytes = (header >> 1) * bit_width
+            if pos + n_bytes > end:
+                _raise_corrupt()
             packed.append(buf[pos : pos + n_bytes])
             pos += n_bytes
             runs.append((None, (header >> 1) * 8))
         else:  # a run of one repeated value
-            if (n := header >> 1) > count - n_values:
+            if (n := header >> 1) > count - n_values or pos + byte_width > end:
                 _raise_corrupt()
             runs.append((int.from_bytes(buf[pos : pos + byte_width], "little"), n))
             pos += byte_width

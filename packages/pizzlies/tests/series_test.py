@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import math
+import random
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any
 
 import pizzlies as pz
@@ -51,6 +53,50 @@ def test_rolling_integers_exact() -> None:
         None,
         None,
     ]
+
+
+def test_rolling_infinities() -> None:
+    s = pz.new_series("a", [math.inf, 1.0, -math.inf, 2.0, None, 3.0], pz.Float64())
+    assert _values(s.rolling_sum(2)) == [None, math.inf, -math.inf, -math.inf, None, None]
+    assert _values(s.rolling_mean(2, min_samples=1))[1:] == [
+        math.inf,
+        -math.inf,
+        -math.inf,
+        2.0,
+        3.0,
+    ]
+    var = _values(s.rolling_var(3, min_samples=2))
+    assert var[0] is None
+    assert all(math.isnan(value) for value in var[1:5])
+    assert var[5] == 0.5
+    assert math.isnan(_values(s.rolling_sum(3))[2])
+
+
+def test_rolling_floats_match_fsum() -> None:
+    rng = random.Random(0)  # noqa: S311
+    values = [rng.choice([None, rng.uniform(-1e6, 1e6), 1e-300]) for _ in range(200)]
+    s = pz.new_series("a", values, pz.Float64())
+    window_size = 7
+    for result, index in zip(
+        _values(s.rolling_sum(window_size, min_samples=1)), range(200), strict=True
+    ):
+        window = [
+            v
+            for v in values[max(index - window_size + 1, 0) : index + 1]
+            if v is not None
+        ]
+        assert result == (math.fsum(window) if window else None)
+
+
+def test_rolling_decimal() -> None:
+    s = pz.new_series("a", [Decimal("0.1"), None, Decimal("0.2")], pz.Decimal(10, 2))
+    assert _values(s.rolling_sum(3, min_samples=1)) == [
+        Decimal("0.1"),
+        Decimal("0.1"),
+        Decimal("0.3"),
+    ]
+    assert _values(s.rolling_mean(3, min_samples=2)) == [None, None, Decimal("0.15")]
+    assert _values(s.rolling_var(3, min_samples=1)) == [None, None, Decimal("0.005")]
 
 
 def test_str_to_datetime_offset_aware_to_utc() -> None:

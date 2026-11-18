@@ -270,6 +270,10 @@ def test_truncated_or_oversized_rle_runs() -> None:
         _decode_rle_bitpacked(b"\xfe\xff\xff\xff\x0f\x01", 0, 6, 1, 3)
     with pytest.raises(ValueError, match="may be corrupt"):
         _decode_rle_bitpacked(b"\x04\x01", 0, 2, 1, 3)
+    # RLE value byte or bit-packed payload missing, within `end` or past the buffer.
+    for buf, end in [(b"\x06", 1), (b"\x06", 5), (b"\x03", 1), (b"\x03", 5)]:
+        with pytest.raises(ValueError, match="may be corrupt"):
+            _decode_rle_bitpacked(buf, 0, end, 1, 3)
 
 
 @pytest.mark.parametrize(

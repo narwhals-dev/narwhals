@@ -886,31 +886,22 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         *,
         min_samples: int,
         center: bool,
-        exact: Callable[[int, int, int], Any],
+        exact: Callable[[int, Any, Any, int], Any],
         local: Callable[[list[Any]], Any],
         needs_squares: bool = False,
     ) -> Self:
         """Aggregate each rolling window.
 
         Windows are position-based: nulls occupy a slot but are excluded from the
-        window's observations, mirroring `pandas`/Polars semantics. Integer inputs
-        use `exact(count, total, total_of_squares)` on prefix sums, which can't lose
-        precision. Anything else (e.g. floats, where prefix sums would let an
-        earlier NaN or a large value leak into later windows) uses `local` on each
-        window's non-null values.
+        window's observations, mirroring `pandas`/Polars semantics. Integers and
+        floats use `exact(count, total, total_of_squares, scale)` on exact prefix
+        sums, see `_rolling_prefix_sums`. Anything else (e.g. `Decimal`) uses
+        `local` on each window's non-null values.
         """
         values = self.native
         n_values = len(values)
         counts = [0, *accumulate(value is not None for value in values)]
-        integral = all(value is None or isinstance(value, int) for value in values)
-        if integral:
-            observed = [0 if value is None else value for value in values]
-            totals = [0, *accumulate(observed)]
-            total_sqs = (
-                [0, *accumulate(value * value for value in observed)]
-                if needs_squares
-                else totals
-            )
+        prefix = _rolling_prefix_sums(values, needs_squares=needs_squares)
         if center:
             # Window [i - window_size // 2, i + (window_size - 1) // 2].
             offsets = (-(window_size // 2), (window_size - 1) // 2 + 1)
@@ -923,17 +914,21 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             count = counts[end] - counts[start]
             if count < min_samples:
                 result.append(None)
-            elif integral:
+            elif prefix is None:
+                result.append(
+                    local([value for value in values[start:end] if value is not None])
+                )
+            elif (total := _non_finite_total(prefix[3], start, end)) is not None:
+                result.append(exact(count, total, math.inf, prefix[0]))
+            else:
+                scale, totals, total_sqs, _ = prefix
                 result.append(
                     exact(
                         count,
                         totals[end] - totals[start],
                         total_sqs[end] - total_sqs[start],
+                        scale,
                     )
-                )
-            else:
-                result.append(
-                    local([value for value in values[start:end] if value is not None])
                 )
         return self._with_native(result)
 
@@ -942,7 +937,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             window_size,
             min_samples=min_samples,
             center=center,
-            exact=lambda _count, total, _total_sq: total,
+            exact=lambda _count, total, _total_sq, scale: (
+                total / scale if scale else total
+            ),
             local=sum,
         )
 
@@ -951,19 +948,22 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             window_size,
             min_samples=min_samples,
             center=center,
-            exact=lambda count, total, _total_sq: total / count,
+            exact=lambda count, total, _total_sq, scale: total / (count * (scale or 1)),
             local=lambda window: sum(window) / len(window),
         )
 
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
-        def exact(count: int, total: int, total_sq: int) -> float | None:
+        def exact(count: int, total: Any, total_sq: Any, scale: int) -> float | None:
             if count <= ddof:
                 return None
-            return (count * total_sq - total * total) / (count * (count - ddof))
+            scale = scale or 1
+            return (count * total_sq - total * total) / (
+                count * (count - ddof) * scale * scale
+            )
 
-        def local(window: list[Any]) -> float | None:
+        def local(window: list[Any]) -> Any:
             count = len(window)
             if count <= ddof:
                 return None
@@ -1321,3 +1321,66 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return DictSeriesCatNamespace(self)
 
     map: Any = not_implemented()
+
+
+def _rolling_prefix_sums(
+    values: list[Any], *, needs_squares: bool
+) -> tuple[int, list[int], list[int], list[tuple[int, int, int]]] | None:
+    """Exact prefix sums for rolling aggregations, or `None` for non-numeric values.
+
+    Returns `(scale, totals, total_sqs, non_finite)`. Integers are summed as they
+    are, with `scale=0`. Finite floats are first turned into integers by
+    multiplying them by `scale`, the largest of their (power of two) denominators,
+    so sums can't lose precision and an earlier large value can't leak into later
+    windows. NaNs and infinities are instead counted in `non_finite`, as prefix
+    counts of `(nan, +inf, -inf)`; it is empty if there are none.
+    """
+    scale = 0
+    non_finite: list[tuple[int, int, int]] = []
+    if all(value is None or isinstance(value, int) for value in values):
+        observed = [0 if value is None else value for value in values]
+    elif all(value is None or isinstance(value, (int, float)) for value in values):
+        ratios = [
+            value.as_integer_ratio()
+            if value is not None and math.isfinite(value)
+            else (0, 1)
+            for value in values
+        ]
+        scale = max((denominator for _, denominator in ratios), default=1)
+        observed = [
+            numerator * (scale // denominator) for numerator, denominator in ratios
+        ]
+        if not all(value is None or math.isfinite(value) for value in values):
+            flags = (
+                (0, 0, 0)
+                if value is None or math.isfinite(value)
+                else (int(math.isnan(value)), int(value > 0), int(value < 0))
+                for value in values
+            )
+            non_finite = [
+                (0, 0, 0),
+                *accumulate(flags, lambda a, b: (a[0] + b[0], a[1] + b[1], a[2] + b[2])),
+            ]
+    else:
+        return None
+    totals = [0, *accumulate(observed)]
+    total_sqs = (
+        [0, *accumulate(value * value for value in observed)] if needs_squares else totals
+    )
+    return scale, totals, total_sqs, non_finite
+
+
+def _non_finite_total(
+    non_finite: list[tuple[int, int, int]], start: int, end: int
+) -> float | None:
+    """Sum of the window `[start, end)`, if it holds any NaN or infinity."""
+    if not non_finite:
+        return None
+    n_nan, n_pos, n_neg = (
+        a - b for a, b in zip(non_finite[end], non_finite[start], strict=True)
+    )
+    if n_nan or (n_pos and n_neg):
+        return math.nan
+    if n_pos:
+        return math.inf
+    return -math.inf if n_neg else None
