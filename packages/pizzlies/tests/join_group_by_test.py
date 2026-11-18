@@ -123,12 +123,8 @@ def _aggs(c: Any) -> list[Any]:
     return [agg(c).alias(f"agg_{i}") for i, agg in enumerate(AGGS)]
 
 
-@pytest.mark.parametrize("n_groups", [3, 200])
-@pytest.mark.parametrize("nulls", [False, True])
-def test_group_by(n_groups: int, nulls: bool) -> None:  # noqa: FBT001
-    data = _group_frame(n_groups, nulls=nulls)
-    result = pz.from_dict(data).group_by("g").agg(*_aggs(pz.col)).sort("g")
-    expected = pl.DataFrame(data).group_by("g").agg(*_aggs(pl.col)).sort("g")
+def _assert_close(result: nw.DataFrame[Any], expected: Any) -> None:
+    """Compare floats with a tolerance: summation order differs from Polars'."""
     assert result.columns == expected.columns
     actual = result.to_native()
     for name, expected_values in expected.to_dict(as_series=False).items():
@@ -139,9 +135,18 @@ def test_group_by(n_groups: int, nulls: bool) -> None:  # noqa: FBT001
                 assert got == want, name
 
 
+@pytest.mark.parametrize("n_groups", [3, 200])
+@pytest.mark.parametrize("nulls", [False, True])
+def test_group_by(n_groups: int, nulls: bool) -> None:  # noqa: FBT001
+    data = _group_frame(n_groups, nulls=nulls)
+    result = pz.from_dict(data).group_by("g").agg(*_aggs(pz.col)).sort("g")
+    expected = pl.DataFrame(data).group_by("g").agg(*_aggs(pl.col)).sort("g")
+    _assert_close(result, expected)
+
+
 def test_group_by_multi_output() -> None:
     data = _group_frame(5, nulls=True)
     del data["s"]
     result = pz.from_dict(data).group_by("g").agg(pz.all().sum()).sort("g")
     expected = pl.DataFrame(data).group_by("g").agg(pl.all().sum()).sort("g")
-    assert result.to_native() == expected.to_dict(as_series=False)
+    _assert_close(result, expected)
