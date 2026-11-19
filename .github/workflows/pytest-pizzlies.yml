@@ -23,7 +23,7 @@ jobs:
     if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.14"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -37,5 +37,9 @@ jobs:
           enable-cache: "true"
           cache-suffix: pizzlies-${{ matrix.python-version }}
           cache-dependency-glob: "packages/pizzlies/pyproject.toml"
+      # Runs every test, known failures included: a new failure makes `--update` exit
+      # non-zero, and a fixed one makes the regenerated list differ from the committed one.
       - name: Run Narwhals' test suite against pizzlies
-        run: python packages/pizzlies/run_tests.py
+        run: python packages/pizzlies/run_tests.py --update
+      - name: Check known_failures.txt is up to date
+        run: git diff --exit-code packages/pizzlies/known_failures.txt

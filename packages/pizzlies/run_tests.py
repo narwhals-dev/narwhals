@@ -52,9 +52,9 @@ BASE_COMMAND = [
 # The parametrization id is part of the node id, so one failing case does not
 # deselect every other case of the same test.
 FAILED_PATTERN = re.compile(
-    # Parameter ids may nest brackets (e.g. `[dict[lazy]-x]`) or contain spaces, so
+    # Parameter ids may nest brackets or contain spaces (e.g. `[dict-dtype mismatch]`), so
     # the id runs up to the ` - ` before the message (or the end of the line).
-    r"^(?:FAILED|ERROR) (tests/\S+?::\w+(?:\[.*?\])?)(?: - |$)",
+    r"^(?:FAILED|ERROR) ((?:packages/pizzlies/)?tests/\S+?::\w+(?:\[.*?\])?)(?: - |$)",
     re.MULTILINE,
 )
 
@@ -91,9 +91,17 @@ def run_tests(extra_args: list[str], *, deselect_known_failures: bool) -> int:
 
 
 def update_known_failures() -> int:
-    command = [*BASE_COMMAND, "-p", "no:randomly", "--tb=no", "-q"]
+    command = [
+        *BASE_COMMAND,
+        "-p",
+        "no:randomly",
+        "--tb=no",
+        "-q",
+        "--color=no",  # `PY_COLORS=1` (as in CI) would hide `FAILED` behind escape codes
+        "--numprocesses=logical",
+    ]
     # The baseline must come from a full run, which e.g. `-x` or `--lf` would cut short.
-    env = {k: v for k, v in _env().items() if k != "PYTEST_ADDOPTS"}
+    env = {k: v for k, v in _env().items() if k not in {"PYTEST_ADDOPTS", "PY_COLORS"}}
     result = subprocess.run(  # noqa: S603
         command, check=False, cwd=REPO_ROOT, env=env, capture_output=True, text=True
     )
@@ -105,6 +113,10 @@ def update_known_failures() -> int:
         raise SystemExit(msg)
 
     failures = sorted(set(FAILED_PATTERN.findall(result.stdout)))
+    if result.returncode == 1 and not failures:
+        sys.stdout.write(result.stdout[-4000:])
+        msg = f"pytest failed, but no failures were parsed; {KNOWN_FAILURES.name} left untouched."
+        raise SystemExit(msg)
     previous = set(read_known_failures(required=False))
     added = sorted(set(failures) - previous)
     removed = sorted(previous - set(failures))

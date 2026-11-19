@@ -59,7 +59,7 @@ jobs:
           fi
       - name: Build a binary wheel and a source tarball
         run: uv build --out-dir dist
-      - name: Smoke tests (wheel and source distribution, minimum and latest Narwhals)
+      - name: Smoke tests and pizzlies' own tests (wheel and sdist, minimum and latest Narwhals)
         run: |
           version="$(uv version --short)"
           floor="$(grep -oP '"narwhals>=\K[^",]+' pyproject.toml)"
@@ -85,8 +85,15 @@ jobs:
           result = df.with_columns(b=nw.col("a").sum().over("g")).sort("a")
           assert result["b"].to_list() == [3, 3, 3]
           assert pz.from_dict({"a": [1, 2]}).shape == (2, 1)
+          # Needs the `native_repr` hook, else Narwhals prints the raw dict.
+          assert "shape: (2, 1)" in repr(pz.from_dict({"a": [1, 2]}))
           assert pz.__version__ == "'"$version"'"
           '
+          # `-c pyproject.toml` keeps the repository's pytest config (and its
+          # `pythonpath = ["src"]`, which would shadow the installed Narwhals) out.
+          uv run --isolated --no-project --with "$dist" --with "$narwhals" \
+            --with pytest --with numpy --with polars --with pyarrow \
+            pytest -c pyproject.toml -p no:cacheprovider -q tests
           done
           done
       - name: Store the distribution packages

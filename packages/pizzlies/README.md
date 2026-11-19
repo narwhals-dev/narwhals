@@ -20,30 +20,9 @@ df.to_native()  # {'a': [1, 2, 3], 'b': [4.0, None, 6.0]}
 ```
 
 `pz.from_dict`, `pz.from_dicts`, `pz.from_numpy`, `pz.from_arrow`, `pz.new_series`,
-`pz.read_csv`, `pz.scan_csv`, `pz.read_parquet` and `pz.scan_parquet` create `pizzlies`-backed
-objects. Everything else (`pz.col`,
+`pz.read_csv` and `pz.scan_csv` create `pizzlies`-backed objects. Everything else (`pz.col`,
 `pz.when`, `pz.concat`, `pz.selectors`, the dtypes, ...) is Narwhals' own, so see the
 [Narwhals docs](https://narwhals-dev.github.io/narwhals/) for the full API.
-
-## Lazy frames
-
-`df.lazy()`, `pz.scan_parquet` and `pz.scan_csv` return lazy frames, which record
-operations in a query plan instead of running them. `collect()` first prunes the
-columns that nothing reads (projection pushdown), so that `scan_parquet` only decodes
-the columns a query uses, and then runs the plan eagerly:
-
-```python
-lf = pz.scan_parquet("lineitem.parquet")  # reads only the footer
-result = lf.filter(pz.col("l_quantity") > 45).select(pz.col("l_extendedprice").sum())
-print(result.to_native().explain())  # the plan, as a tree
-result.collect()  # reads `l_quantity` and `l_extendedprice` only
-```
-
-Operations are checked when they're defined, by running them on empty frames, so e.g.
-selecting a missing column raises straight away. Some errors which depend on dtypes
-(which `pizzlies` infers from values) only show up on `collect()`. Expressions whose
-columns depend on the input's dtypes or order (selectors, `all()`, `nth`, ...) keep
-every column, and resolving dtype selectors runs the plan to get its schema.
 
 ## As a Narwhals plugin
 
@@ -60,10 +39,10 @@ df.select(nw.col("a").sum()).to_native()  # {'a': [6]}
 
 Note that, once installed, `pizzlies` claims every plain `dict` passed to `nw.from_native`.
 
-## Size, import time and performance
+## Size and import time
 
-`pizzlies` is small and quick to import, but it's pure Python, so it's slower than
-pandas and much slower than Polars on anything but small data.
+`pizzlies` is small and quick to import, but it's pure Python, so it's much slower than
+pandas or Polars on anything but small data.
 
 | | Installed size | Import time |
 | --- | ---: | ---: |
@@ -72,38 +51,17 @@ pandas and much slower than Polars on anything but small data.
 | `pyarrow` | 171 MB | 144 ms |
 | `pandas` (+ `numpy`) | 96 MB | 365 ms |
 
-The `pizzlies` wheel is 89 KB. Import times are the median of 40 fresh interpreters, from
+The `pizzlies` wheel is 74 KB. Import times are the median of 40 fresh interpreters, from
 wheel installs; almost all of `pizzlies`' is importing Narwhals (34 ms on its own).
 
-On the 22 [TPC-H](https://github.com/narwhals-dev/narwhals/tree/main/tpch) queries at
-scale factor 0.1 (`lineitem` has 600,000 rows), run through Narwhals end to end
-(Parquet scan, query, collect):
-
-| | Total | Slowdown vs Polars (geometric mean over queries) |
-| --- | ---: | ---: |
-| `polars` | 0.8 s | 1x |
-| `pandas` | 3.4 s | 3.5x |
-| `pyarrow` | 10.1 s | 7.0x |
-| `pizzlies` | 10.0 s | 10.2x |
-
-Its slowest query takes about a second. On tiny inputs (scale factor 0.014, `lineitem` has
-84,000 rows) fixed overheads dominate, and `pizzlies` (1.3 s for all 22 queries) is in the
-same range as pandas (1.6 s) and Polars (0.9 s).
-
 Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1, Polars
-2.1 and PyArrow 26. Results depend on your hardware and data, so measure your own workload.
-`benchmark.py` reproduces the import times and TPC-H numbers, see its docstring.
+2.1 and PyArrow 26. Results depend on your hardware, so measure your own workload.
+`benchmark.py` reproduces the import times, see its docstring.
 
 ## Limitations
 
-Parquet files are read by a small pure-Python reader, straight into a dict of lists. It
-supports flat columns; data pages V1 and V2; `PLAIN`, dictionary and boolean `RLE` encodings;
-and uncompressed, snappy, gzip and zstd compression. Zstd (Polars' default) uses the
-stdlib's `compression.zstd` on Python 3.14+, and on older Pythons needs the optional
-`backports.zstd` package: `pip install pizzlies[zstd]`. Anything else (nested columns, `DELTA_*`
-encodings, brotli/lz4, ...) raises `NotImplementedError`: read such files with pyarrow and
-convert them, `pz.from_arrow(pq.read_table(path))`. Writing Parquet isn't supported.
-`Map` dtypes aren't supported, and dtypes are inferred
+Parquet isn't supported: read files with pyarrow and convert them,
+`pz.from_arrow(pq.read_table(path))`. `Map` dtypes aren't supported, and dtypes are inferred
 from the Python values, so e.g. integers are always `Int64`.
 
 ## Development
