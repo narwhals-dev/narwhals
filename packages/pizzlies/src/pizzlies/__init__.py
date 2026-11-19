@@ -118,7 +118,7 @@ if TYPE_CHECKING:
     from pizzlies._plugin.namespace import DictNamespace
     from pizzlies._plugin.typing import DictFrame
 
-__version__ = "0.1.0"
+__version__: str
 
 BACKEND = PluginName("pizzlies")
 """This package's plugin name, for any Narwhals function which takes a `backend`."""
@@ -289,3 +289,17 @@ __all__ = [
     "to_py_scalar",
     "when",
 ]
+
+
+if not TYPE_CHECKING:
+
+    def __getattr__(name: str) -> Any:
+        if name == "__version__":
+            global __version__  # noqa: PLW0603
+
+            from importlib import metadata
+
+            __version__ = metadata.version(__name__)
+            return __version__
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)

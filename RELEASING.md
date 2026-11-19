@@ -48,6 +48,24 @@ Narwhals release it needs.
    [workflow run](https://github.com/narwhals-dev/narwhals/actions/workflows/publish_narwhals_dask.yml).
 3. Open a PR from `bump-narwhals-dask` to `main` and squash-merge it.
 
+## pizzlies
+
+Lives in [`packages/pizzlies`](packages/pizzlies), and is released the same way as
+narwhals-dask:
+
+1. If it needs a newer Narwhals, raise the `narwhals>=` floor in
+   `packages/pizzlies/pyproject.toml`, run `uv lock` in that directory, and merge to `main`.
+2. With a clean working tree, run:
+
+   ```terminal
+   python utils/bump_version.py minor --package pizzlies
+   ```
+
+   Check the version it prints, and answer `y` to tag and push. If the `pypi-pizzlies`
+   environment requires a reviewer, approve the upload in the
+   [workflow run](https://github.com/narwhals-dev/narwhals/actions/workflows/publish_pizzlies.yml).
+3. Open a PR from `bump-pizzlies` to `main` and squash-merge it.
+
 ## narwhals-daft
 
 From a clone of [narwhals-daft](https://github.com/narwhals-dev/narwhals-daft):

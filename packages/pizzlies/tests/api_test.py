@@ -161,3 +161,11 @@ def test_str_ops_with_scalar_receiver() -> None:
         replaced=pz.lit("abc").str.replace("b", pz.col("r"), literal=True),
     )
     assert result.to_native() == {"starts": [True, False], "replaced": ["aXc", "aYc"]}
+
+
+def test_version() -> None:
+    from importlib import metadata
+
+    assert pz.__version__ == metadata.version("pizzlies")
+    with pytest.raises(AttributeError, match="no attribute 'nope'"):
+        pz.nope  # noqa: B018
