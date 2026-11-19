@@ -71,16 +71,6 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
 
 
-def test_group_by_complex_native(constructor: Constructor) -> None:
-    # Backends which evaluate complex aggregations themselves. Built-in backends which
-    # don't are covered above, and SQL-like ones raise their own native errors.
-    frame = nw.from_native(constructor(data))
-    if frame.implementation not in {nw.Implementation.POLARS, nw.Implementation.UNKNOWN}:
-        pytest.skip("complex group-by is not evaluated natively by this backend")
-    result = frame.group_by("a").agg((nw.col("b") - nw.col("c").mean()).mean()).sort("a")
-    assert_equal_data(result, {"a": [1, 3], "b": [-3.5, -3.0]})
-
-
 def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]

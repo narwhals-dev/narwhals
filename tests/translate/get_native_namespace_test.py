@@ -59,9 +59,6 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
         import sqlframe
 
         return sqlframe
-    # pizzlies is not installed in CI.
-    if "dict" in constructor_name:  # pragma: no cover
-        return pytest.importorskip("pizzlies")
     return None  # pragma: no cover
 
 

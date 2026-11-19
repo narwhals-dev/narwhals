@@ -178,3 +178,9 @@ def test_group_by_expr_key_alias_matches_temporary_name() -> None:
         pz.col("x").sum().alias("_g_tmp")
     )
     assert result.to_native() == {"g": ["A"], "_g_tmp": [5]}
+
+
+def test_group_by_complex_expression() -> None:
+    df = pz.from_dict({"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]})
+    result = df.group_by("a").agg((pz.col("b") - pz.col("c").mean()).mean()).sort("a")
+    assert result.to_native() == {"a": [1, 3], "b": [-3.5, -3.0]}

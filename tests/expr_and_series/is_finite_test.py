@@ -28,9 +28,8 @@ data = {"a": [float("nan"), float("inf"), 2.0, None]}
 def test_is_finite_expr(constructor: Constructor) -> None:
     if any(
         x in str(constructor)
-        for x in ("polars", "pyarrow_table", "duckdb", "pyspark", "ibis", "dict")
+        for x in ("polars", "pyarrow_table", "duckdb", "pyspark", "ibis")
     ):
-        # These backends preserve NaN as a value distinct from null.
         expected = {"a": [False, False, True, None]}
     elif any(
         x in str(constructor) for x in ("pandas_constructor", "dask", "modin_constructor")
@@ -47,8 +46,7 @@ def test_is_finite_expr(constructor: Constructor) -> None:
 
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 def test_is_finite_series(constructor_eager: ConstructorEager) -> None:
-    if any(x in str(constructor_eager) for x in ("polars", "pyarrow_table", "dict")):
-        # These backends preserve NaN as a value distinct from null.
+    if "polars" in str(constructor_eager) or "pyarrow_table" in str(constructor_eager):
         expected = {"a": [False, False, True, None]}
     elif (
         "pandas_constructor" in str(constructor_eager)

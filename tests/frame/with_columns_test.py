@@ -122,13 +122,8 @@ def test_with_columns_numpy_array(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     arr = np.array([4, 5, 6])
-    # Backends which can build a Series (eager ones, plugins included, and Polars and
-    # `pizzlies` lazy frames) build one from the array.
-    if (
-        df.implementation.is_polars()
-        or isinstance(df, nw.DataFrame)
-        or "dict" in str(constructor)
-    ):
+    # Eager backends (plugins included) and Polars lazy frames can build a Series.
+    if df.implementation.is_polars() or isinstance(df, nw.DataFrame):
         assert_equal_data(df.with_columns(b=arr), {"a": [1, 2, 3], "b": [4, 5, 6]})
     else:
         with pytest.raises(ValueError, match="lazy-only, but `new_series`"):
