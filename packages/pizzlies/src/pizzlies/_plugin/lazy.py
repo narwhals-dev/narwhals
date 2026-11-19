@@ -288,12 +288,10 @@ def _requirements(  # noqa: C901, PLR0911, PLR0912
     if needed is None:
         return [None] * len(plan.inputs)
     if name == "with_columns":
-        outputs = {
-            alias
-            for expr in args
-            for alias in expr._evaluate_aliases(input_frame(plan.inputs[0]))
-        }
-        return [_union(needed - outputs, _exprs_columns(args))]
+        frame = input_frame(plan.inputs[0])
+        outputs = {alias for expr in args for alias in expr._evaluate_aliases(frame)}
+        # Overwritten columns stay needed, so that they keep their position.
+        return [_union(needed - (outputs - set(frame.columns)), _exprs_columns(args))]
     if name == "filter":
         predicate = args[0]
         if isinstance(predicate, list):  # a boolean mask
@@ -538,7 +536,7 @@ class DictLazyFrame(
         plan = OpPlan(
             name, (self.native, *(other.native for other in others)), args, kwargs
         )
-        dry_runs = self._dry_runs
+        dry_runs = dict(self._dry_runs)
         for other in others:
             dry_runs = {**dry_runs, **other._dry_runs}
         result = self.__class__(plan, version=self._version, dry_runs=dry_runs)

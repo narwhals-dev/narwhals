@@ -54,7 +54,7 @@ def check(
     result = query(pz.scan_parquet(path)).collect().to_native()
     expected = query(pz.read_parquet(path)).to_native()
     if ordered:
-        assert result == expected
+        assert list(result.items()) == list(expected.items())
     else:  # e.g. joins don't guarantee row order
         assert list(result) == list(expected)
         assert sorted(zip(*result.values(), strict=True), key=repr) == sorted(
@@ -225,6 +225,24 @@ def test_explain(path: str) -> None:
         f"    SCAN PARQUET {path!r} ['a', 'b', 'c', 'd']",
     ]
     assert "FRAME ['a', 'b', 'c', 'd']" in repr(pz.from_dict(DATA).lazy())
+
+
+def test_with_columns_overwrite_keeps_position(path: str) -> None:
+    def query(df: Any) -> Any:
+        return df.with_columns(a=pz.col("b") + "!")
+
+    lf = query(pz.scan_parquet(path))
+    assert lf.columns == list(DATA)
+    assert lf.collect_schema().names() == list(DATA)
+    assert list(check(path, query)) == list(DATA)
+
+
+def test_derived_frames_do_not_grow_the_parent_memo() -> None:
+    base = pz.from_dict({"a": [1, 2]}).lazy()
+    before = len(base._compliant_frame._dry_runs)
+    for i in range(3):
+        base.with_columns(c=pz.col("a") + i).filter(pz.col("c") > 1)
+    assert len(base._compliant_frame._dry_runs) == before
 
 
 def test_drop_then_len() -> None:

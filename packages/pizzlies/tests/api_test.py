@@ -106,6 +106,11 @@ def test_corr_tiny_values() -> None:
     assert df.select(pz.corr("a", "b")).item() == pytest.approx(1.0)
 
 
+def test_corr_with_itself_is_exactly_one() -> None:
+    df = pz.from_dict({"x": [13.840774964442446, 60.45301223363671, -87.37863562245813]})
+    assert df.select(pz.corr("x", "x")).item() == 1.0
+
+
 def test_lazy_from_native_round_trip() -> None:
     lf = pz.from_dict({"a": [1, 2]}).lazy().filter(pz.col("a") > 1)
     assert_pizzlies_frame(nw.from_native(lf.to_native()).collect(), {"a": [2]})

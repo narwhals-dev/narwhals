@@ -369,7 +369,13 @@ class DictNamespace(
                 var_y += dy * dy
             if var_x == 0 or var_y == 0:
                 return None
-            return cov / (math.sqrt(var_x) * math.sqrt(var_y))
+            denominator = var_x * var_y
+            if denominator == 0 or math.isinf(denominator):
+                # Splitting the square root avoids under/overflow, but is less exact.
+                denominator = math.sqrt(var_x) * math.sqrt(var_y)
+            else:
+                denominator = math.sqrt(denominator)
+            return max(-1.0, min(1.0, cov / denominator))
 
         return self._binary_scalar_expr(a, b, pearson)
 
