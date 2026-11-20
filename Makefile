@@ -32,6 +32,7 @@ docs-dynamic-content:  ## Regenerate the dynamic docs pages (API completeness ta
 docs-build: ## Build the docs from a clean state, failing on warnings
 	$(MAKE) docs-dynamic-content
 	uv run --group docs zensical build --clean --strict
+	uv run utils/generate_docs_redirects.py
 
 .PHONY: docs-serve
 docs-serve: ## Serve the docs locally
