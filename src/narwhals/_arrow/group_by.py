@@ -67,11 +67,17 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         /,
         *,
         drop_null_keys: bool,
+        maintain_order: bool = False,
     ) -> None:
         self._df = df
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
         self._drop_null_keys = drop_null_keys
+        self._row_index = (
+            generate_temporary_column_name(n_bytes=8, columns=frame.columns)
+            if maintain_order
+            else None
+        )
 
     def _configure_agg(
         self, expr: ArrowExpr, /
@@ -94,6 +100,9 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         return self._remap_expr_name(function_name), option
 
     def _configure_grouped(self, *exprs: ArrowExpr) -> pa.TableGroupBy:
+        frame = self.compliant
+        if self._row_index is not None:
+            frame = frame.with_row_index(self._row_index, order_by=None)
         order_by = ()
         use_threads = True
         for expr in exprs:
@@ -116,14 +125,14 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             raise NotImplementedError(msg)
         if order_by:
             return pa.TableGroupBy(
-                self.compliant.sort(*order_by, descending=False, nulls_last=False).native,
+                frame.sort(*order_by, descending=False, nulls_last=False).native,
                 self._keys,
                 use_threads=use_threads,
             )
         if not use_threads:
-            return pa.TableGroupBy(self.compliant.native, self._keys, use_threads=False)
+            return pa.TableGroupBy(frame.native, self._keys, use_threads=False)
         # TODO(unassigned): combine with `return` above once PyArrow 15 is the minimum.
-        return pa.TableGroupBy(self.compliant.native, self._keys)
+        return pa.TableGroupBy(frame.native, self._keys)
 
     def agg(self, *exprs: ArrowExpr) -> ArrowDataFrame:
         self._ensure_all_simple(exprs)
@@ -160,6 +169,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
                 [(output_name, function_name, option) for output_name in output_names]
             )
 
+        if self._row_index is not None:
+            # The smallest row index in each group is where that group first appears.
+            new_column_names.append(self._row_index)
+            expected_pyarrow_column_names.append(f"{self._row_index}_min")
+            aggs.append((self._row_index, "min", None))
+
         result_simple = grouped.aggregate(aggs)
 
         # Rename columns, being very careful
@@ -181,6 +196,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         ]
         new_column_names = [new_column_names[i] for i in index_map]
         result_simple = result_simple.rename_columns(new_column_names)
+        if self._row_index is not None:
+            result_simple = result_simple.sort_by(self._row_index).drop([self._row_index])
         return self.compliant._with_native(result_simple).rename(
             dict(zip(self._keys, self._output_key_names, strict=False))
         )
