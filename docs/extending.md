@@ -94,6 +94,12 @@ See [Expression Metadata](how_it_works.md#expression-metadata) for what each pie
 Other private modules (e.g. `narwhals._utils`) are not plugin-facing. If you need something
 from them, vendor it into your plugin.
 
+### Custom repr
+
+The repr of a Narwhals `DataFrame`, `LazyFrame` or `Series` wraps the repr of its native object.
+If that isn't informative (e.g. if the native object is a plain `dict`), a compliant dataframe,
+lazyframe or series can define a `native_repr(self) -> str` method, whose result is used instead.
+
 ## Supporting `backend=...` in Narwhals functions
 
 Functions and constructors which accept a `backend` argument can also dispatch to a
