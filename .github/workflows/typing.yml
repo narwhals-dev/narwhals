@@ -49,5 +49,4 @@ jobs:
       - name: Run mypy and pyright
         run: make typing
       - name: Check type-completeness
-        run: |
-          uv run pyrefly coverage check src/narwhals --public-only
+        run: make typing-coverage

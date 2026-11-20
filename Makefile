@@ -21,7 +21,7 @@ typing: ## Run type checkers
 
 .PHONY: typing-coverage
 typing-coverage: ## Run type checkers
-	uv run --group typing pyrefly coverage check src/narwhals --public-only
+	uv run --group typing pyrefly coverage check 'src/narwhals/**/*.py' --public-only
 
 .PHONY: docs-dynamic-content
 docs-dynamic-content:  ## Regenerate the dynamic docs pages (API completeness tables, docs/this.md, ...)
