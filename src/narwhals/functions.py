@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, overload
@@ -493,6 +492,8 @@ def _get_sys_info() -> dict[str, str]:
     Returns:
         Dictionary with system info.
     """
+    import platform
+
     python = sys.version.replace("\n", " ")
 
     blob = (
