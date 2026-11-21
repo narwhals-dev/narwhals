@@ -98,7 +98,7 @@ class SeriesListNamespace(Generic[SeriesT]):
     def get(self, index: int) -> SeriesT:
         """Return the value by index in each list.
 
-        Negative indices are not accepted.
+        Negative indices count from the end of each list.
 
         Examples:
             >>> import polars as pl
@@ -113,16 +113,20 @@ class SeriesListNamespace(Generic[SeriesT]):
                     4
                     5
             ]
+            >>> s.list.get(-1).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (3,)
+            Series: '' [i64]
+            [
+                    2
+                    null
+                    5
+            ]
         """
         if not isinstance(index, int):
             msg = (
                 f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
             )
             raise TypeError(msg)
-
-        if index < 0:
-            msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
-            raise ValueError(msg)
 
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.list.get(index)

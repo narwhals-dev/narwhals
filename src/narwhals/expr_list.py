@@ -117,38 +117,36 @@ class ExprListNamespace(Generic[ExprT]):
     def get(self, index: int) -> ExprT:
         """Return the value by index in each list.
 
-        Negative indices are not accepted.
+        Negative indices count from the end of each list.
 
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>> df_native = pl.DataFrame({"a": [[1, 2], [3, 4, None], [None, 5]]})
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(a_first=nw.col("a").list.get(0))
-            ┌──────────────────────────┐
-            |    Narwhals DataFrame    |
-            |--------------------------|
-            |shape: (3, 2)             |
-            |┌──────────────┬─────────┐|
-            |│ a            ┆ a_first │|
-            |│ ---          ┆ ---     │|
-            |│ list[i64]    ┆ i64     │|
-            |╞══════════════╪═════════╡|
-            |│ [1, 2]       ┆ 1       │|
-            |│ [3, 4, null] ┆ 3       │|
-            |│ [null, 5]    ┆ null    │|
-            |└──────────────┴─────────┘|
-            └──────────────────────────┘
+            >>> df.with_columns(
+            ...     a_first=nw.col("a").list.get(0), a_last=nw.col("a").list.get(-1)
+            ... )
+            ┌───────────────────────────────────┐
+            |        Narwhals DataFrame         |
+            |-----------------------------------|
+            |shape: (3, 3)                      |
+            |┌──────────────┬─────────┬────────┐|
+            |│ a            ┆ a_first ┆ a_last │|
+            |│ ---          ┆ ---     ┆ ---    │|
+            |│ list[i64]    ┆ i64     ┆ i64    │|
+            |╞══════════════╪═════════╪════════╡|
+            |│ [1, 2]       ┆ 1       ┆ 2      │|
+            |│ [3, 4, null] ┆ 3       ┆ null   │|
+            |│ [null, 5]    ┆ null    ┆ 5      │|
+            |└──────────────┴─────────┴────────┘|
+            └───────────────────────────────────┘
         """
         if not isinstance(index, int):
             msg = (
                 f"Index must be of type 'int'. Got type '{type(index).__name__}' instead."
             )
             raise TypeError(msg)
-
-        if index < 0:
-            msg = f"Index {index} is out of bounds: should be greater than or equal to 0."
-            raise ValueError(msg)
 
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "list.get", index=index)
