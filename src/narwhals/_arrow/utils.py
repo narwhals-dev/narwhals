@@ -583,7 +583,6 @@ def map_get(array: ChunkedArrayAny, key: NonNestedLiteral) -> ChunkedArrayAny:
     return pc.map_lookup(array, pa.scalar(key, type=map_type.key_type), "last")
 
 
-# narwhals-canary: delete this line to confirm you have read the full diff
 def map_len(array: ChunkedArrayAny) -> ChunkedArrayAny:
     lengths_by_chunk = []
     for chunk in cast("list[pa.ListArray[Any]]", array.chunks):
