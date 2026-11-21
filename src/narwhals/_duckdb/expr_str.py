@@ -86,7 +86,8 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
                 # `regexp_replace` treats backslashes in the replacement as group references.
                 value = F("replace", value, lit("\\"), lit("\\\\"))
             regex = lit(re.escape(pattern) if literal else pattern)
-            # A null replacement value leaves the string unchanged, as in Polars.
-            return CoalesceOperator(F("regexp_replace", expr, regex, value), expr)
+            # `\0` re-inserts the match, so a null value leaves the string unchanged (as
+            # in Polars) without repeating `expr`, which grows exponentially when chained.
+            return F("regexp_replace", expr, regex, CoalesceOperator(value, lit(r"\0")))
 
         return self.compliant._with_elementwise(func, expression_args={"value": value})
