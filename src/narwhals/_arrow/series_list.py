@@ -5,9 +5,14 @@ from typing import TYPE_CHECKING
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import ArrowSeriesNamespace, list_agg, list_contains, list_sort
+from narwhals._arrow.utils import (
+    ArrowSeriesNamespace,
+    list_agg,
+    list_contains,
+    list_sort,
+    list_unique,
+)
 from narwhals._compliant.any_namespace import ListNamespace
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -44,4 +49,5 @@ class ArrowSeriesListNamespace(ArrowSeriesNamespace, ListNamespace["ArrowSeries"
             list_sort(self.native, descending=descending, nulls_last=nulls_last)
         )
 
-    unique = not_implemented()
+    def unique(self, *, maintain_order: bool) -> ArrowSeries:
+        return self.with_native(list_unique(self.native))
