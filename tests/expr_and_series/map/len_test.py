@@ -7,11 +7,15 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from tests.expr_and_series.map.get_test import map_frame
 from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
+    import pandas as pd
     import polars as pl
     import pyarrow as pa
+
+    from tests.utils import ConstructorPandasLike
 
 # A null map has no length, but a null value still counts as an entry.
 expected = {"a": [2, 0, None, 1]}
@@ -93,7 +97,7 @@ def test_len_arrow_sliced_chunks() -> None:
         len(maps),
         [validity, maps.buffers()[1]],
         null_count=1,
-        children=[maps.values],
+        children=[maps.values],  # noqa: PD011 - Arrow map child array.
     )
     chunks = pa.chunked_array([maps.slice(1), masked.slice(1), maps.slice(2, 0)])
     series = nw.from_native(chunks, series_only=True)
@@ -113,6 +117,79 @@ def test_len_arrow_zero_chunks() -> None:
     assert len(result) == 0
     assert result.num_chunks == 0
     assert result.type == pa.uint32()
+
+
+@pytest.fixture
+def pandas_like_map_frame(
+    request: pytest.FixtureRequest, constructor_pandas_like: ConstructorPandasLike
+) -> pd.DataFrame:
+    pytest.importorskip("pandas", minversion="2.2")
+    import pandas as pd
+
+    data = [[("x", 1), ("x", 2)], [], None, [("x", None)]]
+    frame: pd.DataFrame = map_frame(request, constructor_pandas_like, data)
+    frame.index = pd.Index([9, 4, 9, 2], name="row")
+    return frame
+
+
+def test_len_pandas_like_series(pandas_like_map_frame: pd.DataFrame) -> None:
+    import pandas as pd
+    import pyarrow as pa
+
+    series = nw.from_native(pandas_like_map_frame["a"], series_only=True)
+    result = series.map.len()
+    native = result.to_native()
+
+    assert_equal_data({"a": result}, expected)
+    assert result.dtype == nw.UInt32
+    assert native.dtype == pd.ArrowDtype(pa.uint32())
+    assert native.name == series.name
+    pd.testing.assert_index_equal(
+        native.index, pandas_like_map_frame.index, check_names=True
+    )
+
+
+def test_len_pandas_like_expr(pandas_like_map_frame: pd.DataFrame) -> None:
+    import pandas as pd
+    import pyarrow as pa
+
+    frame = nw.from_native(pandas_like_map_frame)
+    result = frame.select(nw.col("a").map.len())
+    native = result.to_native()
+
+    assert_equal_data(result, expected)
+    assert result.schema == {"a": nw.UInt32}
+    assert native["a"].dtype == pd.ArrowDtype(pa.uint32())
+    assert native["a"].name == "a"
+    pd.testing.assert_index_equal(
+        native.index, pandas_like_map_frame.index, check_names=True
+    )
+
+
+def test_len_pandas_non_pyarrow() -> None:
+    pd = pytest.importorskip("pandas")
+    series = nw.from_native(pd.Series([{"x": 1}], dtype=object), series_only=True)
+    msg = re.escape("Series must be of PyArrow Map type to support map namespace.")
+
+    with pytest.raises(TypeError, match=msg):
+        series.map.len()
+
+
+def test_len_pandas_unsupported_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    pd = pytest.importorskip("pandas", minversion="2.0")
+    pa = pytest.importorskip("pyarrow")
+    monkeypatch.setattr("narwhals._pandas_like.series_map.PANDAS_VERSION", (2, 1, 4))
+
+    maps = pa.array([[("x", 1)]], type=pa.map_(pa.string(), pa.int64()))
+    native = pd.Series(maps, dtype=pd.ArrowDtype(maps.type), name="a")
+    series = nw.from_native(native, series_only=True)
+    frame = nw.from_native(native.to_frame())
+    msg = re.escape("`map.len()` requires pandas 2.2 or newer.")
+
+    with pytest.raises(NotImplementedError, match=msg):
+        series.map.len()
+    with pytest.raises(NotImplementedError, match=msg):
+        frame.select(nw.col("a").map.len())
 
 
 @pytest.mark.skipif(

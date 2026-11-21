@@ -16,7 +16,9 @@ class SeriesMapNamespace(Generic[SeriesT]):
         """Return the number of entries in each map.
 
         Null maps return null. Entries with null values count towards the total.
-        The result has dtype `UInt32`. Supported on PyArrow and Polars 2.0 or newer.
+        The result has dtype `UInt32`. Supported on PyArrow, Polars 2.0 or newer,
+        pandas, and Modin. On pandas and Modin, this requires a PyArrow-backed
+        `Map` Series and pandas 2.2 or newer.
 
         Examples:
             >>> import polars as pl

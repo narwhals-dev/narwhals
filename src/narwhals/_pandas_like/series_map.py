@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from narwhals._compliant.any_namespace import MapNamespace
-from narwhals._pandas_like.utils import PandasLikeSeriesNamespace
-from narwhals._utils import not_implemented
+from narwhals._pandas_like.utils import PANDAS_VERSION, PandasLikeSeriesNamespace
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -16,7 +15,15 @@ if TYPE_CHECKING:
 class PandasLikeSeriesMapNamespace(
     PandasLikeSeriesNamespace, MapNamespace["PandasLikeSeries"]
 ):
-    len = not_implemented()
+    def len(self) -> PandasLikeSeries:
+        if PANDAS_VERSION < (2, 2):
+            msg = "`map.len()` requires pandas 2.2 or newer."
+            raise NotImplementedError(msg)
+
+        from narwhals._arrow.utils import map_len
+
+        result_native = self.compliant._apply_pyarrow_compute_func(self.native, map_len)
+        return self.with_native(result_native)
 
     def get(self, key: NonNestedLiteral) -> PandasLikeSeries:
         from narwhals._arrow.utils import map_get
