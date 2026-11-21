@@ -12,6 +12,7 @@ from narwhals._native import (
     IntoSeries,
     IntoSeriesT,
 )
+from narwhals._typing import EagerAllowed, IntoBackend
 
 if TYPE_CHECKING:
     from typing import TypeAlias
@@ -76,8 +77,10 @@ SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 __all__ = [
     "DataFrameT",
+    "EagerAllowed",
     "Frame",
     "FrameT",
+    "IntoBackend",
     "IntoDataFrame",
     "IntoDataFrameT",
     "IntoExpr",
