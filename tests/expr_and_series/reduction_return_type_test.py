@@ -32,14 +32,16 @@ NUMERIC_REDUCTIONS = [
 def test_numeric_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, reduction: str
 ) -> None:
-    if reduction != "sum" and any(
-        x in str(constructor)
-        for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
-    ):
-        reason = "Return an untyped `pd.NA`. `sum` returns a typed zero."
-        request.applymarker(pytest.mark.xfail(reason=reason))
     if reduction in {"skew", "kurtosis"} and any(
-        x in str(constructor) for x in ("pandas_constructor", "modin_constructor", "ibis")
+        x in str(constructor)
+        for x in (
+            "pandas_constructor",
+            "pandas_nullable",
+            "pandas_pyarrow",
+            "modin_constructor",
+            "modin_pyarrow",
+            "ibis",
+        )
     ):
         reason = "pandas-like returns an untyped `None`. Ibis does not implement them."
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -145,3 +147,40 @@ def test_expr_aggregation_keeps_dtype(
     if empty:
         df = df.head(0)
     assert df.select(expr).schema == {"a": dtype}
+
+
+@pytest.mark.parametrize(
+    ("reduction", "expected"),
+    [
+        ("mean", nw.Float64()),
+        ("median", nw.Float64()),
+        ("std", nw.Float64()),
+        ("var", nw.Float64()),
+        ("min", nw.Int64()),
+        ("max", nw.Int64()),
+    ],
+)
+def test_reduction_all_null_int64_pandas_nullable(
+    reduction: str, expected: DType
+) -> None:
+    pd = pytest.importorskip("pandas")
+    df = nw.from_native(pd.DataFrame({"a": pd.Series([None, None], dtype="Int64")}))
+    result = df.select(getattr(nw.col("a"), reduction)())
+    assert result.collect_schema()["a"] == expected
+    assert result.select(nw.col("a").is_null())["a"].to_list() == [True]
+
+
+def test_map_batches_scalar_na_numpy_input() -> None:
+    pd = pytest.importorskip("pandas")
+    df = nw.from_native(pd.DataFrame({"a": [1, 2]}), eager_only=True)
+    result = df.select(nw.col("a").map_batches(lambda _: pd.NA, returns_scalar=True))
+    assert result["a"].is_null().to_list() == [True]
+
+
+@pytest.mark.parametrize("reduction", ["mean", "median", "std", "var", "min", "max"])
+def test_reduction_all_null_float32_pandas_nullable(reduction: str) -> None:
+    pd = pytest.importorskip("pandas")
+    df = nw.from_native(pd.DataFrame({"a": pd.Series([None, None], dtype="Float32")}))
+    result = df.select(getattr(nw.col("a"), reduction)())
+    assert result.collect_schema()["a"] == nw.Float32()
+    assert result.select(nw.col("a").is_null())["a"].to_list() == [True]
