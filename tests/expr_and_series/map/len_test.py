@@ -53,7 +53,9 @@ def test_len_expr_lazy(map_series: pl.Series) -> None:
 
 @pytest.fixture
 def arrow_map_table() -> pa.Table:
-    pa = pytest.importorskip("pyarrow")
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
     maps = pa.array(
         [[("x", 1), ("y", 2)], [], None, [("x", None)]],
         type=pa.map_(pa.string(), pa.int64()),
