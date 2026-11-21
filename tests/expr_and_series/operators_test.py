@@ -101,8 +101,9 @@ def test_xor_operator_integers(
 ) -> None:
     if any(
         x in str(constructor)
-        for x in ("pyarrow_table", "duckdb", "sqlframe", "ibis", "pyspark")
+        for x in ("pyarrow_table", "duckdb", "sqlframe", "pyspark")
     ):
+        # PyArrow and PySpark raise, DuckDB and SQLFrame cast to boolean.
         # PyArrow and PySpark raise, DuckDB and SQLFrame cast to boolean,
         # Ibis compiles `~(a & b)` on integers to `~a & b`.
         reason = "https://github.com/narwhals-dev/narwhals/issues/4150"
