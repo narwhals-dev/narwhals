@@ -138,3 +138,15 @@ def test_native_repr_hook() -> None:
     assert native_repr(Default()) == "(1, 2)"
     assert native_repr(Custom()) == "custom"
     assert native_repr(Interchange()) == "(1, 2)"
+
+
+def test_generate_repr_empty_native() -> None:
+    from narwhals._utils import generate_repr
+
+    result = generate_repr("Narwhals DataFrame", "")
+    assert result.splitlines() == [
+        "┌──────────────────┐",
+        "|Narwhals DataFrame|",
+        "|------------------|",
+        "└──────────────────┘",
+    ]
