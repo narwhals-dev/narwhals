@@ -35,6 +35,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 if TYPE_CHECKING:
+    import builtins
     from collections.abc import Callable, Iterable, Iterator
     from types import ModuleType
 
@@ -431,7 +432,7 @@ def test_not_implemented() -> None:
         def __init__(self) -> None:
             self._implementation = nw.Implementation.POLARS
 
-        def alias(self, name: str) -> str:
+        def alias(self, name: builtins.str) -> builtins.str:
             return name
 
         unique = not_implemented()
@@ -575,12 +576,14 @@ def test_requires() -> None:
     class ProbablyCompliant:
         _implementation: Implementation = Implementation.POLARS
 
-        def __init__(self, native_obj: str, backend_version: tuple[int, ...]) -> None:
+        def __init__(
+            self, native_obj: builtins.str, backend_version: tuple[int, ...]
+        ) -> None:
             self._native_obj: str = native_obj
             self._backend_version: tuple[int, ...] = backend_version
 
         @property
-        def native(self) -> str:
+        def native(self) -> builtins.str:
             return self._native_obj
 
         @requires.backend_version((1, 0, 0))
@@ -588,11 +591,13 @@ def test_requires() -> None:
             return int(self.native)
 
         @requires.backend_version((2,), hint="Something helpful I suppose")
-        def concat(self, *strings: str, separator: str = "") -> str:
+        def concat(
+            self, *strings: builtins.str, separator: builtins.str = ""
+        ) -> builtins.str:
             return separator.join((self.native, *strings))
 
         @requires.backend_version((3, 0, 0))
-        def repeat(self, n: int) -> str:
+        def repeat(self, n: int) -> builtins.str:
             return self.native * n
 
         @property
