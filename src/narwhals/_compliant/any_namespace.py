@@ -83,6 +83,7 @@ class MapNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "map"
 
     def get(self, key: NonNestedLiteral) -> CompliantT_co: ...
+    def len(self) -> CompliantT_co: ...
 
 
 class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):

@@ -1241,6 +1241,9 @@ class EagerExprMapNamespace(
     def get(self, key: NonNestedLiteral) -> EagerExprT:
         return self.compliant._reuse_series_namespace("map", "get", key=key)
 
+    def len(self) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("map", "len")
+
 
 class EagerExprStructNamespace(
     EagerExprNamespace[EagerExprT], StructNamespace[EagerExprT], Generic[EagerExprT]

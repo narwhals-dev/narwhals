@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import MapNamespace
 from narwhals._duckdb.utils import F, lit
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprMapNamespace(LazyExprNamespace["DuckDBExpr"], MapNamespace["DuckDBExpr"]):
+    len = not_implemented()
+
     def get(self, key: NonNestedLiteral) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:
             if self.compliant._backend_version < (1, 2):  # pragma: no cover
