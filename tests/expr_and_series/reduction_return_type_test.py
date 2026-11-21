@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import multiprocessing
+import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -7,7 +9,7 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
+from tests.utils import DUCKDB_VERSION, POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -32,22 +34,142 @@ NUMERIC_REDUCTIONS = [
 def test_numeric_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, reduction: str
 ) -> None:
-    if reduction != "sum" and any(
+    if reduction not in {"sum", "skew", "kurtosis"} and any(
         x in str(constructor)
         for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
     ):
         reason = "Return an untyped `pd.NA`. `sum` returns a typed zero."
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if reduction in {"skew", "kurtosis"} and any(
-        x in str(constructor) for x in ("pandas_constructor", "modin_constructor", "ibis")
-    ):
-        reason = "pandas-like returns an untyped `None`. Ibis does not implement them."
+    if "ibis" in str(constructor) and reduction in {"skew", "kurtosis"}:
+        reason = "Ibis does not implement them."
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     df = nw.from_native(constructor({"a": [1.0, 2.0]}))
     all_null = df.with_columns(a=nw.when(nw.col("a") < 0).then(nw.col("a")))
     expr = getattr(nw.col("a"), reduction)()
     assert all_null.select(expr).collect_schema() == df.select(expr).collect_schema()
+
+
+@pytest.mark.parametrize("reduction", ["skew", "kurtosis"])
+@pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning:dask")
+def test_skew_kurtosis_without_values_stay_null_aware(
+    constructor: Constructor, request: pytest.FixtureRequest, reduction: str
+) -> None:
+    """The result of a reduction with nothing to reduce must behave like a null.
+
+    Stating the dtype is not enough on its own: a `Float64` result built as a NumPy
+    `float64` turns the missing value into a NaN, which `is_nan` then reports as
+    `True` on the dtypes that do tell NaN and null apart. The column's own null is
+    used as the reference, so the classic NumPy dtypes keep their documented
+    behaviour of not distinguishing the two.
+
+    The all-null column is built the way the test above builds it, from float values
+    that no dtype backend reads as integers. Casting an already-null column instead
+    would drop the nullable dtype backend from both sides at once and leave nothing
+    for the reference to pin down.
+
+    See `docs/concepts/null_handling.md` and
+    https://github.com/narwhals-dev/narwhals/issues/4044.
+    """
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/11176
+        request.applymarker(pytest.mark.xfail)
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    df = nw.from_native(constructor({"a": [1.5, 2.5]}))
+    all_null = df.with_columns(a=nw.when(nw.col("a") < 0).then(nw.col("a")))
+    missing = nw.col("a").is_nan().is_null()
+    expected = all_null.lazy().select(missing).collect()["a"][0]
+    result = all_null.lazy().select(getattr(nw.col("a"), reduction)().is_nan().is_null())
+    assert_equal_data(result, {"a": [bool(expected)]})
+
+
+@pytest.mark.parametrize("reduction", ["skew", "kurtosis"])
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning")
+def test_group_by_skew_kurtosis_all_null_group(
+    constructor: Constructor, request: pytest.FixtureRequest, reduction: str
+) -> None:
+    """A group with nothing to reduce must not change the dtype of the whole column.
+
+    pandas cannot express either reduction as a native group-by aggregation, so this
+    goes through the apply path, which rebuilds the column one group at a time.
+    """
+    if "ibis" in str(constructor):
+        # https://github.com/ibis-project/ibis/issues/11176
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    df = nw.from_native(constructor({"g": [1, 1, 2, 2], "a": [1.5, 2.5, None, None]}))
+    expr = getattr(nw.col("a"), reduction)()
+    result = df.lazy().group_by("g").agg(expr).sort("g").collect()
+    assert result.schema["a"] == df.lazy().select(expr).collect().schema["a"]
+    missing = df.lazy().select(nw.col("a").is_nan().is_null()).collect()["a"][2]
+    assert_equal_data(
+        result.select(nw.col("a").is_nan().is_null()), {"a": [False, bool(missing)]}
+    )
+
+
+@pytest.mark.parametrize("dtype", ["Float64", "double[pyarrow]"])
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.skipif(sys.platform == "win32", reason="needs the fork start method")
+def test_group_by_apply_keeps_dtype_out_of_process(
+    monkeypatch: pytest.MonkeyPatch, dtype: str
+) -> None:
+    """The apply path must not rely on state shared between groups.
+
+    Modin on Ray or Dask runs the function passed to `groupby.apply` on workers,
+    so anything it stores outside its return value is lost. Each group is run in a
+    forked process here to mimic that.
+    """
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pyarrow")
+    from pandas.core.groupby.generic import DataFrameGroupBy
+
+    original_apply = DataFrameGroupBy.apply
+    ctx = multiprocessing.get_context("fork")
+
+    def in_child(func: Any, group: Any, queue: Any) -> None:
+        queue.put(func(group))
+
+    def apply(self: Any, func: Any, *args: Any, **kwargs: Any) -> Any:
+        def run(group: Any) -> Any:
+            queue = ctx.Queue()
+            process = ctx.Process(target=in_child, args=(func, group, queue))
+            process.start()
+            out = queue.get(timeout=60)
+            process.join()
+            return out
+
+        return original_apply(self, run, *args, **kwargs)
+
+    monkeypatch.setattr(DataFrameGroupBy, "apply", apply)
+    native = pd.DataFrame(
+        {"g": [1, 1, 2, 2, 2], "a": pd.Series([None, None, 1.0, 2.0, 4.0], dtype=dtype)}
+    )
+    result = nw.from_native(native).group_by("g").agg(nw.col("a").skew()).sort("g")
+    assert result.schema["a"] == nw.Float64()
+    assert result["a"].is_null().to_list() == [True, False]
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_group_by_keeps_values_when_group_dtypes_differ(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    """Groups that reduce to different dtypes must not have one cast onto the other.
+
+    `mean` still returns an untyped `pd.NA` on the nullable dtypes, so a group with
+    nothing to reduce disagrees with a group that has values. Casting either way
+    would swap a missing value for a NaN or the other way around, so the column is
+    left as the backend built it.
+    """
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    df = nw.from_native(constructor({"g": [1, 1, 2, 2], "a": [1.5, 2.5, None, None]}))
+    result = df.lazy().group_by("g").agg((nw.col("a") * 2).mean()).sort("g").collect()
+    assert_equal_data(result, {"g": [1, 2], "a": [4.0, None]})
 
 
 def test_string_reduction_keeps_dtype_when_all_null(
