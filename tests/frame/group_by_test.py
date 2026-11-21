@@ -813,3 +813,46 @@ def test_multi_column_expansion(constructor: Constructor) -> None:
         .sort("a", descending=True)
     )
     assert_equal_data(result, expected)
+
+
+def test_group_by_len_n_unique_keep_pyarrow_dtype_pandas() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4169
+    pytest.importorskip("pyarrow")
+    pd = pytest.importorskip("pandas", minversion="2.0")
+    native = pd.DataFrame({"a": [1, 1, 2], "b": [1, 2, 2]}).convert_dtypes(
+        dtype_backend="pyarrow"
+    )
+    result = (
+        nw.from_native(native)
+        .group_by("a")
+        .agg(
+            nw.col("b").n_unique().alias("n_unique"),
+            nw.len().alias("len"),
+            nw.col("b").count().alias("count"),
+        )
+        .to_native()
+    )
+    assert str(result["n_unique"].dtype) == "int64[pyarrow]"
+    assert str(result["len"].dtype) == "int64[pyarrow]"
+    assert str(result["count"].dtype) == "int64[pyarrow]"
+
+
+@pytest.mark.parametrize("order", [("b", "c"), ("c", "b")])
+def test_group_by_n_unique_mixed_backends_pandas(order: tuple[str, str]) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4169
+    pytest.importorskip("pyarrow")
+    pd = pytest.importorskip("pandas", minversion="2.0")
+    native = pd.DataFrame({"a": [1, 1, 2], "b": [1, 2, 2], "c": [1, 2, 2]})
+    native["c"] = native["c"].astype("int64[pyarrow]")
+    result = (
+        nw.from_native(native).group_by("a").agg(nw.col(*order).n_unique()).to_native()
+    )
+    assert str(result["b"].dtype) == "int64"
+    assert str(result["c"].dtype) == "int64[pyarrow]"
+
+
+def test_group_by_n_unique_empty_selection_pandas() -> None:
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame({"a": [1, 1, 2], "b": [1, 2, 2]})
+    result = nw.from_native(native).group_by("a").agg(nw.col([]).n_unique())
+    assert result.collect_schema().names() == ["a"]
