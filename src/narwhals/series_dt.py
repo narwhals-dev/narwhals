@@ -449,6 +449,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
 
             - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
+            - for PyArrow, we compute `"%s"` (seconds since the epoch) explicitly,
+              as `pc.strftime` doesn't support it and passes it through as
+              literal text.
             ---
             Workarounds like these don't make us happy, and we try to avoid them as
             much as possible, but here we feel like it's the best compromise.
