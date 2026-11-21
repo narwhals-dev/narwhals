@@ -141,3 +141,67 @@ def test_rows_with_nulls_named(
                 )  # because float('nan') != float('nan')
             else:
                 assert value_in_result == value
+
+
+def test_rows_python_scalars(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4091
+    if "cudf" in str(constructor_eager):
+        # cudf intentionally doesn't support itertuples / iter_rows
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    unnamed = [*df.rows(named=False), *df.iter_rows(named=False)]
+    named = [*df.rows(named=True), *df.iter_rows(named=True)]
+    values = [
+        *(v for row in unnamed for v in row),
+        *(v for row in named for v in row.values()),
+    ]
+    assert {type(v) for v in values} == {int, float}
+
+
+def test_rows_pandas_nullable_dtypes() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4091
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame(
+        {
+            "a": pd.array([1, None], dtype="Int64"),
+            "b": pd.array([True, None], dtype="boolean"),
+        }
+    )
+    df = nw.from_native(native, eager_only=True)
+    for rows in (
+        df.rows(named=False),
+        list(df.iter_rows(named=False)),
+        [tuple(row.values()) for row in df.rows(named=True)],
+        [tuple(row.values()) for row in df.iter_rows(named=True)],
+    ):
+        (a, b), (a_missing, b_missing) = rows
+        assert type(a) is int
+        assert type(b) is bool
+        assert is_pd_na(a_missing)
+        assert is_pd_na(b_missing)
+
+
+def test_rows_pandas_temporal_scalars() -> None:
+    # Regression coverage for datetime/timedelta values after replacing itertuples.
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2026-01-01", "2026-01-02"]),
+            "duration": pd.to_timedelta(["1 day", "2 days"]),
+        }
+    )
+    df = nw.from_native(native, eager_only=True)
+
+    for named in (False, True):
+        for row_method in (df.rows, df.iter_rows):
+            result = list(row_method(named=named))
+            assert len(result) == 2
+            for i, row in enumerate(result):
+                date = row["date"] if named else row[0]
+                duration = row["duration"] if named else row[1]
+                assert isinstance(date, pd.Timestamp)
+                assert isinstance(duration, pd.Timedelta)
+                assert date == native["date"].iloc[i]
+                assert duration == native["duration"].iloc[i]
