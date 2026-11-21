@@ -969,18 +969,34 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
     def cum_min(self, *, reverse: bool) -> Self:
+        native = self.native
+        # Explicit float `start`: PyArrow<26 seeds with `max()` instead of `+inf`.
+        # https://github.com/apache/arrow/issues/51194
+        start = (
+            pa.scalar(float("inf"), native.type)
+            if pa.types.is_floating(native.type)
+            else None
+        )
         result = (
-            pc.cumulative_min(self.native, skip_nulls=True)
+            pc.cumulative_min(native, start=start, skip_nulls=True)
             if not reverse
-            else pc.cumulative_min(self.native[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_min(native[::-1], start=start, skip_nulls=True)[::-1]
         )
         return self._with_native(result)
 
     def cum_max(self, *, reverse: bool) -> Self:
+        native = self.native
+        # Explicit float `start`: PyArrow<26 seeds with `min()` (smallest positive
+        # value) instead of `-inf`. https://github.com/apache/arrow/issues/51194
+        start = (
+            pa.scalar(float("-inf"), native.type)
+            if pa.types.is_floating(native.type)
+            else None
+        )
         result = (
-            pc.cumulative_max(self.native, skip_nulls=True)
+            pc.cumulative_max(native, start=start, skip_nulls=True)
             if not reverse
-            else pc.cumulative_max(self.native[::-1], skip_nulls=True)[::-1]
+            else pc.cumulative_max(native[::-1], start=start, skip_nulls=True)[::-1]
         )
         return self._with_native(result)
 

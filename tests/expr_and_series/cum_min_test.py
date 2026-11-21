@@ -213,3 +213,35 @@ def test_cum_min_series(
         cum_min=df["a"].cum_min(), reverse_cum_min=df["a"].cum_min(reverse=True)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected_cum_min", "expected_reverse_cum_min"),
+    [
+        ([float("inf")], [float("inf")], [float("inf")]),
+        ([float("inf"), 3.0, 4.0], [float("inf"), 3.0, 3.0], [3.0, 3.0, 4.0]),
+        ([float("inf"), None, 3.0], [float("inf"), None, 3.0], [3.0, None, 3.0]),
+    ],
+)
+@pytest.mark.parametrize("reverse", [True, False])
+def test_cum_min_infinite_floats(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    values: list[float | None],
+    expected_cum_min: list[float | None],
+    expected_reverse_cum_min: list[float | None],
+    *,
+    reverse: bool,
+) -> None:
+    if "pandas_pyarrow" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
+        # pandas calls the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
+        pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
+        # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`
+        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
+
+    df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
+    result = df.select(nw.col("a").cum_min(reverse=reverse))
+
+    expected = expected_reverse_cum_min if reverse else expected_cum_min
+    assert_equal_data(result, {"a": expected})
