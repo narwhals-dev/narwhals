@@ -44,6 +44,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_sequence_of,
     is_slice_none,
+    native_repr,
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
@@ -475,14 +476,28 @@ class BaseFrame(Generic[_FrameT]):
         )
         raise NotImplementedError(msg)
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         to_explode = (
             [columns, *more_columns]
             if isinstance(columns, str)
             else [*columns, *more_columns]
         )
 
-        return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
+        compliant = self._compliant_frame
+        if empty_as_null and keep_nulls:
+            # Plugins written before these flags existed implement `explode(columns)`.
+            return self._with_compliant(compliant.explode(columns=to_explode))
+        return self._with_compliant(
+            compliant.explode(
+                columns=to_explode, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+            )
+        )
 
 
 class DataFrame(BaseFrame[DataFrameT]):
@@ -790,7 +805,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
+        return generate_repr("Narwhals DataFrame", native_repr(self._compliant_frame))
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """Export a DataFrame via the Arrow PyCapsule Interface.
@@ -2380,7 +2395,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -2390,6 +2411,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             columns: Column names. The underlying columns being exploded must be of the `List` data type.
             *more_columns: Additional names of columns to explode, specified as positional arguments.
+            empty_as_null: How to explode an empty list. If `True`, an empty list explodes
+                into a single null row; if `False`, it produces no rows.
+            keep_nulls: How to explode a null list. If `True`, a null list explodes into a
+                single null row; if `False`, it produces no rows.
 
         Examples:
             >>> import polars as pl
@@ -2408,7 +2433,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ y   ┆ 3   │
             └─────┴─────┘
         """
-        return super().explode(columns, *more_columns)
+        return super().explode(
+            columns, *more_columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+        )
 
 
 class LazyFrame(BaseFrame[LazyFrameT]):
@@ -2468,7 +2495,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
+        return generate_repr("Narwhals LazyFrame", native_repr(self._compliant_frame))
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
@@ -3414,7 +3441,13 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -3424,6 +3457,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         Arguments:
             columns: Column names. The underlying columns being exploded must be of the `List` data type.
             *more_columns: Additional names of columns to explode, specified as positional arguments.
+            empty_as_null: How to explode an empty list. If `True`, an empty list explodes
+                into a single null row; if `False`, it produces no rows.
+            keep_nulls: How to explode a null list. If `True`, a null list explodes into a
+                single null row; if `False`, it produces no rows.
 
         Examples:
             >>> import duckdb
@@ -3446,4 +3483,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └─────────┴───────┘
             <BLANKLINE>
         """
-        return super().explode(columns, *more_columns)
+        return super().explode(
+            columns, *more_columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+        )

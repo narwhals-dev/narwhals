@@ -17,6 +17,7 @@ from narwhals._utils import (
     generate_repr,
     is_compliant_series,
     is_index_selector,
+    native_repr,
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
@@ -36,6 +37,7 @@ from narwhals.functions import col
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
+from narwhals.series_map import SeriesMapNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
@@ -578,7 +580,7 @@ class Series(Generic[IntoSeriesT]):
         return function(self, *args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals Series", self.to_native().__repr__())
+        return generate_repr("Narwhals Series", native_repr(self._compliant_series))
 
     def __len__(self) -> int:
         return len(self._compliant_series)
@@ -3108,6 +3110,10 @@ class Series(Generic[IntoSeriesT]):
     @property
     def list(self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)
+
+    @property
+    def map(self) -> SeriesMapNamespace[Self]:
+        return SeriesMapNamespace(self)
 
     @property
     def struct(self) -> SeriesStructNamespace[Self]:

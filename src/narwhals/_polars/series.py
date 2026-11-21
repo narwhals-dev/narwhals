@@ -12,6 +12,7 @@ from narwhals._polars.utils import (
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
     PolarsListNamespace,
+    PolarsMapNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
     catch_polars_exception,
@@ -29,6 +30,7 @@ from narwhals._utils import (
     requires,
 )
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals.exceptions import ComputeError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -541,6 +543,14 @@ class PolarsSeries:
         return self._with_native(result)
 
     def scatter(self, indices: Self, values: Self) -> Self:
+        n_values, n_indices = len(values.native), len(indices.native)
+        if n_values not in {1, n_indices}:
+            # Polars silently ignores extra values: https://github.com/pola-rs/polars/issues/30713
+            msg = f"Expected object of length {n_indices}, got length: {n_values}"
+            raise ShapeError(msg)
+        if indices.native.null_count():
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
         s = self.native.clone().scatter(indices.native, values.native)
         return self._with_native(s)
 
@@ -803,6 +813,10 @@ class PolarsSeries:
     def list(self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
 
+    @property
+    def map(self) -> PolarsSeriesMapNamespace:
+        return PolarsSeriesMapNamespace(self)
+
 
 class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
     def __init__(self, series: PolarsSeries) -> None:
@@ -906,6 +920,11 @@ class PolarsSeriesListNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
+
+
+class PolarsSeriesMapNamespace(
+    PolarsSeriesNamespace, PolarsMapNamespace[PolarsSeries, pl.Series]
+): ...
 
 
 class PolarsSeriesStructNamespace(

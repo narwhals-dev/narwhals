@@ -99,6 +99,11 @@ Here are exceptions to our backwards compatibility policy:
 - Anything labelled "unstable".
 - We may sometimes need to bump the minimum versions of supported backends.
 - We will drop support for old python versions, roughly in sync with [their end of life](https://devguide.python.org/versions/#supported-versions)
+- Dask support is moving to the separate [`narwhals-dask`](https://pypi.org/project/narwhals-dask/)
+  package. In a future release, using Dask with Narwhals will require `narwhals-dask` to be
+  installed, including from `narwhals.stable.v1` and `narwhals.stable.v2`. Until then, using the
+  built-in Dask backend emits a `FutureWarning`. Installing `narwhals-dask` silences it, and no
+  other code changes are needed.
 
 In general, decisions are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.

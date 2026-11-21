@@ -16,11 +16,8 @@ from datetime import timezone
 from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
-from inspect import getattr_static, getdoc
 from io import IOBase
 from operator import attrgetter
-from pathlib import Path
-from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1251,6 +1248,8 @@ def generate_temporary_column_name(
         >>> temp_name not in columns and temp_name.startswith("foo")
         True
     """
+    from secrets import token_hex
+
     counter = 0
     while True:
         if (token := f"{prefix}{token_hex(n_bytes - 1)}") not in columns:
@@ -1495,13 +1494,22 @@ def _resolve_sample_size(
     return size
 
 
+def native_repr(compliant: Any) -> str:
+    # Plugins whose native objects have an unhelpful repr (e.g. a plain `dict`) can
+    # define `native_repr` on their compliant frames and series. It's looked up on the
+    # class so that interchange-level objects' `__getattr__`, which raises, isn't hit.
+    if (custom := getattr(type(compliant), "native_repr", None)) is not None:
+        return str(custom(compliant))
+    return repr(compliant.native)
+
+
 def generate_repr(header: str, native_repr: str) -> str:
     try:
         terminal_width = os.get_terminal_size().columns
     except OSError:
         terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
     native_lines = native_repr.expandtabs().splitlines()
-    max_native_width = max(len(line) for line in native_lines)
+    max_native_width = max((len(line) for line in native_lines), default=0)
 
     if max_native_width + 2 <= terminal_width:
         length = max(max_native_width, len(header))
@@ -1599,6 +1607,8 @@ _SENTINEL: Final = object()
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
+    from inspect import getattr_static
+
     return getattr_static(obj, attr, _SENTINEL) is not _SENTINEL
 
 
@@ -1683,6 +1693,8 @@ def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
         `not_implemented` descriptors, which exist statically but raise on instance
         access, or the protocol's own stubs inherited unchanged, which return `None`.
     """
+    from inspect import getattr_static
+
     from narwhals._compliant import EagerNamespace
 
     return all(
@@ -2152,6 +2164,8 @@ def inherit_doc(
     """
 
     def decorate(init_child: _Constructor[_T, P, R2], /) -> _Constructor[_T, P, R2]:
+        from inspect import getdoc
+
         if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
             init_child.__doc__ = getdoc(tp_parent)
             return init_child
@@ -2399,6 +2413,8 @@ def ensure_path_source(
 if sys.platform != "win32":
 
     def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
+        from pathlib import Path
+
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
@@ -2410,6 +2426,8 @@ else:  # pragma: no cover
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
     def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
+        from pathlib import Path
+
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(Path(source).as_posix())
@@ -2463,6 +2481,11 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 NO_DEFAULT = _NoDefault.no_default
+"""Sentinel for a parameter the caller did not set, when `None` is a valid value.
+
+Compliant-level methods receive it as-is, e.g. `replace_strict(default=NO_DEFAULT, ...)`,
+so plugins can compare against it with `default is NO_DEFAULT`.
+"""
 # keep this for tubular https://github.com/azukds/tubular/issues/725
 no_default = NO_DEFAULT
 
