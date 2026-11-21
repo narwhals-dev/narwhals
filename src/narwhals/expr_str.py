@@ -401,7 +401,6 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Notes:
             If the length of the string has fewer than `n` characters, the full string is returned.
-            If `n` is zero, an empty string is returned for each non-null value.
 
         Examples:
             >>> import pyarrow as pa
