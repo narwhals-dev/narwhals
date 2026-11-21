@@ -19,17 +19,16 @@ class ExprMapNamespace(Generic[ExprT]):
         """Return the number of entries in each map.
 
         Null maps return null. Entries with null values count towards the total.
-        The result has dtype `UInt32`. Requires Polars 2.0 or newer.
+        The result has dtype `UInt32`. Supported on PyArrow and Polars 2.0 or newer.
 
         Examples:
-            >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pl.Series(
-            ...     "a",
-            ...     [{"x": 1, "y": 2}, {}, None, {"x": None}],
-            ...     dtype=pl.Map(pl.String, pl.Int64),
-            ... ).to_frame()
-            >>> df = nw.from_native(df_native)
+            >>> maps = pa.array(
+            ...     [[("x", 1), ("y", 2)], [], None, [("x", None)]],
+            ...     type=pa.map_(pa.string(), pa.int64()),
+            ... )
+            >>> df = nw.from_native(pa.table({"a": maps}))
             >>> df.select(nw.col("a").map.len()).get_column("a").to_list()
             [2, 0, None, 1]
         """
