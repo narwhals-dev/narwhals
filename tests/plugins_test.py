@@ -154,6 +154,13 @@ def _arrow_table() -> pa.Table:
     return pa.table(DATA)
 
 
+def _arrow_chunked_array() -> pa.ChunkedArray[Any]:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    return pa.chunked_array([[1, 2, 3]])
+
+
 @pytest.fixture
 def plugin_module() -> ModuleType:
     plugin: ModuleType = pytest.importorskip("test_plugin")
@@ -285,11 +292,12 @@ def test_eager_dataframe_constructors_plugin(
         (nw.new_series, [1, 2, 3]),
         (nw.Series.from_iterable, [1, 2, 3]),
         (nw.Series.from_numpy, _np_1d_array),
+        (nw.Series.from_arrow, _arrow_chunked_array),
     ],
 )
 def test_eager_series_constructors_plugin(
     series_constructor: Callable[..., nw.Series[Any]],
-    values: list[int] | Callable[[], _1DArray],
+    values: list[int] | Callable[[], _1DArray | pa.ChunkedArray[Any]],
 ) -> None:
     # The factory is deferred, so that `importorskip` runs at test time.
     native_values = values() if callable(values) else values

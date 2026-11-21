@@ -117,6 +117,11 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
                 for field in dtype
             ]
         )
+    if isinstance(dtype, native.MapType):
+        return dtypes.Map(
+            native_to_narwhals_dtype(dtype.keyType, version, spark_types, session),
+            native_to_narwhals_dtype(dtype.valueType, version, spark_types, session),
+        )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
@@ -194,6 +199,11 @@ def narwhals_to_native_dtype(  # noqa: C901
                 native.StructField(name=field.name, dataType=to_native(field.dtype))
                 for field in dtype.fields
             ]
+        )
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        return native.MapType(
+            keyType=narwhals_to_native_dtype(dtype.key, version, native, session),
+            valueType=narwhals_to_native_dtype(dtype.value, version, native, session),
         )
     if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
         return native.DecimalType(precision=dtype.precision, scale=dtype.scale)

@@ -69,6 +69,39 @@ handle plugins. For this integration to work, any plugin architecture must conta
     class the plugin exposes (namespace, dataframe, lazyframe, series). This is how Narwhals
     tells plugin objects apart from those of its built-in backends.
 
+### Expression metadata
+
+Some operations can't be implemented by looking at a single compliant expression in isolation.
+For example, `over` needs to know which function it's being applied to, and `group_by` needs to
+know whether an aggregation is simple enough to dispatch to a native group-by. For this, compliant
+expressions carry an `ExprMetadata` object, available as `_metadata`, which plugins may read.
+Commonly used parts of it are:
+
+- `is_literal`, `is_scalar_like`, `is_elementwise`, `prev`
+- `expansion_kind` (e.g. `expansion_kind.is_multi_output()`)
+- `iter_nodes_reversed()` and `op_nodes_reversed()`, which walk the expression's nodes from
+  last to first
+
+See [Expression Metadata](how_it_works.md#expression-metadata) for what each piece means.
+
+!!! warning
+    `_metadata` is plugin-facing but **not** covered by Narwhals' [backwards-compatibility
+    policy](backcompat.md): it may change between minor releases. Plugins which use it should
+    set a tight lower bound on `narwhals` and test against the minimum version they support.
+    They should also test against Narwhals' `main` branch, and release a new plugin version
+    when `_metadata` changes, as a newer Narwhals release may break an already-released plugin.
+
+Other private modules (e.g. `narwhals._utils`) are not plugin-facing. If you need something
+from them, vendor it into your plugin.
+
+### Custom repr
+
+The repr of a Narwhals `DataFrame`, `LazyFrame` or `Series` wraps the repr of its native object.
+If that isn't informative (e.g. if the native object is a plain `dict`), a compliant dataframe,
+lazyframe or series can define a `native_repr(self) -> str` method, whose result is used instead.
+Every line of it must fit within the terminal width minus 2 (for the box borders), otherwise
+Narwhals shows a placeholder asking the user to call `.to_native()` instead.
+
 ## Supporting `backend=...` in Narwhals functions
 
 Functions and constructors which accept a `backend` argument can also dispatch to a

@@ -209,9 +209,11 @@ class PolarsNamespace:
 
     def mean_horizontal(self, *exprs: PolarsExpr) -> PolarsExpr:
         if self._backend_version < (0, 20, 8):
+            count = pl.sum_horizontal(1 - e.is_null()._native_expr for e in exprs)
             return self._expr(
-                pl.sum_horizontal(e._native_expr for e in exprs)
-                / pl.sum_horizontal(1 - e.is_null()._native_expr for e in exprs),
+                pl.when(count > 0).then(
+                    pl.sum_horizontal(e._native_expr for e in exprs) / count
+                ),
                 version=self._version,
             )
 

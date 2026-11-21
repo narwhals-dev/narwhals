@@ -8,9 +8,11 @@ import pyarrow.compute as pc
 from narwhals._arrow.series_cat import ArrowSeriesCatNamespace
 from narwhals._arrow.series_dt import ArrowSeriesDateTimeNamespace
 from narwhals._arrow.series_list import ArrowSeriesListNamespace
+from narwhals._arrow.series_map import ArrowSeriesMapNamespace
 from narwhals._arrow.series_str import ArrowSeriesStringNamespace
 from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
+    BACKEND_VERSION,
     arange,
     cast_for_truediv,
     chunked_array,
@@ -22,6 +24,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    repeat,
     sortable,
     zeros,
 )
@@ -33,9 +36,12 @@ from narwhals._utils import (
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
+    qualified_type_name,
+    supports_arrow_c_array,
+    supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -62,6 +68,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -206,6 +213,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        # NOTE: The stubs don't accept PyCapsule objects in `pa.array` and `pa.chunked_array`
+        array_from_capsule: Incomplete = pa.array
+        chunked_array_from_capsule: Incomplete = pa.chunked_array
+        if isinstance(data, (pa.Array, pa.ChunkedArray)):
+            native = chunked_array(data)
+        # Prefer the stream: it keeps chunks zero-copy, while `__arrow_c_array__`
+        # may combine them (e.g. `nw.Series` exposes both).
+        elif supports_arrow_c_stream(data) and BACKEND_VERSION >= (16,):
+            native = chunked_array_from_capsule(data)
+        elif supports_arrow_c_array(data) and BACKEND_VERSION >= (14,):
+            native = chunked_array(array_from_capsule(data))
+        elif supports_arrow_c_array(data) or supports_arrow_c_stream(data):
+            msg = f"'pyarrow>=14.0.0' (`__arrow_c_array__`) or 'pyarrow>=16.0.0' (`__arrow_c_stream__`) is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
+            raise ModuleNotFoundError(msg)
+        else:  # pragma: no cover
+            # Unreachable via the public API: `nw.Series.from_arrow` validates `data` first.
+            msg = f"`Series.from_arrow` is not supported for object of type {qualified_type_name(data)!r}."
+            raise TypeError(msg)
+        return cls.from_native(native, context=context)
+
+    @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
         target_length = max(
@@ -260,6 +289,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(pc.or_kleene, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(pc.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(pc.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)
@@ -476,10 +511,43 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.slice(start, stop - start))
 
     def scatter(self, indices: Self, values: Self) -> Self:
-        mask = pc.is_in(arange(start=0, end=len(self), step=1), indices.native)
-        sorted_indices = pc.sort_indices(indices.native)
-        replacements = values.native.take(sorted_indices).combine_chunks()
-        return self._with_native(pc.replace_with_mask(self.native, mask, replacements))
+        n_values, n_indices = len(values), len(indices)
+        if n_values not in {1, n_indices}:
+            msg = f"Expected object of length {n_indices}, got length: {n_values}"
+            raise ShapeError(msg)
+        values_native = (
+            values.native.cast(self._type)
+            if values.native.type != self._type
+            else values.native
+        )
+        if indices.native.null_count:
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
+        n = len(self)
+        indices_native = pc.if_else(
+            pc.less(indices.native, lit(0)),
+            pc.add(indices.native, lit(n)),
+            indices.native,
+        )
+        min_max = pc.min_max(indices_native)
+        if min_max["min"].as_py() < 0 or min_max["max"].as_py() >= n:
+            msg = f"Scatter indices are out of bounds for Series of length {n}."
+            raise IndexError(msg)
+        # `replace_with_mask` fills masked slots in ascending order, so sort (stably)
+        # by index and keep only the last occurrence of each, matching Polars.
+        order = pc.sort_indices(indices_native)
+        sorted_indices = indices_native.take(order)
+        next_indices = pa.concat_arrays(
+            [*sorted_indices[1:].chunks, pa.nulls(1, sorted_indices.type)]
+        )
+        keep = pc.not_equal(sorted_indices, next_indices).fill_null(True)
+        if n_values == n_indices:
+            replacements = values_native.take(order).filter(keep).combine_chunks()
+        else:
+            replacements = repeat(values_native[0], pc.sum(keep).as_py())
+        return self._with_native(
+            _replace_sorted(self.native, indices_native, replacements)
+        )
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
@@ -1131,6 +1199,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesListNamespace(self)
 
     @property
+    def map(self) -> ArrowSeriesMapNamespace:
+        if not pa.types.is_map(self.native.type):
+            msg = "Series must be of PyArrow Map type to support map namespace."
+            raise TypeError(msg)
+        return ArrowSeriesMapNamespace(self)
+
+    @property
     def struct(self) -> ArrowSeriesStructNamespace:
         return ArrowSeriesStructNamespace(self)
 
@@ -1222,3 +1297,22 @@ class _ArrowHist(
         if self._breakpoint:
             return {"breakpoint": bins[1:], "count": counts}
         return {"count": counts}
+
+
+def _replace_sorted(
+    native: ChunkedArrayAny, indices: ChunkedArrayAny, replacements: ArrayAny
+) -> ChunkedArrayAny:
+    """Replace `native` at unique, non-negative `indices` (`replacements` sorted by index)."""
+    n = len(native)
+    positions = arange(start=0, end=n, step=1)
+    mask = pc.is_in(positions, indices)
+    try:
+        return pc.replace_with_mask(native, mask, replacements)
+    except pa.ArrowNotImplementedError:
+        # No `replace_with_mask` kernel for dictionary, duration and nested types:
+        # append the replacements and `take` each masked slot's replacement from the
+        # tail instead.
+        offsets = pc.add(pc.cumulative_sum(mask.cast(pa.int64())), lit(n - 1))
+        return pa.chunked_array([*native.chunks, replacements], type=native.type).take(
+            pc.if_else(mask, offsets, positions)
+        )

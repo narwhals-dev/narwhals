@@ -42,6 +42,7 @@ from narwhals.dtypes import (
     Int64,
     Int128,
     List,
+    Map,
     Object,
     String,
     Struct,
@@ -83,6 +84,7 @@ if TYPE_CHECKING:
         AllowLazy,
         AllowSeries,
         ExcludeSeries,
+        IntoArrowSeries,
         IntoArrowTable,
         OnlySeries,
         PassThroughUnknown,
@@ -293,6 +295,17 @@ class Series(NwSeries[IntoSeriesT]):
         backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
+        return cast("Series[Any]", result)
+
+    @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        result = super().from_arrow(name, values, backend=backend)
         return cast("Series[Any]", result)
 
     @classmethod
@@ -793,7 +806,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
-    Null values are ignored.
+    Null values are ignored. If all values in a row are null, the result is null.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
@@ -1246,6 +1259,7 @@ __all__ = [
     "Int128",
     "LazyFrame",
     "List",
+    "Map",
     "Object",
     "Schema",
     "Series",

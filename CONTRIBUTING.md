@@ -349,6 +349,12 @@ In general we assume that dataframes are used to store and process columnar data
   - Use standard SQL constructs where possible instead of non-standard
     ones such as `GROUP BY ALL` or `EXCLUDE`.
 
+- Dask:
+
+  - Dask support is moving to the `narwhals-dask` plugin in `packages/narwhals-dask`.
+    The built-in `src/narwhals/_dask` is frozen and only kept as a fallback during the
+    deprecation period: make fixes and new features in the plugin only.
+
 ### Test Failure Patterns
 
 We aim to use three standard patterns for handling test failures:
@@ -446,12 +452,8 @@ The aim is to keep maintainer time focused on review quality, not on triaging ma
 
    **This applies whether or not AI was used.**
 
-4. **First-time contributors** are asked to:
-
-    - Post a screenshot of the test suite passing locally (not on CI) in the PR description.
-      This is a quick check that your dev environment works and that you have run the code you are proposing.
-    - Keep at most one open pull request at a time, so reviewers can give it proper attention before
-      you open the next one.
+4. **First-time contributors** are asked to keep at most one open pull request at a time, so
+   reviewers can give it proper attention before you open the next one.
 
 5. When interacting in issues, pull requests, discussion, discord, etc., **do not use LLMs to speak for you**,
    except for translation or grammar edits. Human-to-human communication is foundational to open source communities.

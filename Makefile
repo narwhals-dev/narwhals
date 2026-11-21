@@ -21,11 +21,11 @@ typing: ## Run type checkers
 
 .PHONY: typing-coverage
 typing-coverage: ## Run type checkers
-	uv run --group typing pyrefly coverage check src/narwhals --public-only
+	uv run --group typing pyrefly coverage check 'src/narwhals/**/*.py' --public-only
 
 .PHONY: docs-dynamic-content
 docs-dynamic-content:  ## Regenerate the dynamic docs pages (API completeness tables, docs/this.md, ...)
-	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
+	uv run --group docs --extra ibis utils/generate_backend_completeness.py
 	uv run --group docs utils/generate_zen_content.py
 
 .PHONY: docs-build

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 
 import pytest
@@ -103,3 +104,15 @@ def test_pyarrow(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "ibis" not in sys.modules
     assert "pyspark" not in sys.modules
     assert "duckdb" not in sys.modules
+
+
+def test_no_heavy_stdlib_imports() -> None:
+    # These are only needed in a handful of functions and noticeably slow down `import narwhals`.
+    code = (
+        "import sys; import narwhals; "
+        "print([m for m in ('inspect', 'secrets', 'pathlib', 'platform') if m in sys.modules])"
+    )
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert result.stdout.strip() == "[]"
