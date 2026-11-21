@@ -34,6 +34,8 @@ from narwhals._enum import NoAutoEnum
 from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
+    get_cupy,
+    get_numpy,
     get_pandas,
     get_polars,
     is_narwhals_series,
@@ -61,7 +63,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import LiteralString, ParamSpec, Self, TypeIs
+    from typing_extensions import CapsuleType, LiteralString, ParamSpec, Self, TypeIs
 
     from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
     from narwhals._compliant.any_namespace import NamespaceAccessor
@@ -90,6 +92,8 @@ if TYPE_CHECKING:
     from narwhals._translate import (
         ArrowArrayExportable,
         ArrowStreamExportable,
+        DLPackExportable,
+        DLPackKwargs,
         IntoArrowSeries,
         IntoArrowTable,
         ToNarwhalsT_co,
@@ -135,6 +139,7 @@ if TYPE_CHECKING:
         SupportsNativeNamespace,
         TimeUnit,
         _1DArray,
+        _NDArray,
         _SliceIndex,
         _SliceName,
         _SliceNone,
@@ -1801,6 +1806,75 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def supports_dlpack(obj: Any) -> TypeIs[DLPackExportable]:
+    return _hasattr_static(obj, "__dlpack__")
+
+
+class _DLPackSource(_StoresNative[Any], _StoresImplementation, Protocol):
+    def to_numpy(self, dtype: Any, *, copy: bool | None) -> _NDArray[Any]: ...
+
+
+def to_dlpack(
+    compliant: _DLPackSource,
+    *,
+    stream: int | Any | None,
+    max_version: tuple[int, int] | None,
+    dl_device: tuple[int, int] | None,
+    copy: bool | None,
+) -> CapsuleType:
+    """Export via DLPack: natively, via `to_cupy` for cuDF, else via `to_numpy`."""
+    native = compliant.native
+    # NOTE: Producers on an older DLPack version (e.g. numpy<2.1) reject keywords
+    # added later, so only forward what the consumer passed.
+    kwds = {
+        "stream": stream,
+        "max_version": max_version,
+        "dl_device": dl_device,
+        "copy": copy,
+    }
+    kwargs = cast("DLPackKwargs", {k: v for k, v in kwds.items() if v is not None})
+    if supports_dlpack(native):
+        return native.__dlpack__(**kwargs)
+    if compliant._implementation is Implementation.CUDF:  # pragma: no cover
+        # NOTE: cuDF has no `__dlpack__`, and its `to_dlpack` exports booleans as uint8
+        # and single-column frames as 1D, and ignores `dl_device`. `to_cupy` keeps dtype
+        # and shape (zero-copy for numeric columns without nulls), and CuPy implements
+        # the full protocol (`stream`, `dl_device`, `copy`).
+        try:
+            arr = native.to_cupy()
+        except ValueError:
+            # NOTE: cuDF<25.10 raises on any null, while later versions cast non-float
+            # columns to float64 (floats keep their dtype) and fill nulls with NaN
+            # themselves: do the same on the GPU.
+            if compliant._implementation._backend_version() >= (25, 10):
+                raise
+            np = get_numpy()
+            dtypes = native.dtypes if native.ndim == 2 else [native.dtype]
+            dtype = np.result_type(*(d if d.kind == "f" else np.float64 for d in dtypes))
+            arr = native.astype(dtype).to_cupy(na_value=float("nan"))
+        return arr.__dlpack__(**kwargs)
+
+    arr = compliant.to_numpy(None, copy=None)
+    # NOTE: Unversioned DLPack (`max_version` < 1.0) can't flag a buffer as read-only,
+    # so NumPy refuses to export read-only arrays (zero-copy Arrow memory, pandas
+    # copy-on-write) to such consumers. They may write to it, so hand them a copy.
+    legacy = max_version is None or max_version[0] < 1
+    if legacy and not arr.flags.writeable and copy is not False:
+        arr = arr.copy()
+    return arr.__dlpack__(**kwargs)
+
+
+def dlpack_device(compliant: _DLPackSource) -> tuple[int, int]:
+    native = compliant.native
+    if supports_dlpack(native):
+        return native.__dlpack_device__()
+    if compliant._implementation is Implementation.CUDF:  # pragma: no cover
+        # NOTE: cuDF allocates on the current CUDA device. Asking `to_cupy` instead
+        # would gather a copy of every column of a DataFrame just to report this.
+        return (2, get_cupy().cuda.runtime.getDevice())
+    return (1, 0)
 
 
 def supports_arrow_c_array(obj: Any) -> TypeIs[ArrowArrayExportable]:
