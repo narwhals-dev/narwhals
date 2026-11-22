@@ -84,6 +84,37 @@ def test_len_arrow_expr(arrow_map_table: pa.Table) -> None:
     assert result.schema == {"a": nw.UInt32}
 
 
+def test_len_duckdb_expr(arrow_map_table: pa.Table) -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+    import pyarrow as pa
+
+    row_ids = [0, 1, 2, 3]
+    table = arrow_map_table.append_column("row_id", pa.array(row_ids))
+    frame = nw.from_native(duckdb.from_arrow(table))
+    result = frame.select("row_id", nw.col("a").map.len()).sort("row_id")
+
+    assert_equal_data(result, {"row_id": row_ids, **expected})
+    assert result.collect_schema()["a"] == nw.UInt32
+
+
+@pytest.mark.parametrize("list_size", [-1, 2], ids=["list", "array"])
+def test_len_duckdb_non_map(list_size: int) -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("pyarrow")
+    import duckdb
+    import pyarrow as pa
+
+    data = pa.array([[1, 2]], type=pa.list_(pa.int64(), list_size))
+    frame = nw.from_native(duckdb.from_arrow(pa.table({"a": data})))
+
+    with pytest.raises(
+        (duckdb.InvalidInputException, duckdb.BinderException),
+        match=r"(?i)not a map|map_keys\(",
+    ):
+        frame.select(nw.col("a").map.len())
+
+
 def test_len_arrow_sliced_chunks() -> None:
     pa = pytest.importorskip("pyarrow")
     maps = pa.array(

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import MapNamespace
 from narwhals._duckdb.utils import F, lit
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from duckdb import Expression
@@ -15,7 +14,11 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprMapNamespace(LazyExprNamespace["DuckDBExpr"], MapNamespace["DuckDBExpr"]):
-    len = not_implemented()
+    def len(self) -> DuckDBExpr:
+        # DuckDB's cardinality also accepts lists and arrays starting in 2.0.
+        return self.compliant._with_elementwise(
+            lambda expr: F("len", F("map_keys", expr)).cast("UINTEGER")
+        )
 
     def get(self, key: NonNestedLiteral) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:

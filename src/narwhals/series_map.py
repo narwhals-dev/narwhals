@@ -18,7 +18,8 @@ class SeriesMapNamespace(Generic[SeriesT]):
         Null maps return null. Entries with null values count towards the total.
         The result has dtype `UInt32`. Supported on PyArrow, Polars 2.0 or newer,
         pandas, and Modin. On pandas and Modin, this requires a PyArrow-backed
-        `Map` Series and pandas 2.2 or newer.
+        `Map` Series and pandas 2.2 or newer. For DuckDB, use `Expr.map.len()`
+        with a lazy frame.
 
         Examples:
             >>> import polars as pl
