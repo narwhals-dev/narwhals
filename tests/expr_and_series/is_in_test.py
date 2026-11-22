@@ -14,6 +14,7 @@ from tests.conftest import (
     pandas_constructor,
 )
 from tests.utils import (
+    PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
@@ -86,6 +87,24 @@ def test_expr_is_in_with_null(constructor: Constructor) -> None:
         expected = {"a": [True, True, False, False]}
     else:
         expected = {"a": [True, True, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+def test_expr_is_in_with_nan(constructor: Constructor) -> None:
+    # A NaN is a value, not a null: it must not match, and must not become null.
+    data_with_nan = {"a": [0.0, 4.0, None], "b": [0.0, 2.0, 1.0]}
+    df = nw.from_native(constructor(data_with_nan))
+    result = df.select((nw.col("a") / nw.col("b")).is_in([2.0]))
+
+    expected: dict[str, list[Any]]
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+        expected = {"a": [False, True, False]}
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
+        # NaN values are coerced into NA for nullable datatypes by default
+        expected = {"a": [None, True, None]}
+    else:
+        expected = {"a": [False, True, None]}
 
     assert_equal_data(result, expected)
 

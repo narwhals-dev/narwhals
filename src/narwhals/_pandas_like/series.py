@@ -440,8 +440,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         ser = self.native
         res = ser.isin(other)
         if self._implementation.is_cudf():
-            # cuDF has nullable booleans but returns `False` for null input.
-            return self._with_native(res.mask(ser.isna()))
+            # cuDF has nullable booleans but returns `False` for null input; `isna`
+            # also flags valid NaN, which must keep the `isin` result.
+            is_nan = (ser != ser).fillna(False)  # noqa: PLR0124
+            return self._with_native(res.mask(ser.isna() & ~is_nan))
         dtype_backend = get_dtype_backend(ser.dtype, self._implementation)
         if dtype_backend is not None:
             res = res.convert_dtypes(dtype_backend=dtype_backend)
