@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.28.0"
+version = "2.29.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -49,7 +49,10 @@ pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
-dask = ["dask[dataframe]>=2024.8"]
+dask = [
+    "dask[dataframe]>=2024.8",
+    "narwhals-dask>=0.1.0",
+]
 duckdb = ["duckdb>=1.1"]
 ibis = [
     "ibis-framework>=6.0.0",
@@ -191,6 +194,9 @@ min-pyspark-version = [
 source-include = ["tests/**"]
 
 [tool.uv]
+# `narwhals-dask` (pulled in by the `dask` extra) replaces the built-in Dask backend, which
+# would leave `src/narwhals/_dask` untested. It is tested separately, see `packages/narwhals-dask`.
+exclude-dependencies = ["narwhals-dask"]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
 # See https://docs.astral.sh/uv/reference/settings/#conflicts.
@@ -236,6 +242,9 @@ conflicts = [
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# NOTE: `narwhals-dask` has its own environment and lock file. Installing it replaces the
+# built-in Dask backend, and its `dask` requirement conflicts with the `extreme-*` groups.
+exclude = ["packages/narwhals-dask"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
@@ -365,6 +374,8 @@ filterwarnings = [
   # Record, don't raise: pytest-run-parallel swallows warnings raised inside its worker
   # threads, and fails the run on this one only when it is recorded.
   'default:The global interpreter lock \(GIL\) has been enabled:RuntimeWarning',
+  # Emitted when using Dask without `narwhals-dask` installed, see `tests/dask_plugin_test.py`.
+  'ignore:Dask support is moving out of Narwhals:FutureWarning',
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
@@ -476,7 +487,10 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin"]
+files = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
+# NOTE: `narwhals-dask` is resolved from source rather than installed, as installing it
+# replaces the built-in Dask backend.
+mypy_path = "packages/narwhals-dask/src"
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -523,16 +537,17 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin"]
+include = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
 defineConstant = { "MYPY" = false }
+extraPaths = ["packages/narwhals-dask/src"]
 
 [tool.pyrefly]
-search-path = ["src", "."]
+search-path = ["src", ".", "packages/narwhals-dask/src"]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",
