@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import unicodedata
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -13,8 +14,8 @@ if TYPE_CHECKING:
 MAX_ROWS = 10
 MAX_COLS = 8
 MAX_WIDTH = 25
-CELL_WIDTHS = (MAX_WIDTH, 15, 8)
-"""Widths cells are cut to, narrower ones only if wider ones don't fit."""
+CELL_WIDTHS = (None, 15, 8)
+"""Widths cells are cut to (`None`: not cut), narrower ones only if wider ones don't fit."""
 ELLIPSIS = "…"
 
 _SHORT_DTYPE_NAMES = {
@@ -63,8 +64,42 @@ def available_width() -> int:
     return width - 2
 
 
-def _truncate(text: str, width: int = MAX_WIDTH) -> str:
-    return text if len(text) <= width else f"{text[: width - 1]}{ELLIPSIS}"
+_ESCAPES = {
+    i: "\\n" if i == 10 else "\\t" if i == 9 else "\\r" if i == 13 else f"\\x{i:02x}"
+    for i in [*range(32), 127]
+}
+"""Control characters would break the table (and Narwhals expands tabs), so escape them."""
+
+
+def _escape(text: str) -> str:
+    return text.translate(_ESCAPES)
+
+
+def _char_width(char: str) -> int:
+    if unicodedata.combining(char) or unicodedata.category(char) in {"Mn", "Me", "Cf"}:
+        return 0
+    return 2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1
+
+
+def display_width(text: str) -> int:
+    """The number of terminal columns `text` takes, which `len` gets wrong for e.g. CJK."""
+    return len(text) if text.isascii() else sum(map(_char_width, text))
+
+
+def _truncate(text: str, width: int | None = MAX_WIDTH) -> str:
+    if width is None or display_width(text) <= width:
+        return text
+    kept, used = [], 0
+    for char in text:
+        used += _char_width(char)
+        if used > width - 1:
+            break
+        kept.append(char)
+    return f"{''.join(kept)}{ELLIPSIS}"
+
+
+def _ljust(text: str, width: int) -> str:
+    return text + " " * (width - display_width(text))
 
 
 def fit_lines(text: str, width: int | None = None) -> str:
@@ -79,13 +114,14 @@ def _format_value(value: Any) -> str:
     if isinstance(value, bool):
         return str(value).lower()
     if isinstance(value, str):
-        return _truncate(f'"{value}"')
+        return _truncate(f'"{_escape(value)}"')
     if isinstance(value, list):
         return _truncate(f"[{', '.join(_format_value(v) for v in value)}]")
     if isinstance(value, dict):
         fields = ", ".join(_format_value(v) for v in value.values())
         return _truncate(f"{{{fields}}}")
-    return _truncate(str(value))
+    # Like Polars, other scalars (e.g. datetimes with microseconds) are shown in full.
+    return _escape(str(value))
 
 
 def _row_indices(n_rows: int) -> list[int | None]:
@@ -138,7 +174,12 @@ def frame_repr(
     n_rows = len(native[names[0]])
     rows = _row_indices(n_rows)
     formatted: list[list[str]] = [
-        [name, "---", _dtype_name(schema[name]), *_format_column(native[name], rows)]
+        [
+            _escape(name),
+            "---",
+            _dtype_name(schema[name]),
+            *_format_column(native[name], rows),
+        ]
         for name in names
     ]
     for cell_width in CELL_WIDTHS:
@@ -146,7 +187,7 @@ def frame_repr(
         columns = [
             [_truncate(cell, cell_width) for cell in column] for column in formatted
         ]
-        widths = [max(len(cell) for cell in column) for column in columns]
+        widths = [max(map(display_width, column)) for column in columns]
         shown = _shown_columns(widths, max_width)
         elided_width = [3] if len(shown) < len(columns) else []
         fits = _table_width([widths[i] for i in shown] + elided_width) <= max_width
@@ -161,10 +202,10 @@ def frame_repr(
             elided,
             *(columns[i] for i in shown[split:]),
         ]
-    widths = [max(len(cell) for cell in column) for column in columns]
+    widths = [max(map(display_width, column)) for column in columns]
 
     def line(cells: Sequence[str]) -> str:
-        padded = (cell.ljust(width) for cell, width in zip(cells, widths, strict=True))
+        padded = (_ljust(cell, width) for cell, width in zip(cells, widths, strict=True))
         return f"│ {' ┆ '.join(padded)} │"
 
     def rule(left: str, fill: str, sep: str, right: str) -> str:
@@ -188,7 +229,7 @@ def series_repr(name: str, values: Sequence[Any], dtype: DType) -> str:
     return "\n".join(
         [
             f"shape: ({len(values)},)",
-            f"Series: '{name}' [{_dtype_name(dtype)}]",
+            f"Series: '{_escape(name)}' [{_dtype_name(dtype)}]",
             "[",
             *body,
             "]",

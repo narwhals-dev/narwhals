@@ -74,6 +74,16 @@ def test_join(  # noqa: PLR0917
     _assert_same(result, expected)
 
 
+@pytest.mark.parametrize(("n_left", "n_right"), [(3, 5), (5, 3)])
+def test_left_join_keeps_left_order(n_left: int, n_right: int) -> None:
+    # Not guaranteed by Narwhals, but matches Polars, whichever side gets indexed.
+    left = {"k": [3, 1, 5, 7, 9][:n_left], "a": list(range(n_left))}
+    right = {"k": [1, 2, 3, 1, 3][:n_right], "b": list("abcde")[:n_right]}
+    result = pz.from_dict(left).join(pz.from_dict(right), on="k", how="left")
+    expected = pl.DataFrame(left).join(pl.DataFrame(right), on="k", how="left")
+    assert result.to_native() == expected.to_dict(as_series=False)
+
+
 def _group_frame(n_groups: int, *, nulls: bool) -> dict[str, list[Any]]:
     rng = random.Random(n_groups * 2 + nulls)  # noqa: S311
     n = 500

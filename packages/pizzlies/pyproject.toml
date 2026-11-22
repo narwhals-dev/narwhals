@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Pure-Python eager dataframes on dicts of lists, with the Narwhals API"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 # Raise to the first Narwhals release with `native_repr` before tagging pizzlies: the
 # publish workflow runs the tests against this floor, and the repr tests need it.

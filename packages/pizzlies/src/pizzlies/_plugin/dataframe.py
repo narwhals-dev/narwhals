@@ -810,34 +810,21 @@ class DictDataFrame(
             (index := _unique_key_index(left_keys)) is not None
         ):
             # A small unique left side, e.g. a filtered dimension table: index it and
-            # scan the right side once, as an inner join, then add the unmatched rows.
-            positions = list(map(index.get, right_keys))
-            matched = self._join_inner_unique(
+            # scan the right side once, bucketing its rows by the left row they match,
+            # so that the output keeps the left order (as Polars does).
+            buckets: list[list[int | None]] = [[] for _ in range(len(left_keys))]
+            for right_row, left_row in enumerate(map(index.get, right_keys)):
+                if left_row is not None:
+                    buckets[left_row - 1].append(right_row)
+            return self._join_gather(
                 other,
-                positions,
-                probe_is_left=False,
+                range(len(self)),
+                [len(bucket) or 1 for bucket in buckets],
+                list(chain.from_iterable(bucket or [None] for bucket in buckets)),
+                left_tail=0,
                 exclude_right=set(right_on),
                 suffix=suffix,
             )
-            hits = set(positions)
-            if not (
-                missing := [row for row in range(len(left_keys)) if row + 1 not in hits]
-            ):
-                return matched
-            gather = gatherer(missing)
-            n_missing = len(missing)
-            result: DictFrame = {
-                name: [
-                    *column,
-                    *(
-                        gather(self.native[name])
-                        if name in self.native
-                        else repeat(None, n_missing)
-                    ),
-                ]
-                for name, column in matched.native.items()
-            }
-            return self._with_native(result, validate_column_names=False)
         if (index := _unique_key_index(right_keys)) is not None:
             # Every left row is kept once and in order; misses map to row 0, the null
             # which `_nullable_gatherer`-style padding puts in front of each column.

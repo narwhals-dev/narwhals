@@ -107,3 +107,26 @@ def test_frame_repr_single_too_wide_column() -> None:
 
 def test_fit_lines() -> None:
     assert fit_lines("short\n" + "x" * 30, 10) == "short\nxxxxxxxxx…"
+
+
+def test_frame_repr_escapes_control_characters() -> None:
+    schema = {"s": SCHEMA["column_0"]}
+    lines = frame_repr({"s": ["a\nb", "c\td"]}, schema, max_width=80).splitlines()
+    assert lines[6] == '│ "a\\nb" │'
+    assert lines[7] == '│ "c\\td" │'
+
+
+def test_frame_repr_wide_characters() -> None:
+    schema = {"s": SCHEMA["column_0"], "t": SCHEMA["column_0"]}
+    lines = frame_repr(
+        {"s": ["日本語", "é"], "t": ["x", "y"]}, schema, max_width=80
+    ).splitlines()
+    widths = {repr_module.display_width(line) for line in lines[1:]}
+    assert widths == {repr_module.display_width(lines[1])}
+    assert lines[6] == '│ "日本語" ┆ "x" │'
+
+
+def test_frame_repr_datetime_in_full() -> None:
+    value = dt.datetime(2020, 1, 1, 12, 30, 15, 123456)
+    df = pz.from_dict({"a": [value]})
+    assert "2020-01-01 12:30:15.123456" in native_repr(df)
