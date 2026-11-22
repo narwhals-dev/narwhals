@@ -201,11 +201,11 @@ def test_shared_dataframe_read_only(constructor_eager: ConstructorEager) -> None
     """Reading from a shared `DataFrame` is safe: no method may mutate it, or its input."""
     if (
         "pandas" in str(constructor_eager)
-        and PANDAS_VERSION < PkgVersion("3.2")
+        and PANDAS_VERSION < PkgVersion("3.1.1")
         and not getattr(sys, "_is_gil_enabled", lambda: True)()
     ):
         # Upstream: views of one frame race in pandas' copy-on-write reference tracking.
-        pytest.skip("pandas<3.2 can segfault on concurrent reads without the GIL")
+        pytest.skip("pandas<3.1.1 can segfault on concurrent reads without the GIL")
     native = constructor_eager(DATA)
     df = nw.from_native(native, eager_only=True)
     native_before = repr(native)
