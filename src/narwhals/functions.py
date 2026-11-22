@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Concatenate, Literal, overload
@@ -23,6 +22,7 @@ from narwhals._utils import (
     is_plugin_backend,
     is_sequence_of,
     normalize_source,
+    qualified_type_name,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -476,7 +476,7 @@ def from_arrow(
         └──────────────────┘
     """
     if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
-        msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+        msg = f"Given object of type {qualified_type_name(native_frame)!r} does not support PyCapsule interface"
         raise TypeError(msg)
     ns = eager_namespace(backend, version=Version.MAIN, function_name="from_arrow")
     return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
@@ -492,6 +492,8 @@ def _get_sys_info() -> dict[str, str]:
     Returns:
         Dictionary with system info.
     """
+    import platform
+
     python = sys.version.replace("\n", " ")
 
     blob = (
@@ -1562,7 +1564,7 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
-    Null values are ignored.
+    Null values are ignored. If all values in a row are null, the result is null.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts

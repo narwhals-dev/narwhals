@@ -6,6 +6,7 @@ from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
     ListNamespace,
+    MapNamespace,
     StringNamespace,
     StructNamespace,
 )
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._translate import IntoArrowSeries
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -67,6 +69,7 @@ __all__ = [
     "EagerSeriesDateTimeNamespace",
     "EagerSeriesHist",
     "EagerSeriesListNamespace",
+    "EagerSeriesMapNamespace",
     "EagerSeriesNamespace",
     "EagerSeriesStringNamespace",
     "EagerSeriesStructNamespace",
@@ -113,6 +116,10 @@ class CompliantSeries(
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self: ...
     @classmethod
+    def from_arrow(
+        cls, data: IntoArrowSeries, /, *, context: _LimitedContext
+    ) -> Self: ...
+    @classmethod
     def from_iterable(
         cls,
         data: Iterable[Any],
@@ -126,6 +133,7 @@ class CompliantSeries(
     def __rand__(self, other: Any) -> Self: ...
     def __rmul__(self, other: Any) -> Self: ...
     def __ror__(self, other: Any) -> Self: ...
+    def __rxor__(self, other: Any) -> Self: ...
     def all(self) -> bool: ...
     def any(self) -> bool: ...
     def any_value(self, *, ignore_nulls: bool) -> PythonLiteral: ...
@@ -261,6 +269,8 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     @property
     def list(self) -> EagerSeriesListNamespace[Self, NativeSeriesT]: ...
     @property
+    def map(self) -> EagerSeriesMapNamespace[Self, NativeSeriesT]: ...
+    @property
     def struct(self) -> EagerSeriesStructNamespace[Self, NativeSeriesT]: ...
 
 
@@ -323,6 +333,13 @@ class EagerSeriesListNamespace(  # pyright: ignore[reportInvalidTypeVarUse]
     _SeriesNamespace[EagerSeriesT, NativeSeriesT_co],
     ListNamespace[EagerSeriesT],
     Protocol[EagerSeriesT, NativeSeriesT_co],
+): ...
+
+
+class EagerSeriesMapNamespace(  # type: ignore[misc]
+    _SeriesNamespace[EagerSeriesT_co, NativeSeriesT_co],
+    MapNamespace[EagerSeriesT_co],
+    Protocol[EagerSeriesT_co, NativeSeriesT_co],
 ): ...
 
 

@@ -12,6 +12,7 @@ from narwhals._polars.utils import (
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
     PolarsListNamespace,
+    PolarsMapNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
     catch_polars_exception,
@@ -21,8 +22,15 @@ from narwhals._polars.utils import (
     native_get_categories,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    _into_arrow_chunked_array,
+    floor_mod,
+    requires,
+)
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals.exceptions import ComputeError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -35,6 +43,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -73,8 +82,10 @@ INHERITED_METHODS = frozenset(
         "__ror__",
         "__rsub__",
         "__rtruediv__",
+        "__rxor__",
         "__sub__",
         "__truediv__",
+        "__xor__",
         "abs",
         "all",
         "any",
@@ -213,6 +224,15 @@ class PolarsSeries:
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
+        return cls.from_native(native, context=context)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        if BACKEND_VERSION >= (1, 3):
+            native = pl.Series(data)
+        else:
+            ca = _into_arrow_chunked_array(data, context)
+            native = cast("pl.Series", pl.from_arrow(ca))
         return cls.from_native(native, context=context)
 
     def to_narwhals(self) -> Series[pl.Series]:
@@ -523,6 +543,14 @@ class PolarsSeries:
         return self._with_native(result)
 
     def scatter(self, indices: Self, values: Self) -> Self:
+        n_values, n_indices = len(values.native), len(indices.native)
+        if n_values not in {1, n_indices}:
+            # Polars silently ignores extra values: https://github.com/pola-rs/polars/issues/30713
+            msg = f"Expected object of length {n_indices}, got length: {n_values}"
+            raise ShapeError(msg)
+        if indices.native.null_count():
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
         s = self.native.clone().scatter(indices.native, values.native)
         return self._with_native(s)
 
@@ -718,8 +746,10 @@ class PolarsSeries:
     __ror__: Method[Self]
     __rsub__: Method[Self]
     __rtruediv__: Method[Self]
+    __rxor__: Method[Self]
     __sub__: Method[Self]
     __truediv__: Method[Self]
+    __xor__: Method[Self]
     abs: Method[Self]
     all: Method[bool]
     any: Method[bool]
@@ -782,6 +812,10 @@ class PolarsSeries:
     @property
     def list(self) -> PolarsSeriesListNamespace:
         return PolarsSeriesListNamespace(self)
+
+    @property
+    def map(self) -> PolarsSeriesMapNamespace:
+        return PolarsSeriesMapNamespace(self)
 
 
 class PolarsSeriesNamespace(PolarsAnyNamespace[PolarsSeries, pl.Series]):
@@ -886,6 +920,11 @@ class PolarsSeriesListNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).list.contains(item)).get_column(name)
+
+
+class PolarsSeriesMapNamespace(
+    PolarsSeriesNamespace, PolarsMapNamespace[PolarsSeries, pl.Series]
+): ...
 
 
 class PolarsSeriesStructNamespace(

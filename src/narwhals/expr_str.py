@@ -416,7 +416,9 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics_tail: [["taata","atata","kkyun"]]
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=-n, length=None)
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.slice", offset=-n, length=0 if n == 0 else None
+            )
         )
 
     def to_datetime(self, format: str | None = None) -> ExprT:
