@@ -51,7 +51,6 @@ class SQLExprStringNamespace(
         )
 
     def replace_all(self, value: SQLExprT, pattern: str, *, literal: bool) -> SQLExprT:
-        # narwhals-canary: delete this line to confirm you have read the full diff
         fname: str = "replace" if literal else "regexp_replace"
         impl = self.compliant._implementation
         # Java regex re-inserts the whole match with `$0`. Other engines (e.g. SQLFrame's)
