@@ -359,27 +359,68 @@ class PandasLikeGroupBy(
         """
         warn_complex_group_by()
         impl = self.compliant._implementation
-        func = self._apply_exprs_function(exprs)
+        func, dtypes = self._apply_exprs_function(exprs)
         apply = grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)  # type: ignore[call-overload]
-        return apply(func)  # type: ignore[return-value]  # pragma: no cover
+            result = cast(
+                "pd.DataFrame",
+                apply(func, include_groups=False),  # type: ignore[call-overload]
+            )
+        else:
+            result = cast(
+                "pd.DataFrame",
+                apply(func),  # pragma: no cover
+            )
+        return self._restore_agg_dtypes(result, dtypes)
 
-    def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
+    def _apply_exprs_function(
+        self, exprs: Iterable[PandasLikeExpr]
+    ) -> tuple[NativeApply, dict[str, set[Any]]]:
+        """Return the per-group function for `grouped.apply`, plus evaluated dtypes.
+
+        The second return value maps each aggregation output name to the native
+        dtypes it evaluated to across groups, so the caller can restore them:
+        packing the per-expression scalars into a single Series below upcasts
+        mixed int/float results to float64.
+        """
         ns = self.compliant.__narwhals_namespace__()
         into_series = ns._series.from_iterable
+        dtypes: dict[str, set[Any]] = {}
 
         def fn(df: pd.DataFrame) -> pd.Series[Any]:
             compliant = self.compliant._with_native(df)
-            results = [
-                (keys.native.iloc[0], keys.name)
-                for expr in exprs
-                for keys in expr(compliant)
-            ]
+            series = [keys for expr in exprs for keys in expr(compliant)]
+            for keys in series:
+                dtypes.setdefault(keys.name, set()).add(keys.native.dtype)
+            results = [(keys.native.iloc[0], keys.name) for keys in series]
             out_group, out_names = zip(*results, strict=True) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 
-        return fn
+        return fn, dtypes
+
+    @staticmethod
+    def _restore_agg_dtypes(
+        result: pd.DataFrame, dtypes: dict[str, set[Any]], /
+    ) -> pd.DataFrame:
+        """Restore per-expression dtypes lost when packing scalars into one Series.
+
+        Arguments:
+            result: The DataFrame produced by the complex group-by `apply`.
+            dtypes: Native dtypes each aggregation output evaluated to, per group.
+        """
+        for name, seen in dtypes.items():
+            if len(seen) != 1:
+                # The expression evaluated to different dtypes across groups,
+                # so there is no single dtype to restore.
+                continue
+            if result.columns.tolist().count(name) != 1:
+                # Duplicate output names are rejected downstream; leave them alone.
+                continue
+            dtype = next(iter(seen))
+            if result[name].dtype == dtype:
+                continue
+            result[name] = result[name].astype(dtype)
+        return result
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
