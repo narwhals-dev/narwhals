@@ -13,6 +13,7 @@ from pizzlies._plugin._vendored import (
     is_sequence_of,
 )
 from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.utils import canonical_nans, skip_nan
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -54,14 +55,14 @@ _NULL_SAFE_AGGS: Mapping[str, Callable[[list[Any]], Any]] = {
     "len": len,
     "first": itemgetter(0),
     "last": itemgetter(-1),
-    "n_unique": lambda values: len(set(values)),
+    "n_unique": lambda values: len(set(canonical_nans(values))),
 }
 # These ones skip nulls, so only apply as-is to columns without any.
 _NULL_FREE_AGGS: Mapping[str, Callable[[list[Any]], Any]] = {
     "sum": sum,
     "mean": _mean,
-    "min": min,
-    "max": max,
+    "min": lambda values: min(skip_nan(values)),
+    "max": lambda values: max(skip_nan(values)),
     "count": len,
     "any": any,
     "all": all,
@@ -84,11 +85,11 @@ def _mean_skipping_nulls(values: list[Any]) -> Any:
 
 
 def _min_skipping_nulls(values: list[Any]) -> Any:
-    return min(present) if (present := _non_null(values)) else None
+    return min(skip_nan(present)) if (present := _non_null(values)) else None
 
 
 def _max_skipping_nulls(values: list[Any]) -> Any:
-    return max(present) if (present := _non_null(values)) else None
+    return max(skip_nan(present)) if (present := _non_null(values)) else None
 
 
 # The same aggregations, for columns with nulls: filtering them out still runs in C.
@@ -113,7 +114,7 @@ class _GroupedRows:
 
     def __init__(self, frame: DictDataFrame, keys: Sequence[str]) -> None:
         self._frame = frame
-        self._key_columns = [frame.native[key] for key in keys]
+        self._key_columns = [canonical_nans(frame.native[key]) for key in keys]
         # Keys are raw values for a single key, value tuples for several -- see
         # `_bucket_by_keys`. `row_keys` uses the matching representation so the
         # `order_by` re-bucketing below looks them up consistently.
@@ -284,7 +285,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
 
     def _group_indices(self, frame: DictDataFrame) -> dict[Any, list[int]]:
         """Map each key to its row indices, in order of first appearance."""
-        return _bucket_by_keys([frame.native[key] for key in self._keys])
+        return _bucket_by_keys([canonical_nans(frame.native[key]) for key in self._keys])
 
     @staticmethod
     def _leaf_order_by(leaf: Any) -> tuple[str, ...]:

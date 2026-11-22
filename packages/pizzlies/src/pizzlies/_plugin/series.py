@@ -19,6 +19,7 @@ from pizzlies._plugin._vendored import (
 from pizzlies._plugin.repr import series_repr
 from pizzlies._plugin.utils import (
     binary_op,
+    canonical_nans,
     cast_values,
     first_non_null,
     infer_dtype,
@@ -28,6 +29,7 @@ from pizzlies._plugin.utils import (
     nan_last_column,
     nan_last_key,
     promote_decimal_mix,
+    skip_nan,
     sort_with_nulls,
 )
 
@@ -486,18 +488,18 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self.native.count(None)
 
     def n_unique(self) -> int:
-        return len(set(self.native))
+        return len(set(canonical_nans(self.native)))
 
     def sum(self) -> float:
         return sum(self._non_null())
 
     def min(self) -> Any:
         values = self._non_null()
-        return min(values) if values else None
+        return min(skip_nan(values)) if values else None
 
     def max(self) -> Any:
         values = self._non_null()
-        return max(values) if values else None
+        return max(skip_nan(values)) if values else None
 
     def mean(self) -> float:
         values = self._non_null()
@@ -591,11 +593,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     def arg_min(self) -> int | None:
         values = self._non_null()
-        return self.native.index(min(values)) if values else None
+        # `index` finds a NaN by identity, which `skip_nan` preserves.
+        return self.native.index(min(skip_nan(values))) if values else None
 
     def arg_max(self) -> int | None:
         values = self._non_null()
-        return self.native.index(max(values)) if values else None
+        return self.native.index(max(skip_nan(values))) if values else None
 
     def first(self) -> PythonLiteral:
         return self.native[0] if self.native else None
@@ -634,20 +637,29 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_unary(math.isfinite)
 
     def is_in(self, other: Any) -> Self:
-        candidates = list(other)
+        candidates = canonical_nans(list(other))
+        values = canonical_nans(self.native)
+
+        def lookup(contains: Callable[[Any], bool]) -> list[Any]:
+            if None not in values:
+                return list(map(contains, values))
+            return [None if value is None else contains(value) for value in values]
+
         try:
-            return self._with_unary(set(candidates).__contains__)
+            result = lookup(set(candidates).__contains__)
         except TypeError:  # unhashable elements or values, e.g. a `List` column
-            return self._with_unary(candidates.__contains__)
+            result = lookup(candidates.__contains__)
+        return self._with_native(result, preserve_broadcast=True)
 
     def is_unique(self) -> Self:
-        counts = Counter(self.native)
-        return self._with_native([counts[value] == 1 for value in self.native])
+        values = canonical_nans(self.native)
+        counts = Counter(values)
+        return self._with_native([counts[value] == 1 for value in values])
 
     def is_first_distinct(self) -> Self:
         seen: set[Any] = set()
         result = []
-        for value in self.native:
+        for value in canonical_nans(self.native):
             result.append(value not in seen)
             seen.add(value)
         return self._with_native(result)
@@ -655,7 +667,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def is_last_distinct(self) -> Self:
         seen: set[Any] = set()
         result = []
-        for value in reversed(self.native):
+        for value in reversed(canonical_nans(self.native)):
             result.append(value not in seen)
             seen.add(value)
         return self._with_native(result[::-1])
@@ -757,9 +769,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(result)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        values = canonical_nans(self.native)
         if keep == "all":
-            return self._with_native(statistics.multimode(self.native))
-        return self._with_native([statistics.mode(self.native)] if self.native else [])
+            return self._with_native(statistics.multimode(values))
+        return self._with_native([statistics.mode(values)] if values else [])
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         keys = nan_last_column(self.native)
@@ -1118,7 +1131,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(native)
 
     def unique(self, *, maintain_order: bool = False) -> Self:
-        return self._with_native(list(dict.fromkeys(self.native)))
+        return self._with_native(list(dict.fromkeys(canonical_nans(self.native))))
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
         return self._with_native(
@@ -1155,7 +1168,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
         value_name = name or ("proportion" if normalize else "count")
         check_column_names_are_unique([self.name, value_name])
-        counter = Counter(self.native)
+        counter = Counter(canonical_nans(self.native))
         items = counter.most_common() if sort else list(counter.items())
         total = len(self.native)
         return DictDataFrame(

@@ -62,7 +62,10 @@ Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1,
 
 Parquet isn't supported: read files with pyarrow and convert them,
 `pz.from_arrow(pq.read_table(path))`. `Map` dtypes aren't supported, and dtypes are inferred
-from the Python values, so e.g. integers are always `Int64`.
+from the Python values, so e.g. integers are always `Int64`. Like Python, and unlike Polars,
+`pizzlies` ignores `fold` when comparing time-zone aware datetimes, so the two occurrences
+of an ambiguous wall time (e.g. 01:30 when clocks go back) are equal in group-bys, joins
+and `unique`.
 
 ## Development
 

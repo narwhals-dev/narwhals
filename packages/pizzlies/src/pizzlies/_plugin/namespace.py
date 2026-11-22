@@ -16,7 +16,7 @@ from pizzlies._plugin.dataframe import DictDataFrame
 from pizzlies._plugin.expr import DictExpr
 from pizzlies._plugin.selectors import DictSelectorNamespace
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import csv_to_native
+from pizzlies._plugin.utils import csv_to_native, has_nan, skip_nan
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -112,6 +112,8 @@ class DictNamespace(
         exprs: Sequence[DictExpr],
         reducer: Callable[[tuple[Any, ...]], Any],
         fast_reducer: Callable[[tuple[Any, ...]], Any] | None = None,
+        *,
+        fast_reducer_needs_no_nan: bool = False,
     ) -> DictExpr:
         # `fast_reducer` must agree with `reducer` on null-free rows; it is applied
         # via `map` when no input column contains nulls, so C-level builtins
@@ -124,6 +126,7 @@ class DictNamespace(
                 fast_reducer
                 if fast_reducer is not None
                 and not any(None in column for column in columns)
+                and not (fast_reducer_needs_no_nan and any(map(has_nan, columns)))
                 else reducer
             )
             result = list(map(func, zip(*columns, strict=True)))
@@ -177,15 +180,17 @@ class DictNamespace(
     def min_horizontal(self, *exprs: DictExpr) -> DictExpr:
         return self._horizontal(
             exprs,
-            lambda row: min((value for value in row if value is not None), default=None),
+            lambda row: min(skip_nan([v for v in row if v is not None]), default=None),
             fast_reducer=min,
+            fast_reducer_needs_no_nan=True,
         )
 
     def max_horizontal(self, *exprs: DictExpr) -> DictExpr:
         return self._horizontal(
             exprs,
-            lambda row: max((value for value in row if value is not None), default=None),
+            lambda row: max(skip_nan([v for v in row if v is not None]), default=None),
             fast_reducer=max,
+            fast_reducer_needs_no_nan=True,
         )
 
     def coalesce(self, *exprs: DictExpr) -> DictExpr:

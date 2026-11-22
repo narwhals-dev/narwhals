@@ -84,6 +84,22 @@ def test_left_join_keeps_left_order(n_left: int, n_right: int) -> None:
     assert result.to_native() == expected.to_dict(as_series=False)
 
 
+@pytest.mark.parametrize(("left", "right"), [([True], [1]), ([1], [1.0]), (["a"], [1])])
+def test_join_key_dtypes_must_match(left: list[Any], right: list[Any]) -> None:
+    df, other = pz.from_dict({"k": left}), pz.from_dict({"k": right})
+    with pytest.raises(pz.exceptions.InvalidOperationError, match="join keys"):
+        df.join(other, on="k")
+    with pytest.raises(pz.exceptions.InvalidOperationError, match="join keys"):
+        df.join_asof(other, on="k")
+
+
+def test_join_all_null_key_matches_any_dtype() -> None:
+    result = pz.from_dict({"k": [None], "a": [1]}).join(
+        pz.from_dict({"k": [1], "b": [2]}), on="k", how="left"
+    )
+    assert result.to_native() == {"k": [None], "a": [1], "b": [None]}
+
+
 def _group_frame(n_groups: int, *, nulls: bool) -> dict[str, list[Any]]:
     rng = random.Random(n_groups * 2 + nulls)  # noqa: S311
     n = 500

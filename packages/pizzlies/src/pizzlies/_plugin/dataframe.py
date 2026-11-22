@@ -21,7 +21,13 @@ from pizzlies._plugin._vendored import (
 )
 from pizzlies._plugin.repr import frame_repr
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import gatherer, infer_dtype, is_native_frame, nan_last_column
+from pizzlies._plugin.utils import (
+    canonical_nans,
+    gatherer,
+    infer_dtype,
+    is_native_frame,
+    nan_last_column,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Iterable, Iterator, Sequence
@@ -488,7 +494,7 @@ class DictDataFrame(
             raise error
         if subset is not None and (error := self._check_columns_exist(subset)):
             raise error
-        columns = [self.native[name] for name in (subset or self.columns)]
+        columns = [canonical_nans(self.native[name]) for name in (subset or self.columns)]
         if keep in {"any", "first", "last"}:
             seen: dict[Any, int] = {}
             if order_by:
@@ -626,8 +632,8 @@ class DictDataFrame(
         multi-key joins yield one value tuple per row.
         """
         if len(keys) == 1:
-            return self.native[keys[0]]
-        columns = [self.native[key] for key in keys]
+            return canonical_nans(self.native[keys[0]])
+        columns = [canonical_nans(self.native[key]) for key in keys]
         if not any(None in column for column in columns):
             return zip(*columns, strict=True)
         return (None if None in row else row for row in zip(*columns, strict=True))
@@ -917,6 +923,28 @@ class DictDataFrame(
             list(map(operator.not_, map(contains, self._join_keys(left_on))))
         )
 
+    def _check_join_key_dtypes(
+        self, other: Self, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> None:
+        """Raise on keys of different dtypes, as Polars does.
+
+        Python would otherwise match e.g. `True` with `1`, and `1` with `1.0`. `Unknown`
+        (an all-null column) matches anything.
+        """
+        version = self._version
+        unknown = version.dtypes.Unknown
+        for left, right in zip(left_on, right_on, strict=True):
+            left_dtype = infer_dtype(self.native[left], version)
+            right_dtype = infer_dtype(other.native[right], version)
+            if left_dtype != right_dtype and not (
+                isinstance(left_dtype, unknown) or isinstance(right_dtype, unknown)
+            ):
+                msg = (
+                    f"datatypes of join keys don't match - `{left}`: {left_dtype} on "
+                    f"left does not match `{right}`: {right_dtype} on right"
+                )
+                raise InvalidOperationError(msg)
+
     def join(
         self,
         other: Self,
@@ -934,6 +962,7 @@ class DictDataFrame(
             raise error
         if error := other._check_columns_exist(right_on):
             raise error
+        self._check_join_key_dtypes(other, left_on, right_on)
         if how == "inner":
             return self._join_inner(
                 other, left_on=left_on, right_on=right_on, suffix=suffix
@@ -988,6 +1017,9 @@ class DictDataFrame(
             raise error
         if error := other._check_columns_exist([right_on, *(by_right or ())]):
             raise error
+        self._check_join_key_dtypes(
+            other, [left_on, *(by_left or ())], [right_on, *(by_right or ())]
+        )
         candidates = other._asof_candidates(right_on, by_right)
         by_keys: Iterable[Any] = (
             repeat(None) if by_left is None else self._join_keys(by_left)
@@ -1089,7 +1121,7 @@ class DictDataFrame(
         return columns[0] if len(columns) == 1 else list(zip(*columns, strict=True))
 
     def is_unique(self) -> DictSeries:
-        keys = self._row_keys(list(self.native.values()))
+        keys = self._row_keys(list(map(canonical_nans, self.native.values())))
         counts = Counter(keys)
         return DictSeries(
             [counts[key] == 1 for key in keys], name="", version=self._version

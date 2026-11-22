@@ -7,6 +7,7 @@ from narwhals.compliant import EagerExpr
 from narwhals.utils import Implementation
 from pizzlies._plugin._vendored import evaluate_output_names_and_aliases
 from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.utils import canonical_nans
 from pizzlies._plugin.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
 if TYPE_CHECKING:
@@ -224,7 +225,7 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         indices are already ordered. Null keys work natively. Single-key
         partitions skip the per-row tuple, mirroring `_join_keys`.
         """
-        key_columns = [df.native[name] for name in partition_by]
+        key_columns = [canonical_nans(df.native[name]) for name in partition_by]
         order: Sequence[int] = (
             df._sorted_indices(order_by, descending=False, nulls_last=False)
             if order_by
@@ -382,7 +383,10 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
             # Broadcast target: each input row's partition key, in original order.
             # `None` keys are handled natively since Python tuples are hashable.
             original_keys = list(
-                zip(*(df.native[name] for name in partition_by), strict=True)
+                zip(
+                    *(canonical_nans(df.native[name]) for name in partition_by),
+                    strict=True,
+                )
             )
             grouping = (
                 self._pruned(df, *partition_by, *order_by).sort(

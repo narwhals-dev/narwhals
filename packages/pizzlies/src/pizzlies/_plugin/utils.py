@@ -615,11 +615,35 @@ def nan_last(value: Any) -> tuple[bool, Any]:
     return (_is_nan(value), value)
 
 
+def has_nan(values: Iterable[Any]) -> bool:
+    # All in C: only floats reach `math.isnan`, with no Python call per value.
+    return any(map(math.isnan, filter(float.__instancecheck__, values)))
+
+
 def nan_last_key(values: Iterable[Any]) -> Callable[[Any], Any] | None:
     """`nan_last` if `values` hold a NaN, else no key at all (a faster, plain sort)."""
-    # All in C: only floats reach `math.isnan`, with no Python call per value.
-    has_nan = any(map(math.isnan, filter(float.__instancecheck__, values)))
-    return nan_last if has_nan else None
+    return nan_last if has_nan(values) else None
+
+
+NAN = float("nan")
+
+
+def canonical_nans(values: Sequence[Any]) -> Sequence[Any]:
+    """`values` with every NaN replaced by the same `NAN` object, for use as hash keys.
+
+    NaN hashes by identity, and dicts and sets only find a NaN key by identity, so
+    separate NaN objects are distinct keys. Polars treats all NaNs as equal.
+    """
+    if not has_nan(values):
+        return values
+    return [NAN if _is_nan(value) else value for value in values]
+
+
+def skip_nan(values: list[Any]) -> list[Any]:
+    """`values` without NaN, unless they're all NaN: Polars' `min`/`max` skip NaN."""
+    if not has_nan(values):
+        return values
+    return [value for value in values if not _is_nan(value)] or values[:1]
 
 
 def nan_last_column(values: Sequence[Any]) -> Sequence[Any]:
