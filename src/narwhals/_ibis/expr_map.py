@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import MapNamespace
 from narwhals._ibis.utils import lit
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
@@ -15,7 +14,14 @@ if TYPE_CHECKING:
 
 
 class IbisExprMapNamespace(LazyExprNamespace["IbisExpr"], MapNamespace["IbisExpr"]):
-    len = not_implemented()
+    def len(self) -> IbisExpr:
+        def func(expr: ir.MapValue) -> ir.Value:
+            if not expr.type().is_map():
+                msg = "`map.len()` requires a Map expression."
+                raise TypeError(msg)
+            return expr.length().cast("uint32")
+
+        return self.compliant._with_callable(func)
 
     def get(self, key: NonNestedLiteral) -> IbisExpr:
         def func(expr: ir.MapColumn) -> ir.Value:
