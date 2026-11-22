@@ -329,7 +329,7 @@ class DictNamespace(
                 denominator = math.sqrt(var_x) * math.sqrt(var_y)
             else:
                 denominator = math.sqrt(denominator)
-            return max(-1.0, min(1.0, cov / denominator))
+            return min(max(cov / denominator, -1.0), 1.0)
 
         return self._binary_scalar_expr(a, b, pearson)
 

@@ -728,12 +728,13 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         # the data itself to a single `dict.get` per value.
         if return_dtype is not None:
             new = cast_values(new, return_dtype, self._version)
-        mapping = dict(zip(old, new, strict=True))
+        mapping = dict(zip(canonical_nans(old), new, strict=True))
+        values = canonical_nans(self.native)
         if default is NO_DEFAULT:
             unset = object()
             unmatched: dict[Any, None] = {}
             result = []
-            for value in self.native:
+            for value in values:
                 replacement = mapping.get(value, unset)
                 if replacement is unset:
                     if value is not None:
@@ -757,14 +758,14 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             if fill_is_scalar:
                 # Keys mapped to `None` are still hits, so `dict.get` alone
                 # distinguishes matched from defaulted.
-                result = [mapping.get(value, fill) for value in self.native]
+                result = [mapping.get(value, fill) for value in values]
             else:
                 unset = object()
                 result = [
                     fill_value
                     if (replacement := mapping.get(value, unset)) is unset
                     else replacement
-                    for value, fill_value in zip(self.native, fill, strict=True)
+                    for value, fill_value in zip(values, fill, strict=True)
                 ]
         return self._with_native(result)
 

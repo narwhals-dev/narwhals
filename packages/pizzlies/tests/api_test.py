@@ -164,11 +164,19 @@ def test_over_dtype_selector_all_null_partition() -> None:
         {"x": [1, 1, 1], "y": [1, 2, 3]},  # zero variance
         {"x": [1], "y": [2]},  # fewer than two pairs
         {"x": [None, 1], "y": [2, None]},  # no non-null pairs
+        {"x": [1.0, 2.0, float("nan")], "y": [1.0, 3.0, 2.0]},  # NaN input
     ],
 )
 def test_corr_undefined_is_nan(data: dict[str, list[Any]]) -> None:
     # As in Polars (and pandas).
     assert math.isnan(pz.from_dict(data).select(pz.corr("x", "y")).item())
+
+
+def test_replace_strict_nan_key() -> None:
+    s = pz.new_series("a", [float("nan"), 1.0, 2.0])
+    mapping = {float("nan"): 0.0, 1.0: 1.0}
+    assert s.replace_strict(mapping, default=-1.0).to_list() == [0.0, 1.0, -1.0]
+    assert s.head(2).replace_strict(mapping).to_list() == [0.0, 1.0]
 
 
 def test_horizontal_cov_corr_with_scalar_and_big_ints() -> None:
