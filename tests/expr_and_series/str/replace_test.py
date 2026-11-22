@@ -7,6 +7,7 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from narwhals.exceptions import ComputeError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -305,86 +306,90 @@ def test_str_replace_value_edge_expr_scalar(
     assert_equal_data(result_df, expected)
 
 
+NULL_VALUE_DATA = {"a": ["abc", "def", "abb"], "b": ["X", None, None]}
+# A null replacement leaves the input unchanged, matching polars, also where the
+# pattern matches ("abb").
+NULL_VALUE_EXPECTED = {"a": ["aXc", "def", "abb"]}
+
+
+def _xfail_null_value_unsupported(
+    constructor: Constructor | ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(
+            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
+        )
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37"):
+        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
+
+
+@pytest.mark.parametrize("literal", [True, False])
 def test_str_replace_null_value_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, *, literal: bool
 ) -> None:
-    # A null replacement leaves the input unchanged, matching polars.
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
-        request.applymarker(
-            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
-        )
-    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.37"):
-        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
-    df = nw.from_native(
-        constructor_eager({"a": ["abc", "def"], "b": ["X", None]}), eager_only=True
-    )
-    result_series = df["a"].str.replace(pattern="b", value=df["b"], n=1, literal=True)
-    assert_equal_data({"a": result_series}, {"a": ["aXc", "def"]})
+    _xfail_null_value_unsupported(constructor_eager, request)
+    df = nw.from_native(constructor_eager(NULL_VALUE_DATA), eager_only=True)
+    result_series = df["a"].str.replace(pattern="b", value=df["b"], n=1, literal=literal)
+    assert_equal_data({"a": result_series}, NULL_VALUE_EXPECTED)
 
 
+@pytest.mark.parametrize("literal", [True, False])
 def test_str_replace_all_null_value_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, *, literal: bool
 ) -> None:
-    # A null replacement leaves the input unchanged, matching polars.
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
-        request.applymarker(
-            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
-        )
-    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.37"):
-        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
-    df = nw.from_native(
-        constructor_eager({"a": ["abc", "def"], "b": ["X", None]}), eager_only=True
-    )
-    result_series = df["a"].str.replace_all(pattern="b", value=df["b"], literal=True)
-    assert_equal_data({"a": result_series}, {"a": ["aXc", "def"]})
+    _xfail_null_value_unsupported(constructor_eager, request)
+    df = nw.from_native(constructor_eager(NULL_VALUE_DATA), eager_only=True)
+    result_series = df["a"].str.replace_all(pattern="b", value=df["b"], literal=literal)
+    assert_equal_data({"a": result_series}, NULL_VALUE_EXPECTED)
 
 
+@pytest.mark.parametrize("literal", [True, False])
 @pytest.mark.parametrize("n", [1, -1])
 def test_str_replace_null_value_expr(
-    constructor: Constructor, request: pytest.FixtureRequest, n: int
+    constructor: Constructor, request: pytest.FixtureRequest, n: int, *, literal: bool
 ) -> None:
-    if n != -1 and any(x in str(constructor) for x in ("pyspark", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason=f"{constructor} only supports `replace_all`.",
                 raises=NotImplementedError,
             )
         )
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
-        request.applymarker(
-            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
-        )
-    if any(x in str(constructor) for x in ("pyspark", "ibis")):
-        request.applymarker(
-            pytest.mark.xfail(reason="SQL backend null replacement leaves null")
-        )
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37"):
-        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
-    df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
+    _xfail_null_value_unsupported(constructor, request)
+    if n == -1:
+        _xfail_replace_all_null_value(constructor, request, literal=literal)
+    df = nw.from_native(constructor(NULL_VALUE_DATA))
     result_df = df.select(
-        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=n, literal=True)
+        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=n, literal=literal)
     )
-    assert_equal_data(result_df, {"a": ["aXc", "def"]})
+    assert_equal_data(result_df, NULL_VALUE_EXPECTED)
 
 
+@pytest.mark.parametrize("literal", [True, False])
 def test_str_replace_all_null_value_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest, *, literal: bool
 ) -> None:
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
-        request.applymarker(
-            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
-        )
-    if any(x in str(constructor) for x in ("pyspark", "ibis")):
-        request.applymarker(
-            pytest.mark.xfail(reason="SQL backend null replacement leaves null")
-        )
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37"):
-        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
-    df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
+    _xfail_null_value_unsupported(constructor, request)
+    _xfail_replace_all_null_value(constructor, request, literal=literal)
+    df = nw.from_native(constructor(NULL_VALUE_DATA))
     result_df = df.select(
-        nw.col("a").str.replace_all(pattern="b", value=nw.col("b"), literal=True)
+        nw.col("a").str.replace_all(pattern="b", value=nw.col("b"), literal=literal)
     )
-    assert_equal_data(result_df, {"a": ["aXc", "def"]})
+    assert_equal_data(result_df, NULL_VALUE_EXPECTED)
+
+
+def _xfail_replace_all_null_value(
+    constructor: Constructor, request: pytest.FixtureRequest, *, literal: bool
+) -> None:
+    if "polars_lazy" in str(constructor) and POLARS_VERSION >= PkgVersion("2"):
+        # polars>=2 raises for a null `value` in lazy `replace_all`, eager is fine.
+        request.applymarker(pytest.mark.xfail(raises=ComputeError))
+    if not literal and any(x in str(constructor) for x in ("sqlframe", "ibis")):
+        # The whole-match token for the regex fallback depends on the engine
+        # SQLFrame and Ibis compile to.
+        request.applymarker(
+            pytest.mark.xfail(reason="regex null replacement leaves null")
+        )
 
 
 @pytest.mark.parametrize(

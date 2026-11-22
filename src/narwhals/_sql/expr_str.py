@@ -26,7 +26,6 @@ class SQLExprStringNamespace(
         return self.compliant._when(condition, value, otherwise)  # type: ignore[no-any-return]
 
     def contains(self, pattern: SQLExprT, *, literal: bool) -> SQLExprT:
-
         def func(expr: NativeExpr, pattern: NativeExpr) -> NativeExpr:
             func_name = "contains" if literal else "regexp_matches"
             return self._function(func_name, expr, pattern)
@@ -52,12 +51,22 @@ class SQLExprStringNamespace(
         )
 
     def replace_all(self, value: SQLExprT, pattern: str, *, literal: bool) -> SQLExprT:
+        # narwhals-canary: delete this line to confirm you have read the full diff
         fname: str = "replace" if literal else "regexp_replace"
+        impl = self.compliant._implementation
+        # Java regex re-inserts the whole match with `$0`. Other engines (e.g. SQLFrame's)
+        # use different tokens, so their regex path is left as is.
+        whole_match = "$0" if impl.is_pyspark() or impl.is_pyspark_connect() else None
+        # A fallback that reproduces the match leaves the string unchanged when `value`
+        # is null (as in Polars), without repeating `expr`.
+        fallback = pattern if literal else whole_match
 
-        return self.compliant._with_elementwise(
-            lambda expr, value: self._function(fname, expr, self._lit(pattern), value),
-            expression_args={"value": value},
-        )
+        def func(expr: NativeExpr, value: NativeExpr) -> NativeExpr:
+            if fallback is not None:
+                value = self.compliant._coalesce(value, self._lit(fallback))
+            return self._function(fname, expr, self._lit(pattern), value)
+
+        return self.compliant._with_elementwise(func, expression_args={"value": value})
 
     def slice(self, offset: int, length: int | None) -> SQLExprT:
         def func(expr: NativeExpr) -> NativeExpr:
