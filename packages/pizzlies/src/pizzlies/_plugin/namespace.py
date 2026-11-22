@@ -309,11 +309,11 @@ class DictNamespace(
             )
             raise NotImplementedError(msg)
 
-        def pearson(a_series: DictSeries, b_series: DictSeries) -> float | None:
+        def pearson(a_series: DictSeries, b_series: DictSeries) -> float:
             xs, ys = self._pairwise_not_null(a_series, b_series)
             n = len(xs)
             if n < 2:
-                return None
+                return float("nan")
             mean_x, mean_y = sum(xs) / n, sum(ys) / n
             cov = var_x = var_y = 0.0
             for x, y in zip(xs, ys, strict=True):
@@ -322,7 +322,7 @@ class DictNamespace(
                 var_x += dx * dx
                 var_y += dy * dy
             if var_x == 0 or var_y == 0:
-                return None
+                return float("nan")
             denominator = var_x * var_y
             if denominator == 0 or math.isinf(denominator):
                 # Splitting the square root avoids under/overflow, but is less exact.
