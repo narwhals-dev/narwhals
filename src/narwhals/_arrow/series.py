@@ -966,11 +966,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cum_min(self, *, reverse: bool) -> Self:
         native = self.native
-        # Explicit float `start`: PyArrow<26 seeds with `max()` instead of `+inf`.
+        # PyArrow<26 seeds floats with the largest finite value instead of `+inf`:
         # https://github.com/apache/arrow/issues/51194
         start = (
             pa.scalar(float("inf"), native.type)
-            if pa.types.is_floating(native.type)
+            if BACKEND_VERSION < (26,) and pa.types.is_floating(native.type)
             else None
         )
         result = (
@@ -982,11 +982,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cum_max(self, *, reverse: bool) -> Self:
         native = self.native
-        # Explicit float `start`: PyArrow<26 seeds with `min()` (smallest positive
-        # value) instead of `-inf`. https://github.com/apache/arrow/issues/51194
+        # PyArrow<26 seeds floats with the smallest positive value instead of `-inf`:
+        # https://github.com/apache/arrow/issues/51194
         start = (
             pa.scalar(float("-inf"), native.type)
-            if pa.types.is_floating(native.type)
+            if BACKEND_VERSION < (26,) and pa.types.is_floating(native.type)
             else None
         )
         result = (

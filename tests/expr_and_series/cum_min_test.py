@@ -13,6 +13,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    uses_pyarrow_backend,
 )
 
 data = {"a": [3, 1, None, 2]}
@@ -233,8 +234,8 @@ def test_cum_min_infinite_floats(
     *,
     reverse: bool,
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
-        # pandas calls the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
+    if uses_pyarrow_backend(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
+        # pandas and Modin call the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
         pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`

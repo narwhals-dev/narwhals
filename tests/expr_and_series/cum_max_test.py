@@ -12,6 +12,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    uses_pyarrow_backend,
 )
 
 data = {"a": [1, 3, None, 2]}
@@ -215,34 +216,27 @@ def test_cum_max_series(
     ],
 )
 @pytest.mark.parametrize("reverse", [True, False])
+@pytest.mark.parametrize("dtype", [nw.Float32, nw.Float64])
 def test_cum_max_non_positive_floats(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     values: list[float | None],
     expected_cum_max: list[float | None],
     expected_reverse_cum_max: list[float | None],
+    dtype: type[nw.Float32 | nw.Float64],
     *,
     reverse: bool,
 ) -> None:
-    if "pandas_pyarrow" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
-        # pandas calls the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
+    if uses_pyarrow_backend(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
+        # pandas and Modin call the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
         pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`
         request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
 
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
-    result = df.select(nw.col("a").cum_max(reverse=reverse))
+    result = df.select(nw.col("a").cast(dtype).cum_max(reverse=reverse))
 
+    assert result.schema == {"a": dtype}
     expected = expected_reverse_cum_max if reverse else expected_cum_max
     assert_equal_data(result, {"a": expected})
-
-
-def test_cum_max_non_positive_float32_pyarrow() -> None:
-    pa = pytest.importorskip("pyarrow")
-
-    native = pa.chunked_array([pa.array([-1.0, -3.0, -2.0], type=pa.float32())])
-    result = nw.from_native(native, series_only=True).cum_max()
-
-    assert result.dtype == nw.Float32
-    assert_equal_data({"a": result}, {"a": [-1.0, -1.0, -1.0]})
