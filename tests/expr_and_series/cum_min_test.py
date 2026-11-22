@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 from packaging.version import Version as PkgVersion
 
@@ -240,6 +242,14 @@ def test_cum_min_infinite_floats(
     if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`
         request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.31"):
+        # Polars<1.31 seeds the cumulative kernel with the largest finite value, so a
+        # leading (in accumulation order) infinity is replaced by it.
+        ordered = values[::-1] if reverse else values
+        if math.isinf(next(v for v in ordered if v is not None)):
+            request.applymarker(
+                pytest.mark.xfail(reason="fixed upstream in Polars 1.31", strict=True)
+            )
 
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
     result = df.select(nw.col("a").cum_min(reverse=reverse))
