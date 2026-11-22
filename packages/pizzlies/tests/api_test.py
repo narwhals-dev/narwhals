@@ -11,8 +11,16 @@ import narwhals as nw
 if TYPE_CHECKING:
     from pathlib import Path
 
-# Narwhals functions which need a backend that `pizzlies` doesn't support.
-NOT_REEXPORTED = {"read_parquet", "scan_parquet"}
+OWN_API = {
+    "BACKEND",
+    "from_arrow",
+    "from_dict",
+    "from_dicts",
+    "from_numpy",
+    "new_series",
+    "read_csv",
+    "scan_csv",
+}
 
 
 def assert_pizzlies_frame(df: Any, expected: dict[str, list[Any]]) -> None:
@@ -23,9 +31,9 @@ def assert_pizzlies_frame(df: Any, expected: dict[str, list[Any]]) -> None:
 
 
 def test_reexports_narwhals_api() -> None:
-    assert set(nw.__all__) - NOT_REEXPORTED <= set(pz.__all__)
-    for name in pz.__all__:
-        assert hasattr(pz, name), name
+    for name in set(pz.__all__) - OWN_API:
+        assert getattr(pz, name) is getattr(nw, name), name
+    assert isinstance(pz.from_dict({"a": [1]}), nw.DataFrame)
 
 
 def test_standalone_usage() -> None:
