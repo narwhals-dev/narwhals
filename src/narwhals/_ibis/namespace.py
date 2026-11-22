@@ -136,7 +136,7 @@ class IbisNamespace(
                     for col in cols
                 ),
             )
-            return numerator / denominator
+            return numerator / denominator.nullif(lit(0))
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

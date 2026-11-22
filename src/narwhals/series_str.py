@@ -371,7 +371,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
+            self._narwhals_series._compliant_series.str.slice(
+                offset=-n, length=0 if n == 0 else None
+            )
         )
 
     def to_uppercase(self) -> SeriesT:
