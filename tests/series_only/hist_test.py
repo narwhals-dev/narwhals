@@ -228,9 +228,12 @@ def test_hist_bin_and_bin_count() -> None:
         s.hist(bins=[1, 3], bin_count=4)
 
 
+@pytest.mark.parametrize("values", [[], [None, None]])
 @param_include_breakpoint
 @param_library
-def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
+def test_hist_no_data(
+    library: str, values: list[None], *, include_breakpoint: bool
+) -> None:
     if library == "pandas":
         pytest.importorskip("pandas")
         import pandas as pd
@@ -243,7 +246,7 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
         pa = pytest.importorskip("pyarrow")
         pytest.importorskip("numpy")
         constructor_eager = pa.table
-    s = nw.from_native(constructor_eager({"values": []})).select(
+    s = nw.from_native(constructor_eager({"values": values})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
     for bin_count in [1, 10]:
