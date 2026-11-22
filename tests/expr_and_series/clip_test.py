@@ -74,3 +74,70 @@ def test_clip_preserves_null(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, None, 3, -4, None]}))
     result = df.select(a=nw.col("a").clip(lower_bound=0, upper_bound=2))
     assert_equal_data(result, {"a": [1, None, 2, 0, None]})
+
+
+NULL_BOUNDS_DATA = {
+    "a": [1, 3, 10, -4, None],
+    "lb": [0, 2, None, 0, 0],
+    "ub": [2, None, 3, None, 3],
+}
+"""Data with nulls inside the bound columns: a null bound means "no bound" for that row."""
+
+
+def test_clip_expr_null_bounds(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(
+        x in str(constructor)
+        for x in ["pandas_nullable", "pandas_pyarrow", "modin_pyarrow"]
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="pandas clip cannot fill null bounds for nullable integer dtypes"
+            )
+        )
+    df = nw.from_native(constructor(NULL_BOUNDS_DATA))
+    result = df.select(nw.col("a").clip("lb", "ub"))
+    assert_equal_data(result, {"a": [1, 3, 3, 0, None]})
+
+
+@pytest.mark.parametrize(
+    ("lower", "upper", "expected"),
+    [("lb", None, [1, 3, 10, 0, None]), (None, "ub", [1, 3, 3, -4, None])],
+)
+def test_clip_expr_null_single_bound(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    lower: str | None,
+    upper: str | None,
+    expected: list[int | None],
+) -> None:
+    if any(
+        x in str(constructor)
+        for x in ["pandas_nullable", "pandas_pyarrow", "modin_pyarrow"]
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="pandas clip cannot fill null bounds for nullable integer dtypes"
+            )
+        )
+    df = nw.from_native(constructor(NULL_BOUNDS_DATA))
+    result = df.select(nw.col("a").clip(lower, upper))
+    assert_equal_data(result, {"a": expected})
+
+
+def test_clip_series_null_bounds(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if any(
+        x in str(constructor_eager)
+        for x in ["pandas_nullable", "pandas_pyarrow", "modin_pyarrow"]
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="pandas clip cannot fill null bounds for nullable integer dtypes"
+            )
+        )
+    df = nw.from_native(constructor_eager(NULL_BOUNDS_DATA), eager_only=True)
+    result = df["a"].clip(df["lb"], df["ub"]).to_frame()
+    assert_equal_data(result, {"a": [1, 3, 3, 0, None]})

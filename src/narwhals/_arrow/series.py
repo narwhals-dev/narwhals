@@ -927,24 +927,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         _, lower = extract_native(self, lower_bound)
         _, upper = extract_native(self, upper_bound)
+        # A null bound means "no bound" for that row, so fall back to the value
+        # itself and let min/max leave it unchanged. The lower bound falls back
+        # to the already upper-clipped value, not the original.
+        upper_no_null = pc.if_else(pc.is_null(upper), self.native, upper)
+        clipped = pc.min_element_wise(self.native, upper_no_null, skip_nulls=False)
+        lower_no_null = pc.if_else(pc.is_null(lower), clipped, lower)
         return self._with_native(
-            pc.max_element_wise(
-                pc.min_element_wise(self.native, upper, skip_nulls=False),
-                lower,
-                skip_nulls=False,
-            )
+            pc.max_element_wise(clipped, lower_no_null, skip_nulls=False)
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
         _, lower = extract_native(self, lower_bound)
+        lower_no_null = pc.if_else(pc.is_null(lower), self.native, lower)
         return self._with_native(
-            pc.max_element_wise(self.native, lower, skip_nulls=False)
+            pc.max_element_wise(self.native, lower_no_null, skip_nulls=False)
         )
 
     def clip_upper(self, upper_bound: Self) -> Self:
         _, upper = extract_native(self, upper_bound)
+        upper_no_null = pc.if_else(pc.is_null(upper), self.native, upper)
         return self._with_native(
-            pc.min_element_wise(self.native, upper, skip_nulls=False)
+            pc.min_element_wise(self.native, upper_no_null, skip_nulls=False)
         )
 
     def to_arrow(self) -> ArrayAny:
