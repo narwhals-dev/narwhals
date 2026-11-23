@@ -262,11 +262,8 @@ def _q10_native(
         .merge(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
         .merge(nation_ds, left_on="c_nationkey", right_on="n_nationkey")
     )
-    jn = jn[
-        (jn["o_orderdate"] >= var1)
-        & (jn["o_orderdate"] < var2)
-        & (jn["l_returnflag"] == "R")
-    ]
+    jn = jn[(jn["o_orderdate"] >= var1) & (jn["o_orderdate"] < var2)]
+    jn = jn[jn["l_returnflag"] == "R"]
     jn["revenue"] = jn.l_extendedprice * (1 - jn.l_discount)
 
     gb = jn.groupby(
