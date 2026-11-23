@@ -121,3 +121,13 @@ def test_with_row_index_existing_name(constructor_eager: ConstructorEager) -> No
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(nw.exceptions.DuplicateError):
         df.with_row_index("xyz")
+
+
+def test_with_row_index_existing_name_order_by(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
+        pytest.skip()
+    df = nw.from_native(constructor(data))
+    with pytest.raises(nw.exceptions.DuplicateError):
+        df.with_row_index("xyz", order_by="abc").lazy().collect()

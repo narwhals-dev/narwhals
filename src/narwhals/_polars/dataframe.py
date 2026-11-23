@@ -292,19 +292,18 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         frame = self.native
-        if order_by is None:
-            try:
+        if order_by is not None and self._backend_version < (1, 10):
+            msg = "Cannot pass `order_by` to `with_row_index` for Polars<1.10"
+            raise NotImplementedError(msg)
+        try:
+            if order_by is None:
                 result = frame.with_row_index(name)
-            except Exception as e:  # noqa: BLE001
-                raise catch_polars_exception(e) from None
-        else:
-            if self._backend_version < (1, 10):
-                msg = "Cannot pass `order_by` to `with_row_index` for Polars<1.10"
-                raise NotImplementedError(msg)
-            result = frame.select(
-                pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
-            )
-
+            else:
+                result = frame.select(
+                    pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
+                )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
         return self._with_native(result)
 
     def explode(
