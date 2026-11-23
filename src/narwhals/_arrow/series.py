@@ -349,7 +349,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(res, preserve_broadcast=preserve_broadcast)
 
     def __invert__(self) -> Self:
-        return self._with_native(pc.invert(self.native), preserve_broadcast=True)
+        native = self.native
+        invert = pc.bit_wise_not if pa.types.is_integer(native.type) else pc.invert
+        return self._with_native(invert(native), preserve_broadcast=True)
 
     def __neg__(self) -> Self:
         return self._with_native(pc.negate(self.native), preserve_broadcast=True)

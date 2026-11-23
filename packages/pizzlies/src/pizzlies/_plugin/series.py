@@ -335,17 +335,18 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         quotient = cls._truediv(numerator, denominator)
         return float(math.floor(quotient)) if math.isfinite(quotient) else quotient
 
-    def _floordiv_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
-        """Pick the float or the integer kernel once, from both operands' dtypes."""
+    def _is_float_op(self, other: Any) -> bool:
+        """Whether either operand has a float dtype, so the result is a float."""
         rhs, rhs_is_scalar = self._extract_comparand(other)
         rhs_is_float = (
             isinstance(rhs, float)
             if rhs_is_scalar
             else infer_dtype(rhs, self._version).is_float()
         )
-        if rhs_is_float or self.dtype.is_float():
-            return self._float_floordiv
-        return self._floordiv
+        return rhs_is_float or self.dtype.is_float()
+
+    def _floordiv_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        return self._float_floordiv if self._is_float_op(other) else self._floordiv
 
     def __truediv__(self, other: Self) -> Self:
         return self._with_binary(self._truediv, other)
@@ -372,15 +373,36 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def __rpow__(self, other: Self) -> Self:
         return self._with_binary_right(self._pow, other)
 
+    @staticmethod
+    def _mod(numerator: int, denominator: int) -> int | None:
+        # Integer modulo by zero: Polars returns null.
+        try:
+            return numerator % denominator
+        except ZeroDivisionError:
+            return None
+
+    @staticmethod
+    def _float_mod(numerator: float, denominator: float) -> float:
+        try:
+            return numerator % denominator
+        except ZeroDivisionError:
+            return float("nan")
+
+    def _mod_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        return self._float_mod if self._is_float_op(other) else self._mod
+
     def __mod__(self, other: Self) -> Self:
-        return self._with_binary(operator.mod, other)
+        return self._with_binary(self._mod_kernel(other), other)
 
     def __rmod__(self, other: Self) -> Self:
-        return self._with_binary_right(operator.mod, other)
+        return self._with_binary_right(self._mod_kernel(other), other)
 
     # Unary operations
     def __invert__(self) -> Self:
-        return self._with_unary(operator.not_)
+        # `operator.invert` on a bool gives `~True == -2`, so only use it for integers.
+        if isinstance(self.dtype, self._version.dtypes.Boolean):
+            return self._with_unary(operator.not_)
+        return self._with_unary(operator.invert)
 
     def __neg__(self) -> Self:
         return self._with_unary(operator.neg)
@@ -417,11 +439,23 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def cos(self) -> Self:
         return self._with_unary(math.cos)
 
+    def _with_rounding(self, fn: Callable[[float], int]) -> Self:
+        if not self.dtype.is_float():
+            return self._with_unary(fn)
+
+        # `math.floor`/`math.ceil` return ints and raise on NaN/inf, whereas Polars
+        # keeps a float column float and passes non-finite values through.
+        def _round(value: float) -> float:
+            # `copysign` keeps the sign of zero: Polars' `ceil(-0.5)` is `-0.0`.
+            return math.copysign(fn(value), value) if math.isfinite(value) else value
+
+        return self._with_unary(_round)
+
     def floor(self) -> Self:
-        return self._with_unary(math.floor)
+        return self._with_rounding(math.floor)
 
     def ceil(self) -> Self:
-        return self._with_unary(math.ceil)
+        return self._with_rounding(math.ceil)
 
     def round(self, decimals: int) -> Self:
         if None not in self.native:

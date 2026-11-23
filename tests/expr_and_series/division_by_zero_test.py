@@ -9,6 +9,7 @@ import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
+    PYSPARK_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -216,3 +217,65 @@ def test_floordiv_by_zero_keeps_dtype(
         by_two=a // 2,
     ).collect_schema()
     assert schema["by_zero"] == schema["by_two"]
+
+
+def test_mod_int_by_zero(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(
+        x in str(constructor)
+        for x in (
+            "pandas_nullable",
+            "pandas_pyarrow",
+            "modin_pyarrow",
+            "duckdb",
+            "sqlframe",
+            "ibis",
+            "cudf",
+        )
+    ) or (
+        "pyspark" in str(constructor)
+        and "sqlframe" not in str(constructor)
+        and PYSPARK_VERSION >= PkgVersion("4")
+    ):
+        # pandas nullable returns 0, pandas[pyarrow] doesn't implement `mod`,
+        # DuckDB, Ibis and Spark>=4 (ANSI on) raise.
+        request.applymarker(
+            pytest.mark.xfail(reason="integer modulo by zero should be null")
+        )
+    df = nw.from_native(constructor({"a": [5, -7], "b": [0, 0]}))
+    result = df.select(
+        scalar=nw.col("a") % 0,  # pyrefly: ignore[division-by-zero]
+        column=nw.col("a") % nw.col("b"),
+    )
+    expected = {"scalar": [None, None], "column": [None, None]}
+    assert_equal_data(result, expected)
+    assert_equal_data(
+        result.select(nw.all().is_null().all()), {"scalar": [True], "column": [True]}
+    )
+
+
+def test_mod_float_by_zero(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow")):
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+        )
+    if (
+        "pyspark" in str(constructor)
+        and "sqlframe" not in str(constructor)
+        and PYSPARK_VERSION >= PkgVersion("4")
+    ):
+        # Spark>=4 (ANSI on) raises.
+        request.applymarker(
+            pytest.mark.xfail(reason="float modulo by zero should not raise")
+        )
+    df = nw.from_native(constructor({"a": [5.5, -7.5], "b": [0.0, 0.0]}))
+    result = df.select(
+        scalar=nw.col("a") % 0.0,  # pyrefly: ignore[division-by-zero]
+        column=nw.col("a") % nw.col("b"),
+    )
+    # Some backends give null instead of NaN, which `assert_equal_data` accepts.
+    expected = {"scalar": [float("nan")] * 2, "column": [float("nan")] * 2}
+    assert_equal_data(result, expected)

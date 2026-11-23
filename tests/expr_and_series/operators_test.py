@@ -203,3 +203,15 @@ def test_logic_operators_series(
     series, other = df["a"], df["b"]
     result = {"a": getattr(series, operator)(other)}
     assert_equal_data(result, {"a": expected})
+
+
+def test_invert_integers(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark")):
+        # DuckDB and SQLFrame cast to boolean, PySpark raises.
+        reason = "https://github.com/narwhals-dev/narwhals/issues/4150"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    df = nw.from_native(constructor({"i": [0, 1], "a": [5, -7]}))
+    result = df.select("i", a=~nw.col("a"), b=~nw.lit(5)).sort("i")
+    assert_equal_data(result.select("a", "b"), {"a": [-6, 6], "b": [-6, -6]})
