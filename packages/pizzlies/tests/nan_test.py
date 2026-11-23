@@ -112,3 +112,15 @@ def test_min_max_skip_nan_in_group_by_and_horizontal(with_nulls: bool) -> None: 
             expected.select(pl.min_horizontal("a", "b"), m=pl.max_horizontal("a", "b"))
         ),
     )
+
+
+@pytest.mark.parametrize("by", [["a"], ["a", "b"]])
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("k", [2, 4])
+def test_top_k_nan_is_largest(by: list[str], reverse: bool, k: int) -> None:  # noqa: FBT001
+    data = {"a": [1.5, *nans(1), 3.0, None], "b": [1, 2, 3, 4]}
+    df, expected = pz.from_dict(data), pl.DataFrame(data)
+    assert_same(
+        as_dict(df.top_k(k, by=by, reverse=reverse).sort("b")),
+        as_dict(expected.top_k(k, by=by, reverse=reverse).sort("b")),
+    )

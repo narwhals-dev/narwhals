@@ -465,7 +465,7 @@ class DictDataFrame(
         if error := self._check_columns_exist(by):
             raise error
         if len(by) == 1:
-            column = self.native[by[0]]
+            column = nan_last_column(self.native[by[0]])
             smallest = reverse if isinstance(reverse, bool) else reverse[0]
             picker = heapq.nsmallest if smallest else heapq.nlargest
             indices = (i for i in range(len(self)) if column[i] is not None)
