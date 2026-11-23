@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
@@ -11,7 +12,7 @@ def test_ew_mean(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
 
     data = {

@@ -7,6 +7,7 @@ from duckdb import CoalesceOperator, StarExpression
 
 from narwhals._duckdb.expr_dt import DuckDBExprDateTimeNamespace
 from narwhals._duckdb.expr_list import DuckDBExprListNamespace
+from narwhals._duckdb.expr_map import DuckDBExprMapNamespace
 from narwhals._duckdb.expr_str import DuckDBExprStringNamespace
 from narwhals._duckdb.expr_struct import DuckDBExprStructNamespace
 from narwhals._duckdb.utils import (
@@ -122,6 +123,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             if ignore_nulls
             else self._function("first", expr)
         )
+
+    def _singleton_list(self, expr: Expression) -> Expression:
+        return F("list_value", expr)
+
+    def _list_first(self, expr: Expression) -> Expression:
+        return F("list_extract", expr, lit(1))
 
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
@@ -350,6 +357,10 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     @property
     def list(self) -> DuckDBExprListNamespace:
         return DuckDBExprListNamespace(self)
+
+    @property
+    def map(self) -> DuckDBExprMapNamespace:
+        return DuckDBExprMapNamespace(self)
 
     @property
     def struct(self) -> DuckDBExprStructNamespace:

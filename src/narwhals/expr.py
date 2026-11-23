@@ -19,6 +19,7 @@ from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
 from narwhals.expr_dt import ExprDateTimeNamespace
 from narwhals.expr_list import ExprListNamespace
+from narwhals.expr_map import ExprMapNamespace
 from narwhals.expr_name import ExprNameNamespace
 from narwhals.expr_str import ExprStringNamespace
 from narwhals.expr_struct import ExprStructNamespace
@@ -216,6 +217,12 @@ class Expr:
     def __ror__(self, other: Any) -> Self:
         return (self | other).alias("literal")  # type: ignore[no-any-return]
 
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary("__xor__", other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return (self ^ other).alias("literal")  # type: ignore[no-any-return]
+
     def __add__(self, other: Any) -> Self:
         return self._with_binary("__add__", other)
 
@@ -280,7 +287,7 @@ class Expr:
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
-        If there are no non-null elements, the result is `False`.
+        Null values are ignored. If there are no non-null elements, the result is `False`.
 
         Examples:
             >>> import pandas as pd
@@ -300,7 +307,7 @@ class Expr:
     def all(self) -> Self:
         """Return whether all values in the column are `True`.
 
-        If there are no non-null elements, the result is `True`.
+        Null values are ignored. If there are no non-null elements, the result is `True`.
 
         Examples:
             >>> import pandas as pd
@@ -419,6 +426,8 @@ class Expr:
     def mean(self) -> Self:
         """Get mean value.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -436,6 +445,8 @@ class Expr:
 
     def median(self) -> Self:
         """Get median value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -458,9 +469,12 @@ class Expr:
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                where N represents the number of elements. By default ddof is 1.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -480,9 +494,12 @@ class Expr:
     def var(self, *, ddof: int = 1) -> Self:
         """Get variance.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements. By default ddof is 1.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -559,6 +576,8 @@ class Expr:
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -576,6 +595,8 @@ class Expr:
 
     def kurtosis(self) -> Self:
         """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
@@ -598,7 +619,7 @@ class Expr:
     def sum(self) -> Self:
         """Return the sum value.
 
-        If there are no non-null elements, the result is zero.
+        Null values are ignored. If there are no non-null elements, the result is zero.
 
         Examples:
             >>> import duckdb
@@ -622,6 +643,8 @@ class Expr:
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -639,6 +662,8 @@ class Expr:
 
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -675,6 +700,8 @@ class Expr:
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import pandas as pd
@@ -1139,6 +1166,9 @@ class Expr:
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
+            - `fill_null(strategy='forward')` corresponds to Polars `forward_fill` and pandas
+              `ffill`; likewise, `fill_null(strategy='backward')` corresponds to Polars
+              `backward_fill` and pandas `bfill`.
 
         Examples:
             >>> import polars as pl
@@ -1490,6 +1520,8 @@ class Expr:
     ) -> Self:
         r"""Get quantile value.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             quantile: Quantile between 0.0 and 1.0.
             interpolation: Interpolation method.
@@ -1755,6 +1787,9 @@ class Expr:
         r"""Compute the most occurring value(s).
 
         Can return multiple values.
+
+        Note:
+            Null values are not ignored.
 
         Arguments:
             keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
@@ -2533,10 +2568,10 @@ class Expr:
             |------------------|
             |  pyarrow.Table   |
             |  a: int64        |
-            |  b: null         |
+            |  b: string       |
             |  ----            |
             |  a: [[1]]        |
-            |  b: [1 nulls]    |
+            |  b: [[null]]     |
             └──────────────────┘
 
             >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))
@@ -2575,6 +2610,10 @@ class Expr:
     @property
     def list(self) -> ExprListNamespace[Self]:
         return ExprListNamespace(self)
+
+    @property
+    def map(self) -> ExprMapNamespace[Self]:
+        return ExprMapNamespace(self)
 
     @property
     def struct(self) -> ExprStructNamespace[Self]:

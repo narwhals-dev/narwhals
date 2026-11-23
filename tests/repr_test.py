@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, PANDAS_VERSION
@@ -12,7 +13,7 @@ def test_repr(request: pytest.FixtureRequest) -> None:
     import duckdb
     import pandas as pd
 
-    if PANDAS_VERSION >= (3,) and DUCKDB_VERSION < (1, 4, 4):
+    if PANDAS_VERSION >= PkgVersion("3") and DUCKDB_VERSION < PkgVersion("1.4.4"):
         # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)
 
@@ -118,3 +119,34 @@ def test_polars_series_repr() -> None:
 )
 def test_expr_repr(expr: nw.Expr, expected: str) -> None:
     assert repr(expr) == expected
+
+
+def test_native_repr_hook() -> None:
+    from narwhals._utils import native_repr
+
+    class Default:
+        native = (1, 2)
+
+    class Custom(Default):
+        def native_repr(self) -> str:
+            return "custom"
+
+    class Interchange(Default):
+        def __getattr__(self, attr: str) -> None:
+            raise NotImplementedError
+
+    assert native_repr(Default()) == "(1, 2)"
+    assert native_repr(Custom()) == "custom"
+    assert native_repr(Interchange()) == "(1, 2)"
+
+
+def test_generate_repr_empty_native() -> None:
+    from narwhals._utils import generate_repr
+
+    result = generate_repr("Narwhals DataFrame", "")
+    assert result.splitlines() == [
+        "┌──────────────────┐",
+        "|Narwhals DataFrame|",
+        "|------------------|",
+        "└──────────────────┘",
+    ]

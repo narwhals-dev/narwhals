@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
@@ -60,15 +61,15 @@ def test_sort_expr_args(
     nulls_last: bool,  # noqa: FBT001
     expected: list[Any],
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "ibis" in str(constructor) and descending:
         # https://github.com/ibis-project/ibis/issues/11735
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.5"):
         pytest.skip()
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     result = nw.from_native(constructor(data)).select(
@@ -97,10 +98,10 @@ def test_sort_series_args(
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.5"):
         pytest.skip()
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)

@@ -371,16 +371,22 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.slice(offset=-n, length=None)
+            self._narwhals_series._compliant_series.str.slice(
+                offset=-n, length=0 if n == 0 else None
+            )
         )
 
     def to_uppercase(self) -> SeriesT:
         r"""Transform string to uppercase variant.
 
         Notes:
-            The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
-            For more info see: https://github.com/apache/arrow/issues/34599
-            There may be other unicode-edge-case-related variations across implementations.
+            Polars, and pandas with Python-backed strings, use full Unicode case
+            mapping ('ß' becomes 'SS'). PyArrow, DuckDB, and pandas with
+            PyArrow-backed strings (the pandas 3 default when PyArrow is installed)
+            use simple mapping ('ß' becomes 'ẞ').
+            Full mapping can change string length, so `str.len_chars` or `str.slice` can
+            disagree across backends after casing.
+            See [narwhals#3982](https://github.com/narwhals-dev/narwhals/issues/3982).
 
         Examples:
             >>> import pandas as pd
@@ -398,6 +404,15 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def to_lowercase(self) -> SeriesT:
         r"""Transform string to lowercase variant.
+
+        Notes:
+            Polars, and pandas with Python-backed strings, use full Unicode case
+            mapping ('İ' becomes 'i̇', two code points). PyArrow, DuckDB, and pandas
+            with PyArrow-backed strings (the pandas 3 default when PyArrow is
+            installed) use simple mapping ('İ' becomes 'i').
+            Full mapping can change string length, so `str.len_chars` or `str.slice` can
+            disagree across backends after casing.
+            See [narwhals#3982](https://github.com/narwhals-dev/narwhals/issues/3982).
 
         Examples:
             >>> import pandas as pd

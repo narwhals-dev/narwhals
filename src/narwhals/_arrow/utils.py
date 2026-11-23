@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -225,6 +225,11 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
+    if pa.types.is_map(dtype):
+        return dtypes.Map(
+            native_to_narwhals_dtype(dtype.key_type, version),
+            native_to_narwhals_dtype(dtype.item_type, version),
+        )
     if pa.types.is_decimal128(dtype):
         return dtypes.Decimal(precision=dtype.precision, scale=dtype.scale)
     if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
@@ -280,6 +285,11 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        return pa.map_(
+            narwhals_to_native_dtype(dtype.key, version=version),
+            narwhals_to_native_dtype(dtype.value, version=version),
+        )
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         return pa.decimal128(precision=dtype.precision, scale=dtype.scale)
     if issubclass(base_type, UNSUPPORTED_DTYPES):
@@ -565,6 +575,14 @@ def list_agg(
     )
 
 
+def map_get(array: ChunkedArrayAny, key: NonNestedLiteral) -> ChunkedArrayAny:
+    map_type = cast("pa.MapType[Any, Any]", array.type)
+    if key is None:
+        return pa.chunked_array([pa.nulls(len(array), type=map_type.item_type)])
+    # PyArrow maps can repeat a key; Polars keeps the last value when it builds a map.
+    return pc.map_lookup(array, pa.scalar(key, type=map_type.key_type), "last")
+
+
 _LIST_BLOCK_VALUES = 1 << 21
 _LIST_MIN_BLOCK_VALUES = _LIST_BLOCK_VALUES >> 4
 
@@ -575,8 +593,26 @@ def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArra
     A running count of matches over the flattened values changes within a list iff the
     list holds a match. That keeps this linear, where a group-by per list would sort.
     """
+    list_type = cast("pa.ListType[Any] | pa.LargeListType[Any]", array.type)
+    try:
+        # Probe a single null, so that a mismatched `item` raises even without rows.
+        # Not an empty array: pyarrow skips its timezone check on those.
+        _item_matches(pa.nulls(1, list_type.value_type), item)
+    except (pa.ArrowInvalid, pa.ArrowNotImplementedError, pa.ArrowTypeError) as exc:
+        msg = (
+            f"Unable to compare item of type {type(item)} with list of type {list_type}."
+        )
+        raise InvalidOperationError(msg) from exc
     blocks = [_list_block_contains(block, item) for block in _list_blocks(array)]
     return pa.chunked_array(blocks, pa.bool_())
+
+
+def _item_matches(values: ArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    if item is None:
+        return pc.is_null(values)
+    if isinstance(item, float) and math.isnan(item):
+        return pc.is_nan(values)  # NaN matches NaN, as in Polars.
+    return pc.equal(values, lit(item))
 
 
 def _list_blocks(array: ChunkedArrayAny) -> Iterator[ListArrayAny]:
@@ -615,12 +651,7 @@ def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.Bool
     offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
     ends, starts = offsets.slice(1), offsets.slice(0, len(block))
 
-    if item is None:
-        matches = pc.is_null(values)
-    elif isinstance(item, float) and math.isnan(item):
-        matches = pc.is_nan(values)  # NaN matches NaN, as in Polars.
-    else:
-        matches = pc.equal(values, lit(item))
+    matches = _item_matches(values, item)
 
     # Counting modulo 2^k stays exact within lists shorter than 2^k, so the narrowest
     # type that fits the longest list is enough.

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 # Using pyright's assert type instead
 # mypy: disable-error-code="assert-type"
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 import narwhals as nw
+from narwhals._utils import _MODULE_NAME_TO_IMPLEMENTATION
 
 if TYPE_CHECKING:
     from narwhals._typing import (
@@ -70,7 +72,31 @@ def test_implementation_polars() -> None:
     ],
 )
 def test_implementation_new(member: str, value: str) -> None:
-    assert nw.Implementation(value) is getattr(nw.Implementation, member)
+    expected = getattr(nw.Implementation, member)
+    assert nw.Implementation(value) is expected
+    assert nw.Implementation.from_string(value) is expected
+
+
+@pytest.mark.parametrize(
+    "backend_name", ["", "test-plugin", "no-such-backend", "PANDAS", "polars "]
+)
+def test_implementation_from_string_unknown(backend_name: str) -> None:
+    assert nw.Implementation.from_string(backend_name) is nw.Implementation.UNKNOWN
+
+
+def test_implementation_from_native_namespace_identity() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    assert nw.Implementation.from_native_namespace(pd) is nw.Implementation.PANDAS
+    imposter = ModuleType("pandas")
+    assert nw.Implementation.from_native_namespace(imposter) is nw.Implementation.UNKNOWN
+
+
+def test_implementation_module_names_exhaustive() -> None:
+    assert set(_MODULE_NAME_TO_IMPLEMENTATION.values()) == set(nw.Implementation) - {
+        nw.Implementation.UNKNOWN
+    }
 
 
 _TYPING_ONLY_TESTS = "_"
@@ -255,10 +281,10 @@ if TYPE_CHECKING:
         ser_impl = ser.implementation
 
         # [True Negative]
-        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_df.lazy(df_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_df.lazy(ser_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(df_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(ser_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
 
         assert_type(df_impl, _ModinImpl)
         assert_type(ser_impl, _ModinImpl)
@@ -280,9 +306,10 @@ if TYPE_CHECKING:
         assert_type(ldf_impl, _LazyAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         assert_type(ser_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         # Fallback, matches the first overload `_PolarsImpl`
-        assert_type(df_impl, _PolarsImpl)
-        assert_type(ldf_impl, _PolarsImpl)
-        assert_type(ser_impl, _PolarsImpl)
+        # pyrefly>=1.4 applies overload step 5 (`Any` argument -> `Any` result) instead
+        assert_type(df_impl, _PolarsImpl)  # pyrefly: ignore[assert-type]
+        assert_type(ldf_impl, _PolarsImpl)  # pyrefly: ignore[assert-type]
+        assert_type(ser_impl, _PolarsImpl)  # pyrefly: ignore[assert-type]
 
     def test_bound_typing() -> None:
         df_impl = bound_df.implementation

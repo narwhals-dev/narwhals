@@ -6,6 +6,7 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -118,8 +119,8 @@ def test_rolling_mean_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if "pandas" in str(constructor):
@@ -169,8 +170,8 @@ def test_rolling_mean_expr_lazy_ungrouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if "modin" in str(constructor):
@@ -201,8 +202,8 @@ def test_scrambled_groups_over(
     # https://github.com/narwhals-dev/narwhals/issues/3600
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if "modin" in str(constructor):

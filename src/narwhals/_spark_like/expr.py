@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
+from narwhals._spark_like.expr_map import SparkLikeExprMapNamespace
 from narwhals._spark_like.expr_str import SparkLikeExprStringNamespace
 from narwhals._spark_like.expr_struct import SparkLikeExprStructNamespace
 from narwhals._spark_like.utils import (
@@ -113,6 +114,12 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def _any_value(self, expr: Column, *, ignore_nulls: bool) -> Column:
         return self._F.any_value(expr, ignoreNulls=ignore_nulls)
+
+    def _singleton_list(self, expr: Column) -> Column:
+        return self._F.array(expr)
+
+    def _list_first(self, expr: Column) -> Column:
+        return expr.getItem(0)
 
     def broadcast(self) -> Self:
         return self.over([self._F.lit(1)], [])
@@ -435,6 +442,10 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     @property
     def list(self) -> SparkLikeExprListNamespace:
         return SparkLikeExprListNamespace(self)
+
+    @property
+    def map(self) -> SparkLikeExprMapNamespace:
+        return SparkLikeExprMapNamespace(self)
 
     @property
     def struct(self) -> SparkLikeExprStructNamespace:

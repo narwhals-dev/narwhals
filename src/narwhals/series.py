@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 from narwhals._expression_parsing import ExprKind, ExprNode
@@ -13,16 +12,24 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     _validate_rolling_arguments,
+    eager_namespace,
     ensure_type,
     generate_repr,
     is_compliant_series,
-    is_eager_allowed,
     is_index_selector,
+    native_repr,
     qualified_type_name,
+    supports_arrow_c_array,
     supports_arrow_c_stream,
     unstable,
 )
-from narwhals.dependencies import is_numpy_array, is_numpy_array_1d, is_numpy_scalar
+from narwhals.dependencies import (
+    _is_pyarrow_array,
+    _is_pyarrow_chunked_array,
+    is_numpy_array,
+    is_numpy_array_1d,
+    is_numpy_scalar,
+)
 from narwhals.dtypes import _validate_dtype, _validate_into_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr import Expr
@@ -30,6 +37,7 @@ from narwhals.functions import col
 from narwhals.series_cat import SeriesCatNamespace
 from narwhals.series_dt import SeriesDateTimeNamespace
 from narwhals.series_list import SeriesListNamespace
+from narwhals.series_map import SeriesMapNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
@@ -45,6 +53,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
@@ -165,19 +174,72 @@ class Series(Generic[IntoSeriesT]):
             raise ValueError(msg)
         if dtype:
             _validate_into_dtype(dtype)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns.from_numpy(values).alias(name)
-            if dtype:
-                return cls(compliant.cast(dtype), level="full")
-            return cls(compliant, level="full")
-        msg = (  # pragma: no cover
-            f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="Series.from_numpy"
         )
-        raise ValueError(msg)  # pragma: no cover
+        compliant = ns._series.from_numpy(values, context=ns).alias(name)
+        if dtype:
+            return cls(compliant.cast(dtype), level="full")
+        return cls(compliant, level="full")
+
+    @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        """Construct a Series from an object which supports the PyCapsule Interface.
+
+        Arguments:
+            name: Name of resulting Series.
+            values: A `pyarrow.Array` or `pyarrow.ChunkedArray`, or an object which
+                implements `__arrow_c_array__` (requires `pyarrow>=14`) or
+                `__arrow_c_stream__` (requires `pyarrow>=16`). A table-like object
+                (e.g. `pyarrow.Table`) becomes a single Struct Series.
+            backend: specifies which eager backend instantiate to.
+
+                `backend` can be specified in various ways
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`, `PYARROW`,
+                    `POLARS`, `MODIN` or `CUDF`.
+                - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
+                - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>>
+            >>> arr = pa.array([5, 6, 7])
+            >>> nw.Series.from_arrow("arr", arr, backend="polars")
+            ┌───────────────────┐
+            |  Narwhals Series  |
+            |-------------------|
+            |shape: (3,)        |
+            |Series: 'arr' [i64]|
+            |[                  |
+            |        5          |
+            |        6          |
+            |        7          |
+            |]                  |
+            └───────────────────┘
+        """
+        # NOTE: Native pyarrow arrays only gained the PyCapsule methods in `pyarrow>=14`
+        if not (
+            _is_pyarrow_chunked_array(values)
+            or _is_pyarrow_array(values)
+            or supports_arrow_c_stream(values)
+            or supports_arrow_c_array(values)
+        ):
+            msg = f"Given object of type {qualified_type_name(values)!r} does not support PyCapsule interface"
+            raise TypeError(msg)
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="Series.from_arrow"
+        )
+        compliant = ns._series.from_arrow(values, context=ns).alias(name)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_iterable(
@@ -227,19 +289,11 @@ class Series(Generic[IntoSeriesT]):
         if not isinstance(values, Iterable):
             msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
             raise TypeError(msg)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._series.from_iterable(
-                values, context=ns, name=name, dtype=dtype
-            )
-            return cls(compliant, level="full")
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="Series.from_iterable"
         )
-        raise ValueError(msg)
+        compliant = ns._series.from_iterable(values, context=ns, name=name, dtype=dtype)
+        return cls(compliant, level="full")
 
     implementation: _Implementation = _Implementation()
     """Return [`narwhals.Implementation`][] of native Series.
@@ -321,7 +375,8 @@ class Series(Generic[IntoSeriesT]):
             idx = int(idx) if not isinstance(idx, int) else idx
             return self._compliant_series.item(idx)
 
-        if isinstance(idx, self.to_native().__class__):
+        # NOTE: A plugin's native series may itself be a positional selector, e.g. a `list`.
+        if isinstance(idx, self.to_native().__class__) and not is_index_selector(idx):
             idx = self._with_compliant(self._compliant_series._with_native(idx))
 
         if not is_index_selector(idx):
@@ -358,15 +413,41 @@ class Series(Generic[IntoSeriesT]):
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {qualified_type_name(native_series)!r}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (16, 0):  # pragma: no cover
-            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {type(native_series)}"
+            msg = f"'pyarrow>=16.0.0' is required for `Series.__arrow_c_stream__` for object of type {qualified_type_name(native_series)!r}"
             raise ModuleNotFoundError(msg)
         from narwhals._arrow.utils import chunked_array
 
         ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
+
+    def __arrow_c_array__(
+        self, requested_schema: object | None = None
+    ) -> tuple[object, object]:
+        """Export a Series as a single array via the Arrow PyCapsule Interface.
+
+        Narwhals doesn't implement anything itself here: it calls `to_arrow` and then
+        defers to PyArrow's implementation.
+
+        See [PyCapsule Interface](https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html)
+        for more.
+
+        Note:
+            `pyarrow>=14` is required.
+        """
+        try:
+            pa_version: tuple[int, ...] = Implementation.PYARROW._backend_version()
+        except ModuleNotFoundError:
+            pa_version = ()
+        if pa_version < (14, 0):
+            msg = f"'pyarrow>=14.0.0' is required for `Series.__arrow_c_array__` for object of type {qualified_type_name(self._compliant_series.native)!r}"
+            raise ModuleNotFoundError(msg)
+        result: tuple[object, object] = self.to_arrow().__arrow_c_array__(
+            requested_schema=requested_schema
+        )
+        return result
 
     def to_native(self) -> IntoSeriesT:
         """Convert Narwhals series to native series.
@@ -433,9 +514,12 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
-        into_series = partial(
-            type(self).from_iterable, name="", backend=self.implementation
-        )
+        compliant = self._compliant_series
+
+        def into_series(values: Any, dtype: IntoDType | None = None) -> Series[Any]:
+            return self._with_compliant(
+                compliant.from_iterable(values, context=compliant, dtype=dtype)
+            )
 
         if not isinstance(indices, Series):
             if not isinstance(indices, Iterable):
@@ -496,7 +580,7 @@ class Series(Generic[IntoSeriesT]):
         return function(self, *args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals Series", self.to_native().__repr__())
+        return generate_repr("Narwhals Series", native_repr(self._compliant_series))
 
     def __len__(self) -> int:
         return len(self._compliant_series)
@@ -681,6 +765,8 @@ class Series(Generic[IntoSeriesT]):
     def mean(self) -> float:
         """Reduce this Series to the mean value.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -693,6 +779,8 @@ class Series(Generic[IntoSeriesT]):
 
     def median(self) -> float:
         """Reduce this Series to the median value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -710,6 +798,8 @@ class Series(Generic[IntoSeriesT]):
     def skew(self) -> float | None:
         """Calculate the sample skewness of the Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -726,6 +816,8 @@ class Series(Generic[IntoSeriesT]):
 
     def kurtosis(self) -> float | None:
         """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
@@ -756,7 +848,7 @@ class Series(Generic[IntoSeriesT]):
     def any(self) -> bool:
         """Return whether any of the values in the Series are True.
 
-        If there are no non-null elements, the result is `False`.
+        Null values are ignored. If there are no non-null elements, the result is `False`.
 
         Notes:
             Only works on Series of data type Boolean.
@@ -774,7 +866,7 @@ class Series(Generic[IntoSeriesT]):
     def all(self) -> bool:
         """Return whether all values in the Series are True.
 
-        If there are no non-null elements, the result is `True`.
+        Null values are ignored. If there are no non-null elements, the result is `True`.
 
         Examples:
             >>> import pyarrow as pa
@@ -789,6 +881,8 @@ class Series(Generic[IntoSeriesT]):
     def min(self) -> Any:
         """Get the minimal value in this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -802,6 +896,8 @@ class Series(Generic[IntoSeriesT]):
     def max(self) -> Any:
         """Get the maximum value in this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -812,8 +908,10 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.max()
 
-    def arg_min(self) -> int:
+    def arg_min(self) -> int | None:
         """Returns the index of the minimum value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pyarrow as pa
@@ -825,8 +923,10 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.arg_min()
 
-    def arg_max(self) -> int:
+    def arg_max(self) -> int | None:
         """Returns the index of the maximum value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import polars as pl
@@ -841,7 +941,7 @@ class Series(Generic[IntoSeriesT]):
     def sum(self) -> float:
         """Reduce this Series to the sum value.
 
-        If there are no non-null elements, the result is zero.
+        Null values are ignored. If there are no non-null elements, the result is zero.
 
         Examples:
             >>> import pyarrow as pa
@@ -856,9 +956,12 @@ class Series(Generic[IntoSeriesT]):
     def std(self, *, ddof: int = 1) -> float:
         """Get the standard deviation of this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null.
 
         Examples:
             >>> import polars as pl
@@ -873,9 +976,12 @@ class Series(Generic[IntoSeriesT]):
     def var(self, *, ddof: int = 1) -> float:
         """Get the variance of this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null.
 
         Examples:
             >>> import pyarrow as pa
@@ -1479,6 +1585,9 @@ class Series(Generic[IntoSeriesT]):
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
+            - `fill_null(strategy='forward')` corresponds to Polars `forward_fill` and pandas
+              `ffill`; likewise, `fill_null(strategy='backward')` corresponds to Polars
+              `backward_fill` and pandas `bfill`.
 
         Examples:
             >>> import pandas as pd
@@ -1592,6 +1701,8 @@ class Series(Generic[IntoSeriesT]):
 
     def n_unique(self) -> int:
         """Count the number of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import polars as pl
@@ -1771,6 +1882,16 @@ class Series(Generic[IntoSeriesT]):
     def __ror__(self, other: Any) -> Self:
         return self._with_compliant(
             self._compliant_series.__ror__(self._extract_native(other))
+        )
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_compliant(
+            self._compliant_series.__xor__(self._extract_native(other))
+        )
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_compliant(
+            self._compliant_series.__rxor__(self._extract_native(other))
         )
 
     # unary
@@ -1981,6 +2102,8 @@ class Series(Generic[IntoSeriesT]):
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
         """Get quantile value of the series.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Note:
             pandas and Polars may have implementation differences for a given interpolation method.
@@ -2276,6 +2399,8 @@ class Series(Generic[IntoSeriesT]):
         Can return multiple values.
 
         Note:
+            Null values are not ignored.
+
             For `keep="any"` a scalar is returned, while for `keep="all"` a Series in
             returned even in the case of unimodal values.
 
@@ -2985,6 +3110,10 @@ class Series(Generic[IntoSeriesT]):
     @property
     def list(self) -> SeriesListNamespace[Self]:
         return SeriesListNamespace(self)
+
+    @property
+    def map(self) -> SeriesMapNamespace[Self]:
+        return SeriesMapNamespace(self)
 
     @property
     def struct(self) -> SeriesStructNamespace[Self]:

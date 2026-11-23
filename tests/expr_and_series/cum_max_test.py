@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -21,7 +22,9 @@ expected = {"cum_max": [1, 3, None, 3], "reverse_cum_max": [3, 3, None, 2]}
 def test_cum_max_expr(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager, *, reverse: bool
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < PkgVersion("2.1")) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_max" if reverse else "cum_max"
@@ -49,8 +52,8 @@ def test_lazy_cum_max_grouped(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
@@ -86,8 +89,8 @@ def test_lazy_cum_max_ordered_by_nulls(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
     if "cudf" in str(constructor):
@@ -131,8 +134,8 @@ def test_lazy_cum_max_ungrouped(
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
 
@@ -162,8 +165,8 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):
         pytest.skip(reason="probably bugged")
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="too old version")
 
@@ -190,7 +193,9 @@ def test_lazy_cum_max_ungrouped_ordered_by_nulls(
 def test_cum_max_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < PkgVersion("2.1")) and "pandas_pyarrow" in str(
+        constructor_eager
+    ):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)

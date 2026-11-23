@@ -8,6 +8,7 @@ from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
+from narwhals._pandas_like.series_map import PandasLikeSeriesMapNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
@@ -29,10 +30,15 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    _into_arrow_chunked_array,
+    is_list_of,
+)
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
@@ -49,6 +55,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
+    from narwhals._translate import IntoArrowSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -208,8 +215,19 @@ class PandasLikeSeries(EagerSeries[Any]):
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
         implementation = context._implementation
         arr = data if is_numpy_array_1d(data) else [data]
-        native = implementation.to_native_namespace().Series(arr, name="")
+        kwds: dict[str, Any] = {"copy": False} if implementation.is_pandas() else {}
+        native = implementation.to_native_namespace().Series(arr, name="", **kwds)
         return cls.from_native(native, context=context)
+
+    @classmethod
+    def from_arrow(cls, data: IntoArrowSeries, /, *, context: _LimitedContext) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        tbl = pa.Table.from_arrays([_into_arrow_chunked_array(data, context)], names=[""])
+        df = PandasLikeDataFrame.from_arrow(tbl, context=context)
+        return cls.from_native(df.get_column("").native, context=context)
 
     @classmethod
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
@@ -302,11 +320,42 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> Self | None:
         # !NOTE: See conversation at https://github.com/narwhals-dev/narwhals/pull/3444#discussion_r2787546529
         # to understand why signature differs from `CompliantSeries`
+        import numpy as np  # ignore-banned-import
+
         impl = self._implementation
         native_series, indices_native = self.native, indices.native
-        values_native = set_index(
-            values.native, native_series.index[indices_native], implementation=impl
-        )
+        if indices_native.isna().any():
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
+        target_index = native_series.index[indices_native]
+        values_native = values.native
+        values_dtype, target_dtype = values_native.dtype, native_series.dtype
+        if (
+            values_dtype != target_dtype
+            and isinstance(values_dtype, np.dtype)
+            and isinstance(target_dtype, np.dtype)
+            and values_dtype.kind in {"i", "u"}
+            and target_dtype.kind in {"i", "u"}
+        ):
+            # pandas 3 refuses to set e.g. int64 values into an int32 column (pandas 2
+            # upcasts the column instead), so cast them, but only when they fit:
+            # `astype` to a narrower integer wraps around instead of raising.
+            info = np.iinfo(target_dtype)
+            if info.min <= values_native.min() and values_native.max() <= info.max:
+                values_native = values_native.astype(target_dtype)
+        if len(values_native) == 1 and len(target_index) > 1:
+            values_native = values_native.repeat(len(target_index))
+        if len(values_native) == len(target_index):
+            # Pyarrow-backed dtypes keep the *first* value for a repeated position on
+            # `iloc` assignment, whereas Polars (and NumPy) keep the last one.
+            positions = indices_native.to_numpy().astype(np.intp) % len(native_series)
+            _, last_from_end = np.unique(positions[::-1], return_index=True)
+            if len(last_from_end) < len(positions):
+                keep = np.sort(len(positions) - 1 - last_from_end)
+                indices_native = indices_native.iloc[keep]
+                values_native = values_native.iloc[keep]
+                target_index = target_index[keep]
+        values_native = set_index(values_native, target_index, implementation=impl)
         series = native_series if in_place else native_series.copy(deep=True)
 
         if impl.is_pandas() and in_place and NUMPY_VERSION < (2,):  # pragma: no cover
@@ -406,11 +455,23 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
-    def arg_min(self) -> int:
-        return self.native.argmin()
+    def arg_min(self) -> int | None:
+        return self._arg_extremum(self.native.argmin)
 
-    def arg_max(self) -> int:
-        return self.native.argmax()
+    def arg_max(self) -> int | None:
+        return self._arg_extremum(self.native.argmax)
+
+    def _arg_extremum(self, func: Callable[[], int]) -> int | None:
+        if self._implementation.is_pandas() and self._backend_version >= (3,):
+            # pandas>=3 raises for empty and all-null input on every dtype.
+            try:
+                return func()
+            except ValueError:
+                if self.native.count():
+                    raise
+                return None
+        # NOTE: pandas<3 returns -1 (and warns) for all-NaN float and object input.
+        return func() if self.native.count() else None  # pragma: no cover
 
     # Binary comparisons
 
@@ -482,6 +543,12 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(operator.or_, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(operator.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(operator.add, other)
@@ -996,7 +1063,24 @@ class PandasLikeSeries(EagerSeries[Any]):
         return pa.Array.from_pandas(self.native)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
-        result = self.native.mode()
+        native = self.native
+        if (
+            self._implementation.is_pandas()
+            and self._backend_version >= (3,)
+            and native.dtype != "boolean"
+        ):
+            result = native.mode(dropna=False)
+        else:
+            # `mode(dropna=False)` is broken for nullable dtypes before pandas 3
+            # (pandas-dev/pandas#58926) and for nullable booleans before 3.2
+            # (pandas-dev/pandas#70487), so nulls are counted separately.
+            result = native.mode()
+            if null_count := native.isna().sum():
+                mode_count = (native == result.iloc[0]).sum() if len(result) else 0
+                if null_count >= mode_count:
+                    modes = result if null_count == mode_count else result.iloc[:0]
+                    # One label past the end appends a null of the same dtype.
+                    result = modes.reindex(range(len(modes) + 1))
         result.name = self.name
         return self._with_native(result.head(1) if keep == "any" else result)
 
@@ -1271,6 +1355,13 @@ class PandasLikeSeries(EagerSeries[Any]):
             msg = "Series must be of PyArrow List type to support list namespace."
             raise TypeError(msg)
         return PandasLikeSeriesListNamespace(self)
+
+    @property
+    def map(self) -> PandasLikeSeriesMapNamespace:
+        if not isinstance(self.dtype, self._version.dtypes.Map):
+            msg = "Series must be of PyArrow Map type to support map namespace."
+            raise TypeError(msg)
+        return PandasLikeSeriesMapNamespace(self)
 
     @property
     def struct(self) -> PandasLikeSeriesStructNamespace:

@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.27.0"
+version = "2.29.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -49,7 +49,10 @@ pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
-dask = ["dask[dataframe]>=2024.8"]
+dask = [
+    "dask[dataframe]>=2024.8",
+    "narwhals-dask>=0.1.0",
+]
 duckdb = ["duckdb>=1.1"]
 ibis = [
     "ibis-framework>=6.0.0",
@@ -76,6 +79,7 @@ tests = [
   "pytest-randomly",
   "pytest-xdist",
   "hypothesis>=6.0.0",
+  "packaging>=21.3",
 ]
 # NOTE: `plugins` is deliberately NOT included within `tests`.
 # `test-plugin` is a workspace member, so pulling it into `tests` makes the group unresolvable
@@ -190,6 +194,9 @@ min-pyspark-version = [
 source-include = ["tests/**"]
 
 [tool.uv]
+# `narwhals-dask` (pulled in by the `dask` extra) replaces the built-in Dask backend, which
+# would leave `src/narwhals/_dask` untested. It is tested separately, see `packages/narwhals-dask`.
+exclude-dependencies = ["narwhals-dask"]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
 # See https://docs.astral.sh/uv/reference/settings/#conflicts.
@@ -235,6 +242,9 @@ conflicts = [
 
 [tool.uv.workspace]
 members = ["packages/*"]
+# NOTE: `narwhals-dask` has its own environment and lock file. Installing it replaces the
+# built-in Dask backend, and its `dask` requirement conflicts with the `extreme-*` groups.
+exclude = ["packages/narwhals-dask"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
@@ -322,6 +332,7 @@ extend-ignore-names = [
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
   "PLR0917", # too-many-positional-arguments
+  "SIM300",  # yoda-conditions (flips `PANDAS_VERSION < PkgVersion("2.2")`)
 ]
 
 "tpch/tests/*" = ["S101"]
@@ -360,6 +371,8 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = [
   "error",
+  # Emitted when using Dask without `narwhals-dask` installed, see `tests/dask_plugin_test.py`.
+  'ignore:Dask support is moving out of Narwhals:FutureWarning',
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
@@ -367,6 +380,9 @@ filterwarnings = [
   # Deprecation raised by DuckDB
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:sqlframe',
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:ibis',
+
+  # Deprecation raised by pandas>=3.1, ibis reads the option on every `execute`
+  'ignore:.*future.infer_string. option is deprecated:DeprecationWarning:ibis',
 
   # https://discuss.python.org/t/types-uniontype-was-merged-with-wrong-class-not-even-a-class/102275/31
   "ignore:.*'_UnionGenericAlias' is deprecated:DeprecationWarning",
@@ -458,11 +474,15 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',  # src: tuple comparisons
+  'PANDAS_VERSION < PkgVersion\(',  # tests: packaging.version.Version comparisons
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin"]
+files = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
+# NOTE: `narwhals-dask` is resolved from source rather than installed, as installing it
+# replaces the built-in Dask backend.
+mypy_path = "packages/narwhals-dask/src"
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -509,16 +529,17 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin"]
+include = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
 defineConstant = { "MYPY" = false }
+extraPaths = ["packages/narwhals-dask/src"]
 
 [tool.pyrefly]
-search-path = ["src", "."]
+search-path = ["src", ".", "packages/narwhals-dask/src"]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",

@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -189,7 +190,7 @@ def test_corr_pairwise_nulls(constructor: Constructor) -> None:
 def test_corr_numerical_stability(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 11, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.11"):
         request.applymarker(pytest.mark.xfail(reason="single-pass variance"))
     df = nw.from_native(
         constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})
@@ -209,3 +210,18 @@ def test_corr_group_by(constructor: Constructor, request: pytest.FixtureRequest)
     )
     result = df.group_by("g").agg(nw.corr("a", "b").alias("corr")).sort("g")
     assert_equal_data(result, {"g": [1, 2], "corr": [1.0, -1.0]})
+
+
+def test_corr_index(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]}))
+    result = df.select(nw.corr("a", "b"))
+    index = nw.maybe_get_index(result)
+    if index is not None:
+        assert len(index) == 1
+        assert index[0] == 0
+
+    result_combined = df.select(nw.corr("a", "b"), nw.col("b").mean())
+    index_combined = nw.maybe_get_index(result_combined)
+    if index_combined is not None:
+        assert len(index_combined) == 1
+        assert index_combined[0] == 0

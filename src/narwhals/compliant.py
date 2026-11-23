@@ -9,11 +9,16 @@ from narwhals._compliant import (
     CompliantLazyFrame,
     CompliantNamespace,
     CompliantSeries,
+    EagerDataFrame,
+    EagerExpr,
+    EagerNamespace,
+    EagerSeries,
 )
 from narwhals._compliant.any_namespace import (
     CatNamespace,
     DateTimeNamespace,
     ListNamespace,
+    MapNamespace,
     StringNamespace,
     StructNamespace,
 )
@@ -32,7 +37,12 @@ __all__ = [
     "CompliantSelectorNamespace",
     "CompliantSeries",
     "DateTimeNamespace",
+    "EagerDataFrame",
+    "EagerExpr",
+    "EagerNamespace",
+    "EagerSeries",
     "ListNamespace",
+    "MapNamespace",
     "StringNamespace",
     "StructNamespace",
 ]

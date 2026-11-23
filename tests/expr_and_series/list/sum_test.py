@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, assert_equal_data
@@ -15,13 +16,13 @@ expected = [11, -1, None, 0, 0]
 
 
 def test_sum_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 2):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.2"):
         reason = "version too old, duckdb 1.2 required for LambdaExpression."
         pytest.skip(reason=reason)
     result = nw.from_native(constructor(data)).select(
@@ -36,7 +37,7 @@ def test_sum_series(
     if any(backend in str(constructor_eager) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor_eager(data), eager_only=True)

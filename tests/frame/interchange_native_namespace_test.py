@@ -66,6 +66,7 @@ def test_duckdb() -> None:
     df_pl = pl.DataFrame(data)  # noqa: F841
 
     rel = duckdb.sql("select * from df_pl")
+    assert rel is not None
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     series = df["a"]
 

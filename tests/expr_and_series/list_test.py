@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
     PYARROW_VERSION,
     Constructor,
@@ -23,7 +25,7 @@ UNSUPPORTED_BACKENDS = ("dask",)
 
 def maybe_skip(constructor: Constructor | ConstructorEager) -> None:
     if "pandas" in str(constructor) and (
-        PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
+        PANDAS_VERSION < PkgVersion("2.2") or PYARROW_VERSION == NOT_INSTALLED
     ):
         reason = "pandas is too old or pyarrow not installed"
         pytest.skip(reason=reason)

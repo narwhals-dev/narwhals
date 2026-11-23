@@ -2,24 +2,66 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import CompliantNamespace
-from narwhals._utils import not_implemented
-from test_plugin.dataframe import DictFrame, DictLazyFrame
+from narwhals._typing import PluginName
+from narwhals._utils import Implementation, ensure_path_source, not_implemented
+from narwhals.compliant import CompliantNamespace
+from test_plugin.dataframe import DictDataFrame, DictFrame, DictLazyFrame
 
 if TYPE_CHECKING:
+    from narwhals.typing import NormalizedSource
     from narwhals.utils import Version
+    from test_plugin.series import DictSeries
 
 
 class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
+    _implementation = Implementation.UNKNOWN
+
     def __init__(self, *, version: Version) -> None:
         self._version = version
 
     def from_native(self, native_object: DictFrame) -> DictLazyFrame:
         return DictLazyFrame(native_object, version=self._version)
 
+    @property
+    def _dataframe(self) -> type[DictDataFrame]:
+        return DictDataFrame
+
+    @property
+    def _series(self) -> type[DictSeries]:
+        from test_plugin.series import DictSeries
+
+        return DictSeries
+
+    def read_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DictDataFrame:
+        import csv
+        from pathlib import Path
+
+        path = ensure_path_source(source, PluginName("test-plugin"))
+        with Path(path).open(newline="", encoding="utf-8") as file:
+            header, *rows = list(csv.reader(file, delimiter=separator))
+        data = {name: [row[index] for row in rows] for index, name in enumerate(header)}
+        return DictDataFrame(data, version=self._version)
+
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> DictDataFrame:
+        import pyarrow.parquet as pq
+
+        data: DictFrame = pq.read_table(source, **kwds).to_pydict()
+        return DictDataFrame(data, version=self._version)
+
+    def scan_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DictLazyFrame:
+        data = self.read_csv(source, separator=separator, **kwds).native
+        return DictLazyFrame(data, version=self._version)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DictLazyFrame:
+        data = self.read_parquet(source, **kwds).native
+        return DictLazyFrame(data, version=self._version)
+
     is_native: Any = not_implemented()
     _expr: Any = not_implemented()
-    _implementation: Any = not_implemented()
     corr: Any = not_implemented()
     cov: Any = not_implemented()
     len: Any = not_implemented()
@@ -37,5 +79,3 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     selectors: Any = not_implemented()
     coalesce: Any = not_implemented()
     struct: Any = not_implemented()
-    scan_csv: Any = not_implemented()
-    scan_parquet: Any = not_implemented()

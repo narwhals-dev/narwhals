@@ -8,6 +8,7 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
     Data: TypeAlias = "dict[str, list[Any]]"
 
 
-MIN_PANDAS_NULLABLE_VERSION = (2,)
+MIN_PANDAS_NULLABLE_VERSION = PkgVersion("2")
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -189,7 +190,9 @@ def duckdb_lazy_constructor(obj: dict[str, Any]) -> NativeDuckDB:
     duckdb.sql("""set timezone = 'UTC'""")
 
     _df = pa.table(obj)
-    return duckdb.sql("select * from _df")
+    rel = duckdb.sql("select * from _df")
+    assert rel is not None
+    return rel
 
 
 def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no cover
@@ -197,7 +200,7 @@ def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no 
     import pandas as pd
 
     frame = pd.DataFrame(obj)
-    if PANDAS_VERSION >= (2, 2) and find_spec("pyarrow"):
+    if PANDAS_VERSION >= PkgVersion("2.2") and find_spec("pyarrow"):
         import pyarrow as pa
 
         for name, values in obj.items():
@@ -272,11 +275,13 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
     pytest.importorskip("ibis")
     pytest.importorskip("polars")
+    import ibis
     import polars as pl
 
     ldf = pl.LazyFrame(obj)
     table_name = str(uuid.uuid4())
-    return _ibis_backend().create_table(table_name, ldf)
+    # Wrapping in `memtable` sidesteps ibis-project/ibis#12124 (sqlglot>=30.18).
+    return _ibis_backend().create_table(table_name, ibis.memtable(ldf))
 
 
 EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {

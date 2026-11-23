@@ -16,11 +16,8 @@ from datetime import timezone
 from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
-from inspect import getattr_static, getdoc
 from io import IOBase
 from operator import attrgetter
-from pathlib import Path
-from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -37,17 +34,8 @@ from narwhals._enum import NoAutoEnum
 from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
-    get_cudf,
-    get_dask_dataframe,
-    get_duckdb,
-    get_ibis,
-    get_modin,
     get_pandas,
     get_polars,
-    get_pyarrow,
-    get_pyspark_connect,
-    get_pyspark_sql,
-    get_sqlframe,
     is_narwhals_series,
     is_narwhals_series_bool,
     is_narwhals_series_int,
@@ -61,13 +49,14 @@ from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
     InvalidOperationError,
+    PluginError,
     ShapeError,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import IO, Concatenate, TypeAlias
+    from typing import IO, Concatenate, TypeAlias, TypeGuard
 
     import pandas as pd
     import polars as pl
@@ -78,11 +67,12 @@ if TYPE_CHECKING:
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
+        EagerNamespaceAny,
         EvalNames,
         NativeDataFrameT,
         NativeLazyFrameT,
     )
-    from narwhals._namespace import Namespace
+    from narwhals._namespace import EagerNamespaceKnown, Namespace
     from narwhals._native import (
         NativeArrow,
         NativeCuDF,
@@ -97,7 +87,13 @@ if TYPE_CHECKING:
         NativePySparkConnect,
         NativeSQLFrame,
     )
-    from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
+    from narwhals._translate import (
+        ArrowArrayExportable,
+        ArrowStreamExportable,
+        IntoArrowSeries,
+        IntoArrowTable,
+        ToNarwhalsT_co,
+    )
     from narwhals._typing import (
         Backend,
         IntoBackend,
@@ -387,38 +383,27 @@ class Implementation(NoAutoEnum):
     @classmethod
     def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
-    ) -> Implementation:  # pragma: no cover
+    ) -> Implementation:
         """Instantiate Implementation object from a native namespace module.
 
         Arguments:
             native_namespace: Native namespace.
         """
-        mapping = {
-            get_pandas(): Implementation.PANDAS,
-            get_modin(): Implementation.MODIN,
-            get_cudf(): Implementation.CUDF,
-            get_pyarrow(): Implementation.PYARROW,
-            get_pyspark_sql(): Implementation.PYSPARK,
-            get_polars(): Implementation.POLARS,
-            get_dask_dataframe(): Implementation.DASK,
-            get_duckdb(): Implementation.DUCKDB,
-            get_ibis(): Implementation.IBIS,
-            get_sqlframe(): Implementation.SQLFRAME,
-            get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
-        }
-        return mapping.get(native_namespace, Implementation.UNKNOWN)
+        name = getattr(native_namespace, "__name__", "")
+        if (impl := _MODULE_NAME_TO_IMPLEMENTATION.get(name)) is not None and (
+            sys.modules.get(name) is native_namespace
+        ):
+            return impl
+        return Implementation.UNKNOWN
 
     @classmethod
     def from_string(cls: type[Self], backend_name: str) -> Implementation:
-        """Instantiate Implementation object from a native namespace module.
+        """Instantiate Implementation object from a backend name, expressed as string.
 
         Arguments:
             backend_name: Name of backend, expressed as string.
         """
-        try:
-            return cls(backend_name)
-        except ValueError:
-            return Implementation.UNKNOWN
+        return _BACKEND_NAME_TO_IMPLEMENTATION.get(backend_name, Implementation.UNKNOWN)
 
     @classmethod
     def from_backend(
@@ -653,6 +638,18 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
 }
 """Stores non default mapping from Implementation to module name"""
+
+_BACKEND_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    impl.value: impl for impl in Implementation
+}
+"""Inverse of `Implementation.value`."""
+
+_MODULE_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value): impl
+    for impl in Implementation
+    if impl is not Implementation.UNKNOWN
+}
+"""Inverse of `_IMPLEMENTATION_TO_MODULE_NAME`, including the default `impl.value` names."""
 
 
 @lru_cache(maxsize=16)
@@ -1200,7 +1197,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
             # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
             # Since version 1.32.0, ordering parameter is ignored and
             # it always behaves as if 'lexical' was passed.
-            result = cast("pl.Categorical", native.dtype).ordering == "physical"
+            result = cast("pl.Categorical", native.dtype).ordering == "physical"  # type: ignore[attr-defined]
         elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
         elif impl.is_pyarrow():
@@ -1251,6 +1248,8 @@ def generate_temporary_column_name(
         >>> temp_name not in columns and temp_name.startswith("foo")
         True
     """
+    from secrets import token_hex
+
     counter = 0
     while True:
         if (token := f"{prefix}{token_hex(n_bytes - 1)}") not in columns:
@@ -1495,13 +1494,22 @@ def _resolve_sample_size(
     return size
 
 
+def native_repr(compliant: Any) -> str:
+    # Plugins whose native objects have an unhelpful repr (e.g. a plain `dict`) can
+    # define `native_repr` on their compliant frames and series. It's looked up on the
+    # class so that interchange-level objects' `__getattr__`, which raises, isn't hit.
+    if (custom := getattr(type(compliant), "native_repr", None)) is not None:
+        return str(custom(compliant))
+    return repr(compliant.native)
+
+
 def generate_repr(header: str, native_repr: str) -> str:
     try:
         terminal_width = os.get_terminal_size().columns
     except OSError:
         terminal_width = int(os.getenv("COLUMNS", 80))  # noqa: PLW1508
     native_lines = native_repr.expandtabs().splitlines()
-    max_native_width = max(len(line) for line in native_lines)
+    max_native_width = max((len(line) for line in native_lines), default=0)
 
     if max_native_width + 2 <= terminal_width:
         length = max(max_native_width, len(header))
@@ -1599,6 +1607,8 @@ _SENTINEL: Final = object()
 
 
 def _hasattr_static(obj: Any, attr: str) -> bool:
+    from inspect import getattr_static
+
     return getattr_static(obj, attr, _SENTINEL) is not _SENTINEL
 
 
@@ -1658,6 +1668,124 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
+# NOTE: `TypeGuard`, not `TypeIs`: `TypeIs` also narrows the `False` branch, where it would
+# wrongly strip `ModuleType`, since a built-in backend can be passed as a module too.
+def is_plugin_backend(
+    backend: IntoBackend[Backend | PluginName],  # noqa: ARG001
+    impl: Implementation,
+    /,
+) -> TypeGuard[IntoBackend[PluginName]]:
+    """Return True if `backend` is a plugin, given `impl = Implementation.from_backend(backend)`.
+
+    Arguments:
+        backend: Backend as given by the user, narrowed for type checkers only.
+        impl: Result of `Implementation.from_backend(backend)`.
+    """
+    return impl is Implementation.UNKNOWN
+
+
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/4025
+def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
+    """Duck-check that `obj` implements the `EagerNamespace` protocol.
+
+    Note:
+        `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
+        `not_implemented` descriptors, which exist statically but raise on instance
+        access, or the protocol's own stubs inherited unchanged, which return `None`.
+    """
+    from inspect import getattr_static
+
+    from narwhals._compliant import EagerNamespace
+
+    return all(
+        (attr := getattr_static(obj, name, None)) is not None
+        and not isinstance(attr, not_implemented)
+        and attr is not getattr_static(EagerNamespace, name)
+        for name in ("_series", "_dataframe")
+    )
+
+
+def _ensure_eager_allowed(
+    namespace: object, /, *, plugin_name: str, function_name: str
+) -> EagerNamespaceAny:
+    """Raise unless `namespace` implements the `EagerNamespace` protocol."""
+    if not _is_eager_namespace(namespace):
+        msg = (
+            f"Plugin backend {plugin_name!r} does not provide eager support (its "
+            "compliant namespace does not implement the `EagerNamespace` protocol), "
+            f"but `{function_name}` is an eager-only function."
+        )
+        raise PluginError(msg)
+    return namespace
+
+
+EagerFunctionName: TypeAlias = Literal[
+    "new_series",
+    "from_dict",
+    "from_dicts",
+    "from_numpy",
+    "from_arrow",
+    "DataFrame.from_arrow",
+    "DataFrame.from_dict",
+    "DataFrame.from_dicts",
+    "DataFrame.from_numpy",
+    "Series.from_arrow",
+    "Series.from_iterable",
+    "Series.from_numpy",
+]
+"""Name of an eager-only Narwhals function or constructor which accepts `backend`."""
+
+EAGER_HINT_EXAMPLES: Mapping[EagerFunctionName, str] = {
+    "new_series": "nw.new_series('a', [1,2,3], backend='pyarrow').to_frame()",
+    "from_dict": "nw.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "from_dicts": "nw.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "from_numpy": "nw.from_numpy(arr, backend='pyarrow')",
+    "from_arrow": "nw.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_arrow": "nw.DataFrame.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_dict": "nw.DataFrame.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "DataFrame.from_dicts": "nw.DataFrame.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "DataFrame.from_numpy": "nw.DataFrame.from_numpy(arr, backend='pyarrow')",
+    "Series.from_arrow": "nw.Series.from_arrow('a', arr, backend='pyarrow').to_frame()",
+    "Series.from_iterable": "nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
+    "Series.from_numpy": "nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
+}
+"""Per-function `.lazy(...)` hint, shown when an eager-only function is given a lazy backend."""
+
+
+def eager_namespace(
+    backend: IntoBackend[Backend | PluginName],
+    /,
+    *,
+    version: Version,
+    function_name: EagerFunctionName,
+) -> EagerNamespaceAny | EagerNamespaceKnown:
+    """Resolve `backend` to an eager compliant namespace, or raise an informative error.
+
+    Raises:
+        PluginError: If `backend` is a plugin whose namespace is not an `EagerNamespace`.
+        ValueError: If `backend` is a lazy-only built-in, with a `.lazy(...)` hint taken
+            from `EAGER_HINT_EXAMPLES[function_name]`.
+    """
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        return version.namespace.from_backend(implementation).compliant
+    if is_plugin_backend(backend, implementation):
+        from narwhals.plugins import _plugin_display_name
+
+        namespace = version.namespace.from_backend(backend).compliant
+        return _ensure_eager_allowed(
+            namespace,
+            plugin_name=_plugin_display_name(backend),
+            function_name=function_name,
+        )
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
+    )
+    raise ValueError(msg)
+
+
 def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
     """Return True if `LazyFrame.collect(impl)` is allowed."""
     return impl in {Implementation.PANDAS, Implementation.POLARS, Implementation.PYARROW}
@@ -1682,6 +1810,10 @@ def has_native_namespace(obj: Any) -> TypeIs[SupportsNativeNamespace]:
 
 def supports_arrow_c_stream(obj: Any) -> TypeIs[ArrowStreamExportable]:
     return _hasattr_static(obj, "__arrow_c_stream__")
+
+
+def supports_arrow_c_array(obj: Any) -> TypeIs[ArrowArrayExportable]:
+    return _hasattr_static(obj, "__arrow_c_array__")
 
 
 def _remap_full_join_keys(
@@ -1718,6 +1850,22 @@ def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.T
         return ns._dataframe.from_arrow(data, context=ns).native
     msg = f"'pyarrow>=14.0.0' is required for `from_arrow` for object of type {qualified_type_name(data)!r}."  # pragma: no cover
     raise ModuleNotFoundError(msg)  # pragma: no cover
+
+
+def _into_arrow_chunked_array(
+    data: IntoArrowSeries, context: _LimitedContext, /
+) -> pa.ChunkedArray[Any]:
+    """Guards `ArrowSeries.from_arrow` w/ safer imports.
+
+    Arguments:
+        data: Object which implements `__arrow_c_array__` or `__arrow_c_stream__`.
+        context: Initialized compliant object.
+    """
+    if find_spec("pyarrow"):
+        ns = context._version.namespace.from_backend("pyarrow").compliant
+        return ns._series.from_arrow(data, context=ns).native
+    msg = f"'pyarrow>=14.0.0' is required for `Series.from_arrow` for object of type {qualified_type_name(data)!r}."
+    raise ModuleNotFoundError(msg)
 
 
 # TODO @dangotbanned: Extend with runtime behavior for `v1.*`
@@ -2016,6 +2164,8 @@ def inherit_doc(
     """
 
     def decorate(init_child: _Constructor[_T, P, R2], /) -> _Constructor[_T, P, R2]:
+        from inspect import getdoc
+
         if init_child.__name__ == "__init__" and issubclass(type(tp_parent), type):
             init_child.__doc__ = getdoc(tp_parent)
             return init_child
@@ -2263,6 +2413,8 @@ def ensure_path_source(
 if sys.platform != "win32":
 
     def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
+        from pathlib import Path
+
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
@@ -2274,6 +2426,8 @@ else:  # pragma: no cover
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
     def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
+        from pathlib import Path
+
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(Path(source).as_posix())
@@ -2294,6 +2448,27 @@ def extend_bool(
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
 
 
+def validate_bool_flags(
+    *, flags: bool | Sequence[bool], by: Sequence[str], param_name: str
+) -> None:
+    """Reject a `descending`/`reverse` that is not a bool or one bool per `by` column."""
+    if isinstance(flags, bool):
+        return
+    if len(flags) != len(by):
+        msg = (
+            f"the length of `{param_name}` ({len(flags)}) "
+            f"does not match the length of `by` ({len(by)})"
+        )
+        raise ValueError(msg)
+    for flag in flags:
+        if not isinstance(flag, bool):
+            msg = (
+                f"'{qualified_type_name(flag)}' object is not an instance of 'bool'\n"
+                f"while processing '{param_name}'"
+            )
+            raise TypeError(msg)
+
+
 class _NoDefault(Enum):
     # "borrowed" from
     # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
@@ -2306,6 +2481,11 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 NO_DEFAULT = _NoDefault.no_default
+"""Sentinel for a parameter the caller did not set, when `None` is a valid value.
+
+Compliant-level methods receive it as-is, e.g. `replace_strict(default=NO_DEFAULT, ...)`,
+so plugins can compare against it with `default is NO_DEFAULT`.
+"""
 # keep this for tubular https://github.com/azukds/tubular/issues/725
 no_default = NO_DEFAULT
 

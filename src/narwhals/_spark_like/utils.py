@@ -117,6 +117,11 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
                 for field in dtype
             ]
         )
+    if isinstance(dtype, native.MapType):
+        return dtypes.Map(
+            native_to_narwhals_dtype(dtype.keyType, version, spark_types, session),
+            native_to_narwhals_dtype(dtype.valueType, version, spark_types, session),
+        )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
     return dtypes.Unknown()  # pragma: no cover
@@ -127,8 +132,8 @@ def fetch_session_time_zone(session: SparkSession) -> str:
     # Timezone can't be changed in PySpark session, so this can be cached.
     try:
         return session.conf.get("spark.sql.session.timeZone")  # type: ignore[attr-defined]
-    except Exception:  # noqa: BLE001
-        # https://github.com/eakmanrq/sqlframe/issues/406
+    except Exception:  # noqa: BLE001  # pragma: no cover
+        # sqlframe<4.7: https://github.com/eakmanrq/sqlframe/issues/406
         return "<unknown>"
 
 
@@ -194,6 +199,11 @@ def narwhals_to_native_dtype(  # noqa: C901
                 native.StructField(name=field.name, dataType=to_native(field.dtype))
                 for field in dtype.fields
             ]
+        )
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        return native.MapType(
+            keyType=narwhals_to_native_dtype(dtype.key, version, native, session),
+            valueType=narwhals_to_native_dtype(dtype.value, version, native, session),
         )
     if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
         return native.DecimalType(precision=dtype.precision, scale=dtype.scale)

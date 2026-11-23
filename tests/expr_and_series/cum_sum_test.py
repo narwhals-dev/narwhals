@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -27,8 +28,8 @@ def skip_or_xfail_window(
 ) -> None:
     """Skip or xfail backends that cannot run `cum_sum().over(...)`."""
     id_ = str(constructor)
-    if ("polars" in id_ and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in id_ and DUCKDB_VERSION < (1, 3)
+    if ("polars" in id_ and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in id_ and DUCKDB_VERSION < PkgVersion("1.3")
     ):  # pragma: no cover
         reason = "`polars<1.9` and `duckdb<1.3` are too old for `over(order_by=...)`"
         pytest.skip(reason=reason)
@@ -105,7 +106,11 @@ def test_lazy_cum_sum_ordered_by_nulls(
     if "pandas_nullable" in str(constructor) and not reverse:
         # https://github.com/pandas-dev/pandas/issues/62473
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows() and PYARROW_VERSION < (22, 0):
+    if (
+        "pyarrow" in str(constructor)
+        and is_windows()
+        and PYARROW_VERSION < PkgVersion("22")
+    ):
         # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)
 
@@ -239,7 +244,7 @@ def test_cum_sum_does_not_overflow(
 
 
 def test_shift_cum_sum(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
     data = {"arg entina": [1, 2, 3, 4, 5], "i": list(range(5))}
     df = nw.from_native(constructor_eager(data), eager_only=True)

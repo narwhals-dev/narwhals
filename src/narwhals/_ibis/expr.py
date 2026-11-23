@@ -7,6 +7,7 @@ import ibis
 
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
+from narwhals._ibis.expr_map import IbisExprMapNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import (
@@ -148,6 +149,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         # See: https://ibis-project.org/reference/expression-generic.html#ibis.expr.types.generic.Column.arbitrary
         expr = cast("ir.Column", expr)
         return expr.arbitrary() if ignore_nulls else expr.first(include_null=True)
+
+    def _singleton_list(self, expr: ir.Value) -> ir.Value:
+        return ibis.array([expr])
+
+    def _list_first(self, expr: ir.Value) -> ir.Value:
+        return cast("ir.ArrayValue", expr)[0]
 
     def __narwhals_namespace__(self) -> IbisNamespace:  # pragma: no cover
         from narwhals._ibis.namespace import IbisNamespace
@@ -411,6 +418,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     @property
     def list(self) -> IbisExprListNamespace:
         return IbisExprListNamespace(self)
+
+    @property
+    def map(self) -> IbisExprMapNamespace:
+        return IbisExprMapNamespace(self)
 
     @property
     def struct(self) -> IbisExprStructNamespace:

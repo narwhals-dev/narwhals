@@ -5,12 +5,14 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import assume, given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -37,8 +39,6 @@ def test_arithmetic_expr(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(constructor) and attr == "__floordiv__":
-        request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
@@ -69,7 +69,7 @@ def test_right_arithmetic_expr(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip()
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
@@ -112,7 +112,7 @@ def test_rmod_negative_operands(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip(reason="dask<2024.10 does not implement rmod with negative operands")
     if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
         request.applymarker(
@@ -121,6 +121,97 @@ def test_rmod_negative_operands(
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.lit(dividend) % nw.col("a"))
     assert_equal_data(result, {"literal": expected})
+
+
+@pytest.mark.parametrize(
+    ("data", "divisor", "expected"),
+    [([-7, 7, -1, None], 2, [-4, 3, -1, None]), ([7, -7], -2, [-4, 3])],
+)
+def test_floordiv_negative_operands(
+    data: list[Any], divisor: int, expected: list[Any], constructor: Constructor
+) -> None:
+    df = nw.from_native(constructor({"a": data}))
+    result = df.select(nw.col("a") // divisor)
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("data", "dividend", "expected"),
+    [([2, 3, None], -7, [-4, -3, None]), ([-2, 2], 7, [-4, 3])],
+)
+def test_rfloordiv_negative_operands(
+    data: list[Any], dividend: int, expected: list[Any], constructor: Constructor
+) -> None:
+    df = nw.from_native(constructor({"a": data}))
+    result = df.select(dividend // nw.col("a"))
+    assert_equal_data(result, {"literal": expected})
+
+
+def test_floordiv_large_integers(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
+        pytest.skip(reason="floors through float64")
+    if any(x in str(constructor) for x in ("ibis", "sqlframe", "pyspark")):
+        request.applymarker(pytest.mark.xfail(reason="floors through float64"))
+    # Past 2**53, so flooring a float quotient is off by one.
+    big = 2**62 + 1
+    i64_max = 2**63 - 1
+    data = {"a": [big, -big, 10, -(2**63)], "b": [3, 3, i64_max, 3]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a") // nw.col("b"), i64_max // nw.col("a"))
+    expected = {
+        "a": [1537228672809129301, -1537228672809129302, 0, -3074457345618258603],
+        "literal": [1, -2, 922337203685477580, -1],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("dtype", [nw.UInt32, nw.UInt64])
+def test_floordiv_unsigned_dtype(
+    dtype: type[nw.UInt32 | nw.UInt64],
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ["sqlframe", "pyspark"]):
+        pytest.skip(reason="Spark has no unsigned integers")
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow", "ibis"]):
+        request.applymarker(pytest.mark.xfail(reason="returns Int64"))
+    df = nw.from_native(constructor({"a": [7, 9], "b": [2, 4]}))
+    df = df.select(nw.all().cast(dtype))
+    result = df.select(nw.col("a") // nw.col("b"), nw.lit(7, dtype) // nw.col("b"))
+    assert result.collect_schema() == {"a": dtype, "literal": dtype}
+    assert_equal_data(result, {"a": [3, 2], "literal": [3, 1]})
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        (7.0, 2.0, 3.0),
+        (-7.0, 2.0, -4.0),
+        (1.0, float("inf"), 0.0),
+        (1.0, 0.1, 10.0),
+        (-1.0, 0.1, -10.0),
+    ],
+)
+def test_floordiv_floats(
+    left: float,
+    right: float,
+    expected: float,
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if (
+        left // right != expected
+        and "pyarrow" not in str(constructor)
+        and any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask"))
+    ):
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas follows Python, where 1.0 // 0.1 is 9.0")
+        )
+    df = nw.from_native(constructor({"a": [left], "b": [right]}))
+    result = df.select(nw.col("a") // nw.col("b"), left // nw.col("b"))
+    assert_equal_data(result, {"a": [expected], "literal": [expected]})
 
 
 @pytest.mark.parametrize(
@@ -192,7 +283,7 @@ def test_right_arithmetic_series(
 def test_truediv_same_dims(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor_eager):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("2.1"):
         # https://github.com/pola-rs/polars/issues/17760
         request.applymarker(pytest.mark.xfail)
     s_left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
@@ -204,7 +295,9 @@ def test_truediv_same_dims(
 
 
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="convert_dtypes not available"
+)
 @pytest.mark.slow
 def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
     if any(x in str(constructor_eager) for x in ["modin", "cudf"]):
@@ -220,7 +313,9 @@ def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int)
 
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="convert_dtypes not available"
+)
 def test_mod(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
     if any(x in str(constructor_eager) for x in ["pandas_pyarrow", "modin", "cudf"]):
         # pandas[pyarrow] does not implement mod
@@ -254,9 +349,7 @@ def test_arithmetic_expr_left_literal(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if ("duckdb" in str(constructor) and attr == "__floordiv__") or (
-        "dask" in str(constructor) and DASK_VERSION < (2024, 10)
-    ):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
@@ -303,7 +396,7 @@ def test_arithmetic_series_left_literal(
 
 
 def test_std_broadcating(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         # `std(ddof=2)` fails for duckdb here
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2, 3]}))

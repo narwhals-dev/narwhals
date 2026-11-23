@@ -4,6 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -57,7 +58,11 @@ def test_truncate(
     ):
         request.applymarker(pytest.mark.xfail())
 
-    if every.endswith("ns") and "polars" in str(constructor) and POLARS_VERSION < (1, 35):
+    if (
+        every.endswith("ns")
+        and "polars" in str(constructor)
+        and POLARS_VERSION < PkgVersion("1.35")
+    ):
         request.applymarker(pytest.mark.xfail())
 
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
@@ -116,7 +121,11 @@ def test_truncate_multiples(
     if every.endswith("ns") and any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail())
 
-    if every.endswith("ns") and "polars" in str(constructor) and POLARS_VERSION < (1, 35):
+    if (
+        every.endswith("ns")
+        and "polars" in str(constructor)
+        and POLARS_VERSION < PkgVersion("1.35")
+    ):
         request.applymarker(pytest.mark.xfail())
 
     if any(every.endswith(x) for x in ("mo", "q", "y")) and "dask" in str(constructor):
@@ -206,6 +215,7 @@ def test_truncate_tz_aware_duckdb() -> None:
 
     duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
     rel = duckdb.sql("""select * from values (timestamptz '2020-10-25') df(a)""")
+    assert rel is not None
     result = nw.from_native(rel).with_columns(a_truncated=nw.col("a").dt.truncate("1mo"))
     expected = {
         "a": [datetime(2020, 10, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))],

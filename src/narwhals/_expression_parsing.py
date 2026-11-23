@@ -7,6 +7,7 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from narwhals._utils import _is_eager_namespace
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import (
     InvalidIntoExprError,
@@ -820,7 +821,7 @@ def _parse_into_expr(
     arg: IntoExpr | NonNestedLiteral | _1DArray,
     *,
     str_as_lit: bool = False,
-    backend: Any = None,
+    namespace: CompliantNamespaceAny | None = None,
     allow_literal: bool = True,
 ) -> Expr:
     from narwhals.functions import col, lit, new_series
@@ -828,7 +829,12 @@ def _parse_into_expr(
     if isinstance(arg, str) and not str_as_lit:
         return col(arg)
     if is_numpy_array_1d(arg):
-        return new_series("", arg, backend=backend)._to_expr()
+        if _is_eager_namespace(namespace):
+            series = namespace._series.from_numpy(arg, context=namespace).to_narwhals()
+        else:  # `new_series` raises the informative lazy-only error.
+            backend: Any = None if namespace is None else namespace._implementation
+            series = new_series("", arg, backend=backend)
+        return series._to_expr()
     if is_series(arg):
         return arg._to_expr()
     if is_expr(arg):
@@ -846,7 +852,7 @@ def evaluate_into_exprs(
 ) -> Iterator[CompliantExprAny]:
     for expr in exprs:
         ret = _parse_into_expr(
-            expr, str_as_lit=str_as_lit, backend=ns._implementation
+            expr, str_as_lit=str_as_lit, namespace=ns
         )._to_compliant_expr(ns)
         if not allow_multi_output and ret._metadata.expansion_kind.is_multi_output():
             msg = "Multi-output expressions are not allowed in this context."

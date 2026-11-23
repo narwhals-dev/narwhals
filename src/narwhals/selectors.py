@@ -9,52 +9,47 @@ from narwhals.expr import Expr
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from datetime import timezone
+    from typing import Literal, TypeAlias
 
     from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
+
+    SupportedSetOps: TypeAlias = Literal["__and__", "__or__", "__sub__", "__xor__"]
 
 
 class Selector(Expr):
     def _to_expr(self) -> Expr:
         return Expr(*self._nodes)
 
+    def _with_set_op(self, attr: SupportedSetOps, other: Any) -> Expr:
+        if isinstance(other, Selector):
+            node = ExprNode(
+                ExprKind.ELEMENTWISE,
+                attr,
+                exprs=(other,),
+                str_as_lit=True,
+                allow_multi_output=True,
+            )
+            return self._append_node(node)
+        return self._to_expr()._with_binary(attr, other)
+
     def __add__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, Selector):
             msg = "unsupported operand type(s) for op: ('Selector' + 'Selector')"
             raise TypeError(msg)
-        return self._to_expr()._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "__add__", exprs=(other,), str_as_lit=True)
-        )
+        return self._to_expr()._with_binary("__add__", other)
 
     def __or__(self, other: Any) -> Expr:  # type: ignore[override]
-        if isinstance(other, Selector):
-            return self._append_node(
-                ExprNode(
-                    ExprKind.ELEMENTWISE,
-                    "__or__",
-                    exprs=(other,),
-                    str_as_lit=True,
-                    allow_multi_output=True,
-                )
-            )
-        return self._to_expr()._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "__or__", exprs=(other,), str_as_lit=True)
-        )
+        return self._with_set_op("__or__", other)
 
     def __and__(self, other: Any) -> Expr:  # type: ignore[override]
-        if isinstance(other, Selector):
-            return self._append_node(
-                ExprNode(
-                    ExprKind.ELEMENTWISE,
-                    "__and__",
-                    exprs=(other,),
-                    str_as_lit=True,
-                    allow_multi_output=True,
-                )
-            )
-        return self._to_expr()._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "__and__", exprs=(other,), str_as_lit=True)
-        )
+        return self._with_set_op("__and__", other)
+
+    def __sub__(self, other: Any) -> Expr:  # type: ignore[override]
+        return self._with_set_op("__sub__", other)
+
+    def __xor__(self, other: Any) -> Expr:  # type: ignore[override]
+        return self._with_set_op("__xor__", other)
 
     def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError
@@ -63,6 +58,9 @@ class Selector(Expr):
         raise NotImplementedError
 
     def __ror__(self, other: Any) -> NoReturn:
+        raise NotImplementedError
+
+    def __rxor__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
 

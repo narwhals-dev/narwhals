@@ -131,6 +131,8 @@ class SeriesListNamespace(Generic[SeriesT]):
     def min(self) -> SeriesT:
         """Compute the min value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -150,6 +152,8 @@ class SeriesListNamespace(Generic[SeriesT]):
 
     def max(self) -> SeriesT:
         """Compute the max value of the lists in the array.
+
+        Null values within each list are ignored.
 
         Examples:
             >>> import pyarrow as pa
@@ -172,6 +176,8 @@ class SeriesListNamespace(Generic[SeriesT]):
     def mean(self) -> SeriesT:
         """Compute the mean value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -191,6 +197,8 @@ class SeriesListNamespace(Generic[SeriesT]):
 
     def median(self) -> SeriesT:
         """Compute the median value of the lists in the array.
+
+        Null values within each list are ignored.
 
         Examples:
             >>> import pyarrow as pa
@@ -212,6 +220,8 @@ class SeriesListNamespace(Generic[SeriesT]):
 
     def sum(self) -> SeriesT:
         """Compute the sum value of the lists in the array.
+
+        Null values within each list are ignored. If a list has no non-null elements, the result is zero.
 
         Examples:
             >>> import polars as pl

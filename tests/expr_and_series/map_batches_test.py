@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("numpy")
 
@@ -35,7 +36,7 @@ def test_map_batches_expr_scalar(
 ) -> None:
     df = nw.from_native(constructor_eager(data))
     if dtype.is_nested() and df.implementation.is_pandas_like():
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "pandas is too old for nested types"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -76,7 +77,7 @@ def test_map_batches_expr_names(constructor_eager: ConstructorEager) -> None:
 def test_map_batches_exception(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 32, 3):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.32.3"):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data))

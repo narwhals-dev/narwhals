@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 data = [1, 3, 2]
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pyarrow")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="too old for pyarrow")
 def test_convert(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:

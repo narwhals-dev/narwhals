@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation
@@ -190,7 +191,7 @@ def test_concat_diagonal_invalid(
         )
     )
     context: Any
-    if impl.is_polars() and POLARS_VERSION < (1, 18):  # pragma: no cover
+    if impl.is_polars() and POLARS_VERSION < PkgVersion("1.18"):  # pragma: no cover
         context = pytest.raises(
             NarwhalsError,
             match=re.compile(r"(int.+datetime)|(datetime.+int)", re.IGNORECASE),

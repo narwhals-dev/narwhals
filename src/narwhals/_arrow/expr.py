@@ -114,7 +114,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
                 # We need to broadcast the results to the original size, since
                 # `over` is a length-preserving operation.
                 size = len(df)
-                return [s._with_native(pa.repeat(s.item(), size)) for s in results]
+                return [s._with_native(pa.repeat(s.native[0], size)) for s in results]
 
             # TODO(marco): is there a way to do this efficiently without
             # doing 2 sorts? Here we're sorting the dataframe and then

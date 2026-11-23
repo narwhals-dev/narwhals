@@ -4,6 +4,7 @@ from math import sqrt
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -75,7 +76,7 @@ def test_rolling_std_expr(
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip()
 
     df = nw.from_native(constructor_eager(data))
@@ -91,7 +92,7 @@ def test_rolling_std_expr(
 def test_rolling_std_series(
     constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip()
 
     name = kwargs_and_expected["name"]
@@ -195,8 +196,8 @@ def test_rolling_std_expr_lazy_ungrouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if "modin" in str(constructor):
@@ -308,8 +309,8 @@ def test_rolling_std_expr_lazy_grouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):

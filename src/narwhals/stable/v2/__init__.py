@@ -42,6 +42,7 @@ from narwhals.dtypes import (
     Int64,
     Int128,
     List,
+    Map,
     Object,
     String,
     Struct,
@@ -83,6 +84,7 @@ if TYPE_CHECKING:
         AllowLazy,
         AllowSeries,
         ExcludeSeries,
+        IntoArrowSeries,
         IntoArrowTable,
         OnlySeries,
         PassThroughUnknown,
@@ -296,6 +298,17 @@ class Series(NwSeries[IntoSeriesT]):
         return cast("Series[Any]", result)
 
     @classmethod
+    def from_arrow(
+        cls,
+        name: str,
+        values: IntoArrowSeries,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
+    ) -> Series[Any]:
+        result = super().from_arrow(name, values, backend=backend)
+        return cast("Series[Any]", result)
+
+    @classmethod
     def from_iterable(
         cls,
         name: str,
@@ -407,10 +420,6 @@ def from_native(
 def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
-) -> DataFrame[IntoDataFrameT]: ...
-@overload
-def from_native(
     native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
 @overload
@@ -421,6 +430,10 @@ def from_native(
 def from_native(
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrame[IntoDataFrameT]: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
@@ -746,6 +759,8 @@ def sum(*columns: str) -> Expr:
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is zero.
+
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
 
@@ -791,6 +806,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
+    Null values are ignored. If all values in a row are null, the result is null.
+
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
@@ -800,6 +817,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the minimum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `min_horizontal` over numeric columns only.
@@ -813,6 +832,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the maximum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `max_horizontal` over numeric columns only.
@@ -1238,6 +1259,7 @@ __all__ = [
     "Int128",
     "LazyFrame",
     "List",
+    "Map",
     "Object",
     "Schema",
     "Series",

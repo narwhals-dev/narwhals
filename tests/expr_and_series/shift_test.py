@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -36,9 +37,9 @@ def test_shift_lazy(constructor: Constructor) -> None:
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
     }
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2).over(order_by="i")).filter(
@@ -55,9 +56,9 @@ def test_shift_lazy_grouped(
         # https://github.com/dask/dask/issues/11806
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a").shift(1).over("b", order_by="i")).sort("i")

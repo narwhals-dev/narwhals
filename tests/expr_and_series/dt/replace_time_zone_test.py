@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -24,8 +25,8 @@ def test_replace_time_zone(
 ) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
     ):
         pytest.skip()
 
@@ -51,8 +52,8 @@ def test_replace_time_zone(
 def test_replace_time_zone_none(constructor: Constructor) -> None:
     if (
         ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
     ):
         pytest.skip()
     data = {
@@ -77,8 +78,13 @@ def test_replace_time_zone_series(
 ) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
-        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or (
+            "pandas_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("2")
+        )
+        or (
+            "modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2")
+        )
     ):
         pytest.skip()
     if any(x in str(constructor_eager) for x in ("cudf",)):
@@ -103,8 +109,13 @@ def test_replace_time_zone_series(
 def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> None:
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
-        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or (
+            "pandas_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("2")
+        )
+        or (
+            "modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2")
+        )
     ):
         pytest.skip()
     data = {
@@ -131,6 +142,7 @@ def test_replace_time_zone_to_connection_tz_duckdb() -> None:
 
     duckdb.sql("set timezone = 'Asia/Kolkata'")
     rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    assert rel is not None
     result = nw.from_native(rel).with_columns(
         nw.col("a").dt.replace_time_zone("Asia/Kolkata")
     )

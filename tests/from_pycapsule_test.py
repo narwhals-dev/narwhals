@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PYARROW_VERSION, assert_equal_data
@@ -22,7 +23,7 @@ class FullContext:
     _version: Version
 
 
-@pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
+@pytest.mark.xfail(PYARROW_VERSION < PkgVersion("14"), reason="too old")
 def test_from_arrow_to_arrow() -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -40,7 +41,7 @@ def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
 
     tbl = pa.table({"ab": [1, 2, 3], "ba": [4, 5, 6]})
     monkeypatch.delitem(sys.modules, "pandas", raising=False)
-    if PYARROW_VERSION < (14,):  # pragma: no cover
+    if PYARROW_VERSION < PkgVersion("14"):  # pragma: no cover
         result = nw.from_arrow(tbl, backend=pl)
     else:
         df = nw.from_native(tbl, eager_only=True)
@@ -51,7 +52,7 @@ def test_from_arrow_to_polars(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "pandas" not in sys.modules
 
 
-@pytest.mark.xfail(PYARROW_VERSION < (14,), reason="too old")
+@pytest.mark.xfail(PYARROW_VERSION < PkgVersion("14"), reason="too old")
 def test_from_arrow_to_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd

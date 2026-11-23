@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -59,7 +60,9 @@ def test_floor_dtype_pandas() -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="nullable types require pandas2+")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="nullable types require pandas2+"
+)
 def test_floor_dtype_pandas_nullable() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -70,7 +73,9 @@ def test_floor_dtype_pandas_nullable() -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.1"), reason="nullable types require pandas2+"
+)
 def test_floor_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
@@ -94,7 +99,9 @@ def test_ceil_dtype_pandas() -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="nullable types require pandas2+")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="nullable types require pandas2+"
+)
 def test_ceil_dtype_pandas_nullable() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -105,7 +112,9 @@ def test_ceil_dtype_pandas_nullable() -> None:
     pd.testing.assert_series_equal(result, expected)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.1"), reason="nullable types require pandas2+"
+)
 def test_ceil_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")

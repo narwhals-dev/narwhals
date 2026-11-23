@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, PYARROW_VERSION, assert_equal_data
@@ -33,7 +34,7 @@ def test_any_value_expr(
     )
     assert result.shape == (1, 2)
 
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         reason = "broadcast requires `over`, which requires DuckDB 1.3.0"
         pytest.skip(reason=reason)
 
@@ -107,7 +108,7 @@ def test_any_value_group_by(
     if "dask" in str(constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14"):
         reason = "too old"
         pytest.skip(reason)
 
@@ -142,11 +143,11 @@ def test_any_value_over(
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         reason = "`over` requires DuckDB 1.3.0"
         pytest.skip(reason=reason)
 
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14"):
         reason = "too old"
         pytest.skip(reason)
 

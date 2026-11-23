@@ -5,6 +5,7 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import qualified_type_name
@@ -142,7 +143,7 @@ def test_series_from_iterable(
             (
                 "pandas-polars" in test_name
                 and "String" in test_name
-                and PANDAS_VERSION >= (3,)
+                and PANDAS_VERSION >= PkgVersion("3")
             ),
             reason=(
                 "Pandas nightly suddenly raising on String `pl.Series` in:\n"
@@ -153,7 +154,7 @@ def test_series_from_iterable(
     if (
         "pandas-pyarrow" in test_name
         and "array-String" in test_name
-        and PANDAS_VERSION < (2, 1)
+        and PANDAS_VERSION < PkgVersion("2.1")
     ):  # pragma: no cover
         pytest.skip(
             "pandas being pandas with strings https://github.com/narwhals-dev/narwhals/pull/2933#issuecomment-3156009516"

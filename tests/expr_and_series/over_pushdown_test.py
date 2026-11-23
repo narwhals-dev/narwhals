@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
 def test_over_pushdown(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 2, -4, 5, 6, -1], "b": [1, 1, 1, 2, 2, 2], "i": list(range(6))}
     df = nw.from_native(constructor(data))

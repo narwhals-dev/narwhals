@@ -3,10 +3,17 @@ from __future__ import annotations
 from typing import Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -47,7 +54,7 @@ def test_unique_first_last(
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/12073
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"i": [0, 1, None, 2], "a": [1, 3, 2, 1], "b": [4, 4, 4, 6]}
     df_raw = constructor(data)
@@ -72,7 +79,7 @@ def test_unique_first_last_no_subset(
     keep: Literal["first", "last"],
     expected: dict[str, list[float]],
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"i": [0, 1, 1, 2], "b": [4, 4, 4, 6]}
     df_raw = constructor(data)
@@ -86,7 +93,7 @@ def test_unique_first_last_no_subset(
 
 
 def test_unique_invalid(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
@@ -108,7 +115,7 @@ def test_unique(
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
@@ -127,7 +134,7 @@ def test_unique_full_subset(
     keep: Literal["any", "none"],
     expected: dict[str, list[float]],
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [3, 3, 4, 4]}
     df_raw = constructor(data)
@@ -143,7 +150,7 @@ def test_unique_invalid_keep(constructor: Constructor) -> None:
 
 @pytest.mark.filterwarnings("ignore:.*backwards-compatibility:UserWarning")
 def test_unique_none(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df_raw = constructor(data)
     df = nw.from_native(df_raw)
@@ -156,8 +163,32 @@ def test_unique_none(constructor: Constructor) -> None:
         assert_equal_data(result, data)
 
 
+@pytest.mark.parametrize(
+    ("keep", "expected"),
+    [("first", {"g": ["a", "b"], "x": [1, 2]}), ("last", {"g": ["b", "a"], "x": [2, 3]})],
+)
+def test_unique_maintain_order_4156(
+    constructor_eager: ConstructorEager,
+    keep: Literal["first", "last"],
+    expected: dict[str, list[object]],
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4156
+    data = {"g": ["a", "b", "a"], "x": [1, 2, 3]}
+    df = nw.from_native(constructor_eager(data))
+    result = df.unique("g", keep=keep, maintain_order=True)
+    assert_equal_data(result, expected)
+
+
+def test_unique_maintain_order_no_columns(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.26"):
+        reason = "Polars raises on `unique` of a zero-column frame before 0.20.26."
+        pytest.skip(reason=reason)
+    df = nw.from_native(constructor_eager({}))
+    assert df.unique(maintain_order=True).shape == (0, 0)
+
+
 def test_unique_3069(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"name": ["a", "b", "c"], "group": ["d", "e", "f"], "value": [1, 2, 3]}
     df = nw.from_native(constructor(data))

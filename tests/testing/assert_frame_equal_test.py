@@ -5,6 +5,7 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.testing import assert_frame_equal
@@ -184,7 +185,7 @@ def test_height_mismatch(constructor: Constructor) -> None:
 @pytest.mark.parametrize("check_row_order", [True, False])
 def test_check_row_order(constructor: Constructor, *, check_row_order: bool) -> None:
     if "pandas" in str(constructor) or "dask" in str(constructor):  # pragma: no cover
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -211,7 +212,7 @@ def test_check_row_order(constructor: Constructor, *, check_row_order: bool) -> 
 
 def test_check_row_order_nested_only(constructor: Constructor) -> None:
     if "pandas" in str(constructor) or "dask" in str(constructor):  # pragma: no cover
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -233,7 +234,9 @@ def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     """
     cols_to_drop = ("categorical", "enum", "duration", "struct", "time")
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):  # pragma: no cover
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion(
+        "2.2"
+    ):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
 

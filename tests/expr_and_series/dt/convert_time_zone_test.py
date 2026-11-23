@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -26,8 +27,8 @@ def test_convert_time_zone(
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
@@ -55,8 +56,14 @@ def test_convert_time_zone_series(
     if (
         ("pyarrow" in str(constructor_eager) and is_windows())
         or ("pyarrow_table" in str(constructor_eager) and is_windows())
-        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1))
+        or (
+            "pandas_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("2.1")
+        )
+        or (
+            "modin_pyarrow" in str(constructor_eager)
+            and PANDAS_VERSION < PkgVersion("2.1")
+        )
     ):
         pytest.skip()
     if any(x in str(constructor_eager) for x in ("cudf",)):
@@ -84,13 +91,13 @@ def test_convert_time_zone_from_none(
     if (
         ("pyarrow" in str(constructor) and is_windows())
         or ("pyarrow_table" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"))
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         # polars used to disallow this
         pytest.skip()
     data = {
@@ -143,6 +150,7 @@ def test_convert_time_zone_to_connection_tz_duckdb() -> None:
 
     duckdb.sql("set timezone = 'Asia/Kolkata'")
     rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    assert rel is not None
     result = nw.from_native(rel).with_columns(
         nw.col("a").dt.convert_time_zone("Asia/Kolkata")
     )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -31,13 +32,16 @@ zfill_cases = [
         {"a": ["-1", "+1", "1", "", None]},
         id="width_0",
     ),
-    pytest.param({"a": ["日本", None]}, 3, {"a": ["日本", None]}, id="non_ascii"),
-    # A `+` in front of a multibyte character: Polars pads to a byte count, every other
-    # backend to a character count.
-    pytest.param({"a": ["+é", "+12"]}, 3, {"a": ["+é", "+12"]}, id="non_ascii_plus_w3"),
-    pytest.param({"a": ["+é", "+12"]}, 4, {"a": ["+0é", "+012"]}, id="non_ascii_plus_w4"),
+    pytest.param({"a": ["日本", None]}, 3, {"a": ["0日本", None]}, id="non_ascii"),
+    pytest.param({"a": ["+é", "+12"]}, 3, {"a": ["+0é", "+12"]}, id="non_ascii_plus_w3"),
     pytest.param(
-        {"a": ["+é", "+12"]}, 5, {"a": ["+00é", "+0012"]}, id="non_ascii_plus_w5"
+        {"a": ["+é", "+12"]}, 4, {"a": ["+00é", "+012"]}, id="non_ascii_plus_w4"
+    ),
+    pytest.param(
+        {"a": ["+é", "-é", "+12"]},
+        5,
+        {"a": ["+000é", "-000é", "+0012"]},
+        id="non_ascii_sign_w5",
     ),
     # Only the first character is a sign; the second one is padded like any other.
     pytest.param(
@@ -61,7 +65,7 @@ def test_str_zfill(
     if (
         "width_0" not in request.node.callspec.id
         and uses_pyarrow_backend(constructor)
-        and PANDAS_VERSION < (3,)
+        and PANDAS_VERSION < PkgVersion("3")
     ):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
@@ -69,14 +73,9 @@ def test_str_zfill(
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("1.5"):
         reason = "different zfill behavior"
         pytest.skip(reason=reason)
-
-    if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor):
-        request.applymarker(
-            pytest.mark.xfail(reason="non-polars backends count characters")
-        )
 
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(width))
@@ -95,7 +94,7 @@ def test_str_zfill_series(
     if (
         "width_0" not in request.node.callspec.id
         and uses_pyarrow_backend(constructor_eager)
-        and PANDAS_VERSION < (3,)
+        and PANDAS_VERSION < PkgVersion("3")
     ):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
@@ -103,14 +102,9 @@ def test_str_zfill_series(
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("1.5"):
         reason = "different zfill behavior"
         pytest.skip(reason=reason)
-
-    if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor_eager):
-        request.applymarker(
-            pytest.mark.xfail(reason="non-polars backends count characters")
-        )
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].str.zfill(width)

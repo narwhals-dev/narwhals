@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import nullcontext as does_not_raise
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -32,7 +33,7 @@ data_cum = {
 
 
 def test_over_single(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     df = nw.from_native(constructor(data))
@@ -54,7 +55,7 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     df = nw.from_native(constructor(data))
@@ -85,7 +86,7 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
 
 
 def test_over_multiple(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor(data))
     expected = {
@@ -105,7 +106,7 @@ def test_over_cumsum(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -159,7 +160,7 @@ def test_over_cummax(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -185,7 +186,7 @@ def test_over_cummin(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -213,7 +214,7 @@ def test_over_cumprod(
 ) -> None:
     if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18159
@@ -248,7 +249,7 @@ def test_over_anonymous_cumulative(
         if df.implementation.is_pyarrow()
         else pytest.raises(KeyError)
         if df.implementation.is_modin()
-        or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 3))
+        or (df.implementation.is_pandas() and PANDAS_VERSION < PkgVersion("1.3"))
         # TODO(unassigned): bug in old pandas + modin.
         # df.groupby('a')[['a', 'b']].cum_sum() excludes `'a'` from result
         else does_not_raise()
@@ -269,7 +270,7 @@ def test_over_anonymous_cumulative(
 def test_over_anonymous_reduction(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     if "modin" in str(constructor):
         # probably bugged
@@ -376,7 +377,7 @@ def test_over_cum_reverse(
     if (
         "pandas_nullable" in str(constructor_eager)
         and attr in {"cum_max", "cum_min"}
-        and PANDAS_VERSION < (3, 0)
+        and PANDAS_VERSION < PkgVersion("3")
     ):
         # TODO(FBruzzesi): convert to pytest.skip() if the fix does not make it into
         # `pandas=2.3.4`. Otherwise update version boundary
@@ -416,9 +417,9 @@ def test_unsupported_over() -> None:
 def test_over_without_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
 
@@ -449,7 +450,7 @@ def test_over_without_partition_by_categorical(constructor: Constructor) -> None
 def test_aggregation_over_without_partition_by(
     constructor_eager: ConstructorEager,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
 
     df = nw.from_native(constructor_eager({"a": [1, -1, 2], "i": [0, 2, 1]}))
@@ -463,9 +464,9 @@ def test_aggregation_over_without_partition_by(
 
 
 def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip()
     if any(x in str(constructor) for x in ("modin", "cudf")):
         # https://github.com/modin-project/modin/issues/7508
@@ -481,7 +482,7 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
@@ -546,7 +547,7 @@ def test_over_with_nulls_in_partition(
     expected_max: list[int],
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3300
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {
         "a": [1, 1, None, 3, 3],
@@ -591,7 +592,7 @@ def test_over_when_then_aggregation_partition_by(
     # tests/imputers/test_ModeImputer.py::TestFit::test_learnt_values_tied_weighted[input_col1-weight_col1-b-False-pandas]
     # tubular commit: b2ca639aa26e620271b87d43de826006765b1f48
     # https://github.com/narwhals-dev/narwhals/issues/3300
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Value mismatch"))
@@ -604,7 +605,7 @@ def test_over_when_then_aggregation_partition_by(
 
 
 def test_mutability(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [1, 2, 3]}))
     left = nw.col("a").sum()

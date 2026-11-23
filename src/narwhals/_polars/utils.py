@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType
+    from narwhals.typing import IntoDType, NonNestedLiteral
 
     T = TypeVar("T")
     NativeT = TypeVar(
@@ -78,6 +78,9 @@ HAS_UINT_128: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 
 HAS_FLOAT_16: Final[bool] = BACKEND_VERSION >= (1, 36, 0)
 """https://github.com/pola-rs/polars/pull/25185"""
+
+HAS_MAP: Final[bool] = BACKEND_VERSION >= (2, 0, 0)
+"""https://github.com/pola-rs/polars/pull/28984"""
 
 BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 """Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32` promotion).
@@ -170,7 +173,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, pl.List):
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
     if isinstance(dtype, pl.Array):
-        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
+        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
         return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
     if isinstance(dtype, pl.Decimal):
         return dtypes.Decimal(dtype.precision, dtype.scale)
@@ -178,6 +181,11 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Time()
     if dtype == pl.Binary:
         return dtypes.Binary()
+    if HAS_MAP and isinstance(dtype, pl.Map):
+        return dtypes.Map(
+            native_to_narwhals_dtype(dtype.key, version),
+            native_to_narwhals_dtype(dtype.value, version),
+        )
     return dtypes.Unknown()
 
 
@@ -248,6 +256,14 @@ def narwhals_to_native_dtype(  # noqa: C901
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         return pl.Decimal(dtype.precision, dtype.scale)
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        if not HAS_MAP:  # pragma: no cover
+            msg = f"`Map` dtype is only supported for 'polars>=2.0', found version {BACKEND_VERSION}."
+            raise NotImplementedError(msg)
+        return pl.Map(
+            narwhals_to_native_dtype(dtype.key, version),
+            narwhals_to_native_dtype(dtype.value, version),
+        )
     return pl.Unknown()  # pragma: no cover
 
 
@@ -375,7 +391,7 @@ def native_get_categories(native: pl.Series) -> pl.Series:
     dtype = native.dtype
     if isinstance(dtype, pl.Enum):
         return dtype.categories
-    return native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+    return native.drop_nulls().unique(maintain_order=True).cast(pl.String)
 
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
@@ -406,6 +422,16 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     sort: Method[CompliantT]
 
     sum: Method[CompliantT]
+
+
+class PolarsMapNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
+    _accessor: ClassVar[Accessor] = "map"
+
+    def get(self, key: NonNestedLiteral) -> CompliantT:
+        if not HAS_MAP:  # pragma: no cover
+            msg = f"`Map` dtype is only supported for 'polars>=2.0', found version {BACKEND_VERSION}."
+            raise NotImplementedError(msg)
+        return self.__getattr__("get")(key)
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

@@ -4,6 +4,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, is_windows
@@ -17,12 +18,12 @@ expected_pyarrow = [2.5, -1, None, None, None, 3]
 
 
 def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")) or (
-        "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)
+    if "cudf" in str(constructor) or (
+        "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     if (
@@ -37,7 +38,7 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     )
     if any(
         backend in str(constructor)
-        for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
+        for backend in ("pandas", "pyarrow", "pandas[pyarrow]", "dask")
     ):
         # there is a mismatch as pyarrow uses an approximate median
         assert_equal_data(result, {"a": expected_pyarrow})
@@ -49,11 +50,11 @@ def test_median_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("cudf",)) or (
-        "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7)
+        "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("0.20.7")
     ):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
     if (

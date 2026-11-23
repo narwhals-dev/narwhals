@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -196,7 +197,7 @@ def test_inner_join_single_key(constructor: Constructor) -> None:
 
 
 def test_cross_join(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.1.4"):
         pytest.skip()
     data = {"antananarivo": [1, 3, 2]}
     df = from_native_lazy(constructor(data))
@@ -234,7 +235,7 @@ def test_suffix(
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
 def test_cross_join_suffix(constructor: Constructor, suffix: str) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.1.4"):
         pytest.skip()
     data = {"antananarivo": [1, 3, 2]}
     df = from_native_lazy(constructor(data))
@@ -508,7 +509,7 @@ def test_joinasof_numeric(
         "duckdb" in str(constructor) or "ibis" in str(constructor)
     ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
-    if PANDAS_VERSION < (2, 1) and (
+    if PANDAS_VERSION < PkgVersion("2.1") and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -579,7 +580,7 @@ def test_joinasof_time(
         "duckdb" in str(constructor) or "ibis" in str(constructor)
     ) and strategy == "nearest":
         request.applymarker(pytest.mark.xfail)
-    if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
+    if PANDAS_VERSION < PkgVersion("2.1") and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
     df = from_native_lazy(
         constructor(
@@ -618,7 +619,7 @@ def test_joinasof_time(
 def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if PANDAS_VERSION < (2, 1) and (
+    if PANDAS_VERSION < PkgVersion("2.1") and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -653,7 +654,7 @@ def test_joinasof_suffix(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf", "pyspark")):
         request.applymarker(pytest.mark.xfail)
-    if PANDAS_VERSION < (2, 1) and (
+    if PANDAS_VERSION < PkgVersion("2.1") and (
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
@@ -768,7 +769,7 @@ def test_join_duplicate_column_names(
 ) -> None:
     exception: type[Exception]
 
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 26):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.26"):
         pytest.skip()
     if (
         "cudf" in str(constructor)
@@ -781,7 +782,7 @@ def test_join_duplicate_column_names(
     if any(
         x in str(constructor)
         for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
-    ) and PANDAS_VERSION >= (3,):  # pragma: no cover
+    ) and PANDAS_VERSION >= PkgVersion("3"):  # pragma: no cover
         from pandas.errors import MergeError
 
         exception = MergeError
@@ -868,7 +869,7 @@ def test_join_same_laziness(constructor: Constructor) -> None:
 def test_join_on_null_values(
     constructor: Constructor, how: JoinStrategy, expected: dict[str, list[Any]]
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 1, 4) and how=="cross":
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.1.4") and how=="cross":
         pytest.skip()
     # See https://github.com/narwhals-dev/narwhals/issues/3307
     keys = {"a": [1, 1, None, None], "b": [1, None, 5, None]}

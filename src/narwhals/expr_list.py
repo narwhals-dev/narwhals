@@ -157,6 +157,8 @@ class ExprListNamespace(Generic[ExprT]):
     def min(self) -> ExprT:
         """Compute the min value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
@@ -179,6 +181,8 @@ class ExprListNamespace(Generic[ExprT]):
 
     def max(self) -> ExprT:
         """Compute the max value of the lists in the array.
+
+        Null values within each list are ignored.
 
         Examples:
             >>> import polars as pl
@@ -205,6 +209,8 @@ class ExprListNamespace(Generic[ExprT]):
     def mean(self) -> ExprT:
         """Compute the mean value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -228,6 +234,8 @@ class ExprListNamespace(Generic[ExprT]):
     def median(self) -> ExprT:
         """Compute the median value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import duckdb
             >>> import narwhals as nw
@@ -250,6 +258,9 @@ class ExprListNamespace(Generic[ExprT]):
 
     def sum(self) -> ExprT:
         """Compute the sum value of the lists in the array.
+
+        Null values within each list are ignored. If a list has no non-null elements,
+        the result is zero.
 
         Examples:
             >>> import polars as pl

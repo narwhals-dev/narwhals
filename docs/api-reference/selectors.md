@@ -6,7 +6,11 @@ set operations are supported:
 - set intersection: `&`
 - set union: `|`
 - set difference: `-`
+- symmetric difference: `^`
 - complement: `~`
+
+As in Polars, set operations return columns in the frame's order, so
+`ncs.boolean() | ncs.numeric()` and `ncs.numeric() | ncs.boolean()` give the same result.
 
 ::: narwhals.selectors
     handler: python

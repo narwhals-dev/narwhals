@@ -161,12 +161,12 @@ class PandasLikeSeriesDateTimeNamespace(
 
     def to_string(self, format: str) -> PandasLikeSeries:
         # Polars' parser treats `'%.f'` as pandas does `'.%f'`
-        # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
-        # and doesn't support `%f`
-        if not self._is_pyarrow():
-            format = format.replace("%S%.f", "%S.%f")
-        else:
+        if self._is_pyarrow() and self.backend_version < (3, 2):  # pragma: no cover
+            # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
+            # and doesn't support `%f`, until pandas 3.2 (pandas-dev/pandas#55001)
             format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
+        else:
+            format = format.replace("%S%.f", "%S.%f")
         return self.with_native(self.native.dt.strftime(format))
 
     def replace_time_zone(self, time_zone: str | None) -> PandasLikeSeries:

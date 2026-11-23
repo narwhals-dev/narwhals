@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, ShapeError
 from tests.utils import (
+    PANDAS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -65,7 +67,7 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 def test_with_columns_dtypes_single_row(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("15"):
         pytest.skip()
     if (
         ("pyspark" in str(constructor))
@@ -112,3 +114,31 @@ def test_with_columns_missing_column(
 
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.with_columns(d=nw.col("c") + 1))
+
+
+def test_with_columns_numpy_array(constructor: Constructor) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    arr = np.array([4, 5, 6])
+    impl = df.implementation
+    if impl.is_pandas_like() or impl.is_polars() or impl.is_pyarrow():
+        assert_equal_data(df.with_columns(b=arr), {"a": [1, 2, 3], "b": [4, 5, 6]})
+    else:
+        with pytest.raises(ValueError, match="lazy-only, but `new_series`"):
+            df.with_columns(b=arr)
+
+
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="pandas<2 copies in `Series.rename`"
+)
+def test_with_columns_numpy_array_pandas_no_copy() -> None:
+    pytest.importorskip("pandas")
+    import numpy as np
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
+    arr = np.array([4, 5, 6])
+    result = df.with_columns(b=arr)
+    assert np.shares_memory(result["b"].to_numpy(), arr)

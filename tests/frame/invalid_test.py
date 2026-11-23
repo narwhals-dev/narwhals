@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
@@ -12,7 +13,7 @@ T = TypeVar("T")
 
 
 @pytest.mark.skipif(
-    POLARS_VERSION < (1,), reason="Polars would raise unrecoverable panic."
+    POLARS_VERSION < PkgVersion("1"), reason="Polars would raise unrecoverable panic."
 )
 def test_all_vs_all(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
@@ -87,7 +88,7 @@ def test_validate_laziness() -> None:
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(NUMPY_VERSION < (1, 26, 4), reason="too old")
+@pytest.mark.skipif(NUMPY_VERSION < PkgVersion("1.26.4"), reason="too old")
 def test_memmap() -> None:
     pytest.importorskip("sklearn")
     pytest.importorskip("pandas")

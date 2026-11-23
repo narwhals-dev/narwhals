@@ -32,11 +32,11 @@ from narwhals._utils import (
     can_lazyframe_collect,
     check_column_names_are_unique,
     check_columns_exist,
+    eager_namespace,
     flatten,
     generate_repr,
     is_compliant_dataframe,
     is_compliant_lazyframe,
-    is_eager_allowed,
     is_index_selector,
     is_iterator,
     is_lazy_allowed,
@@ -44,9 +44,11 @@ from narwhals._utils import (
     is_sequence_like,
     is_sequence_of,
     is_slice_none,
+    native_repr,
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
+    validate_bool_flags,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.dtypes import _validate_dtype
@@ -161,9 +163,7 @@ class BaseFrame(Generic[_FrameT]):
         # NOTE: Strings are interpreted as column names.
         out_exprs = []
         ns = self.__narwhals_namespace__()
-        parse = partial(
-            _parse_into_expr, backend=self._compliant._implementation, allow_literal=False
-        )
+        parse = partial(_parse_into_expr, namespace=ns, allow_literal=False)
         all_exprs = chain(
             (parse(x) for x in flatten(exprs)),
             (parse(expr).alias(alias) for alias, expr in named_exprs.items()),
@@ -310,6 +310,7 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
+        validate_bool_flags(flags=descending, by=by, param_name="descending")
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
@@ -318,6 +319,7 @@ class BaseFrame(Generic[_FrameT]):
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
     ) -> Self:
         flatten_by = flatten([by])
+        validate_bool_flags(flags=reverse, by=flatten_by, param_name="reverse")
         return self._with_compliant(
             self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )
@@ -474,14 +476,28 @@ class BaseFrame(Generic[_FrameT]):
         )
         raise NotImplementedError(msg)
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         to_explode = (
             [columns, *more_columns]
             if isinstance(columns, str)
             else [*columns, *more_columns]
         )
 
-        return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
+        compliant = self._compliant_frame
+        if empty_as_null and keep_nulls:
+            # Plugins written before these flags existed implement `explode(columns)`.
+            return self._with_compliant(compliant.explode(columns=to_explode))
+        return self._with_compliant(
+            compliant.explode(
+                columns=to_explode, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+            )
+        )
 
 
 class DataFrame(BaseFrame[DataFrameT]):
@@ -578,19 +594,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             └──────────────────┘
         """
         if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
-            msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
+            msg = f"Given object of type {qualified_type_name(native_frame)!r} does not support PyCapsule interface"
             raise TypeError(msg)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_arrow(native_frame, context=ns)
-            return cls(compliant, level="full")
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_arrow` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_arrow(df, backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_arrow"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_arrow(native_frame, context=ns)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_dict(
@@ -642,18 +652,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         if backend is None:
             data, backend = _from_dict_no_backend(data)
         schema = dict(schema) if schema is not None else None
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
-            return cls(compliant, level="full")
-        # NOTE: (#2786) needs resolving for extensions
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dict` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_dict"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_dicts(
@@ -720,18 +723,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             └──────────────────────────┘
         """
         schema = dict(schema) if schema is not None else None
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
-            return cls(compliant, level="full")
-        # NOTE: (#2786) needs resolving for extensions
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dicts` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_dicts([{{'a': 1}}, {{'a': 2}}], backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_dicts"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
+        return cls(compliant, level="full")
 
     @classmethod
     def from_numpy(
@@ -796,16 +792,11 @@ class DataFrame(BaseFrame[DataFrameT]):
             raise TypeError(msg)
         if not (schema is None or is_sequence_of(schema, str)):
             schema = Schema(schema)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            return cls(ns.from_numpy(data, schema), level="full")
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_numpy` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.DataFrame.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
+        ns = eager_namespace(
+            backend, version=cls._version, function_name="DataFrame.from_numpy"
         )
-        raise ValueError(msg)
+        compliant = ns._dataframe.from_numpy(data, schema=schema, context=ns)
+        return cls(compliant, level="full")
 
     def __len__(self) -> int:
         return self._compliant_frame.__len__()
@@ -814,7 +805,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
+        return generate_repr("Narwhals DataFrame", native_repr(self._compliant_frame))
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """Export a DataFrame via the Arrow PyCapsule Interface.
@@ -831,10 +822,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         try:
             pa_version = Implementation.PYARROW._backend_version()
         except ModuleNotFoundError as exc:
-            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {qualified_type_name(native_frame)!r}"
             raise ModuleNotFoundError(msg) from exc
         if pa_version < (14, 0):  # pragma: no cover
-            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {type(native_frame)}"
+            msg = f"'pyarrow>=14.0.0' is required for `DataFrame.__arrow_c_stream__` for object of type {qualified_type_name(native_frame)!r}"
             raise ModuleNotFoundError(msg) from None
         pa_table = self.to_arrow()
         return pa_table.__arrow_c_stream__(requested_schema=requested_schema)  # type: ignore[no-untyped-call]
@@ -1783,10 +1774,15 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        impl = self.implementation
+
+        def into_series(values: list[bool]) -> Series[Any]:
+            ns = self.__narwhals_namespace__()
+            return self._series(
+                ns._series.from_iterable(values, context=ns), level="full"
+            )
+
         parsed_predicates = (
-            self._series.from_iterable("", p, backend=impl) if is_list_of(p, bool) else p
-            for p in predicates
+            into_series(p) if is_list_of(p, bool) else p for p in predicates
         )
         return super().filter(*parsed_predicates, **constraints)
 
@@ -2399,7 +2395,13 @@ class DataFrame(BaseFrame[DataFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -2409,6 +2411,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             columns: Column names. The underlying columns being exploded must be of the `List` data type.
             *more_columns: Additional names of columns to explode, specified as positional arguments.
+            empty_as_null: How to explode an empty list. If `True`, an empty list explodes
+                into a single null row; if `False`, it produces no rows.
+            keep_nulls: How to explode a null list. If `True`, a null list explodes into a
+                single null row; if `False`, it produces no rows.
 
         Examples:
             >>> import polars as pl
@@ -2427,7 +2433,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             │ y   ┆ 3   │
             └─────┴─────┘
         """
-        return super().explode(columns, *more_columns)
+        return super().explode(
+            columns, *more_columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+        )
 
 
 class LazyFrame(BaseFrame[LazyFrameT]):
@@ -2487,7 +2495,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
+        return generate_repr("Narwhals LazyFrame", native_repr(self._compliant_frame))
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"
@@ -3433,7 +3441,13 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             on=on, index=index, variable_name=variable_name, value_name=value_name
         )
 
-    def explode(self, columns: str | Sequence[str], *more_columns: str) -> Self:
+    def explode(
+        self,
+        columns: str | Sequence[str],
+        *more_columns: str,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
         """Explode the dataframe to long format by exploding the given columns.
 
         Notes:
@@ -3443,6 +3457,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         Arguments:
             columns: Column names. The underlying columns being exploded must be of the `List` data type.
             *more_columns: Additional names of columns to explode, specified as positional arguments.
+            empty_as_null: How to explode an empty list. If `True`, an empty list explodes
+                into a single null row; if `False`, it produces no rows.
+            keep_nulls: How to explode a null list. If `True`, a null list explodes into a
+                single null row; if `False`, it produces no rows.
 
         Examples:
             >>> import duckdb
@@ -3465,4 +3483,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └─────────┴───────┘
             <BLANKLINE>
         """
-        return super().explode(columns, *more_columns)
+        return super().explode(
+            columns, *more_columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+        )

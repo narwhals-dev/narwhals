@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import DuplicateError, InvalidOperationError
@@ -132,11 +133,15 @@ def test_group_by_nw_all(constructor: Constructor) -> None:
 def test_group_by_depth_1_agg(
     constructor: Constructor, attr: str, expected: dict[str, list[int | float]]
 ) -> None:
-    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
+    if (
+        "pandas_pyarrow" in str(constructor)
+        and attr == "var"
+        and PANDAS_VERSION < PkgVersion("2.1")
+    ):
         pytest.skip(
             "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         )
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
@@ -208,7 +213,7 @@ def test_group_by_median(constructor: Constructor) -> None:
 
 
 def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
@@ -351,8 +356,8 @@ def test_no_agg(constructor: Constructor) -> None:
 def test_group_by_categorical(constructor: Constructor) -> None:
     if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
         pytest.skip(reason="no categorical support")
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
-        15,
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion(
+        "15"
     ):  # pragma: no cover
         # https://github.com/narwhals-dev/narwhals/issues/1078
         pytest.skip(
@@ -397,11 +402,11 @@ def test_all_kind_of_aggs(
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("1.4"):
         pytest.skip(
             "Pandas < 1.4.0 does not support multiple aggregations with the same column"
         )
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
     result = (
@@ -545,7 +550,7 @@ def test_group_by_raise_if_not_preserves_length(
 
 
 def test_group_by_window(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 2, 2, None], "b": [1, 1, 2, 2], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
@@ -660,7 +665,7 @@ def test_group_by_no_preserve_dtype(
     if (
         "polars" in str(constructor_eager)
         and isinstance(low, Decimal)
-        and POLARS_VERSION < (1, 21, 0)
+        and POLARS_VERSION < PkgVersion("1.21")
     ):
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
     if any(x == request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
@@ -721,7 +726,8 @@ def test_group_by_agg_first(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            "pyarrow_table" in str(constructor_eager)
+            and (PYARROW_VERSION < PkgVersion("14")),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )
@@ -763,7 +769,8 @@ def test_group_by_agg_last(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            "pyarrow_table" in str(constructor_eager)
+            and (PYARROW_VERSION < PkgVersion("14")),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )
@@ -781,7 +788,7 @@ def test_group_by_agg_last(
 
 
 def test_multi_column_expansion(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.32"):
         pytest.skip(reason="https://github.com/pola-rs/polars/issues/21773")
     if "modin" in str(constructor):
         pytest.skip(reason="Internal error")

@@ -32,6 +32,7 @@
         - NestedType
         - Array
         - List
+        - Map
         - Field
         - Struct
         - String
