@@ -1,0 +1,45 @@
+name: PyTest pizzlies
+
+on:
+  pull_request:
+    paths:
+      - src/narwhals/**
+      - tests/**
+      - packages/pizzlies/**
+      - .github/workflows/pytest-pizzlies.yml
+      - pyproject.toml
+  workflow_call:
+
+env:
+  PY_COLORS: 1
+  PYTEST_ADDOPTS: "--numprocesses=logical"
+  UV_LOCKED: 1
+
+permissions:
+  contents: read
+
+jobs:
+  pytest-pizzlies:
+    if: github.head_ref != 'bump-version'
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: "true"
+          cache-suffix: pizzlies-${{ matrix.python-version }}
+          cache-dependency-glob: "packages/pizzlies/pyproject.toml"
+      # Runs every test, known failures included: a new failure makes `--update` exit
+      # non-zero, and a fixed one makes the regenerated list differ from the committed one.
+      - name: Run Narwhals' test suite against pizzlies
+        run: python packages/pizzlies/run_tests.py --update
+      - name: Check known_failures.txt is up to date
+        run: git diff --exit-code packages/pizzlies/known_failures.txt
