@@ -293,7 +293,10 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         frame = self.native
         if order_by is None:
-            result = frame.with_row_index(name)
+            try:
+                result = frame.with_row_index(name)
+            except Exception as e:  # noqa: BLE001
+                raise catch_polars_exception(e) from None
         else:
             if self._backend_version < (1, 10):
                 msg = "Cannot pass `order_by` to `with_row_index` for Polars<1.10"
