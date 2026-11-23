@@ -23,7 +23,18 @@ import pandas as pd
 
 import narwhals as nw
 from tpch import constants
-from tpch.queries import q1 as _q1, q2 as _q2, q3 as _q3, q4 as _q4
+from tpch.queries import (
+    q1 as _q1,
+    q2 as _q2,
+    q3 as _q3,
+    q4 as _q4,
+    q5 as _q5,
+    q6 as _q6,
+    q9 as _q9,
+    q10 as _q10,
+    q12 as _q12,
+    q14 as _q14,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -157,11 +168,196 @@ def _q4_native(lineitem_ds: pd.DataFrame, orders_ds: pd.DataFrame) -> pd.DataFra
     return agg.sort_values(["o_orderpriority"])
 
 
+def _q5_native(  # noqa: PLR0917
+    region_ds: pd.DataFrame,
+    nation_ds: pd.DataFrame,
+    customer_ds: pd.DataFrame,
+    lineitem_ds: pd.DataFrame,
+    orders_ds: pd.DataFrame,
+    supplier_ds: pd.DataFrame,
+) -> pd.DataFrame:
+    var1 = "ASIA"
+    var2 = datetime(1994, 1, 1)
+    var3 = datetime(1995, 1, 1)
+
+    jn = (
+        region_ds.merge(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
+        .merge(customer_ds, left_on="n_nationkey", right_on="c_nationkey")
+        .merge(orders_ds, left_on="c_custkey", right_on="o_custkey")
+        .merge(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
+        .merge(
+            supplier_ds,
+            left_on=["l_suppkey", "n_nationkey"],
+            right_on=["s_suppkey", "s_nationkey"],
+        )
+    )
+    jn = jn[
+        (jn["r_name"] == var1) & (jn["o_orderdate"] >= var2) & (jn["o_orderdate"] < var3)
+    ]
+    jn["revenue"] = jn.l_extendedprice * (1 - jn.l_discount)
+
+    gb = jn.groupby("n_name", as_index=False)
+    agg = cast("pd.DataFrame", gb["revenue"].sum())
+    return agg.sort_values("revenue", ascending=False)
+
+
+def _q6_native(lineitem_ds: pd.DataFrame) -> pd.DataFrame:
+    var1 = datetime(1994, 1, 1)
+    var2 = datetime(1995, 1, 1)
+    var3 = 24
+
+    flineitem = lineitem_ds[
+        (lineitem_ds["l_shipdate"] >= var1)
+        & (lineitem_ds["l_shipdate"] < var2)
+        & (lineitem_ds["l_discount"] >= 0.05)
+        & (lineitem_ds["l_discount"] <= 0.07)
+        & (lineitem_ds["l_quantity"] < var3)
+    ]
+    revenue = (flineitem["l_extendedprice"] * flineitem["l_discount"]).sum()
+    return pd.DataFrame({"revenue": [revenue]})
+
+
+def _q9_native(  # noqa: PLR0917
+    part_ds: pd.DataFrame,
+    partsupp_ds: pd.DataFrame,
+    nation_ds: pd.DataFrame,
+    lineitem_ds: pd.DataFrame,
+    orders_ds: pd.DataFrame,
+    supplier_ds: pd.DataFrame,
+) -> pd.DataFrame:
+    jn = (
+        part_ds.merge(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
+        .merge(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
+        .merge(
+            lineitem_ds,
+            left_on=["p_partkey", "ps_suppkey"],
+            right_on=["l_partkey", "l_suppkey"],
+        )
+        .merge(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
+        .merge(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
+    )
+    jn = jn[jn["p_name"].str.contains("green", regex=False)]
+    jn["o_year"] = jn["o_orderdate"].dt.year
+    jn["amount"] = (
+        jn.l_extendedprice * (1 - jn.l_discount) - jn.ps_supplycost * jn.l_quantity
+    )
+
+    gb = jn.groupby(["n_name", "o_year"], as_index=False)
+    agg = gb.agg(sum_profit=pd.NamedAgg(column="amount", aggfunc="sum"))
+    agg = agg.rename(columns={"n_name": "nation"})
+    return agg.sort_values(["nation", "o_year"], ascending=[True, False])
+
+
+def _q10_native(
+    customer_ds: pd.DataFrame,
+    nation_ds: pd.DataFrame,
+    lineitem_ds: pd.DataFrame,
+    orders_ds: pd.DataFrame,
+) -> pd.DataFrame:
+    var1 = datetime(1993, 10, 1)
+    var2 = datetime(1994, 1, 1)
+
+    jn = (
+        customer_ds.merge(orders_ds, left_on="c_custkey", right_on="o_custkey")
+        .merge(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
+        .merge(nation_ds, left_on="c_nationkey", right_on="n_nationkey")
+    )
+    jn = jn[
+        (jn["o_orderdate"] >= var1)
+        & (jn["o_orderdate"] < var2)
+        & (jn["l_returnflag"] == "R")
+    ]
+    jn["revenue"] = jn.l_extendedprice * (1 - jn.l_discount)
+
+    gb = jn.groupby(
+        [
+            "c_custkey",
+            "c_name",
+            "c_acctbal",
+            "c_phone",
+            "n_name",
+            "c_address",
+            "c_comment",
+        ],
+        as_index=False,
+    )
+    agg = cast("pd.DataFrame", gb["revenue"].sum())
+
+    sel = agg.loc[
+        :,
+        [
+            "c_custkey",
+            "c_name",
+            "revenue",
+            "c_acctbal",
+            "n_name",
+            "c_address",
+            "c_phone",
+            "c_comment",
+        ],
+    ]
+    return sel.sort_values("revenue", ascending=False).head(20)
+
+
+def _q12_native(lineitem_ds: pd.DataFrame, orders_ds: pd.DataFrame) -> pd.DataFrame:
+    var1 = "MAIL"
+    var2 = "SHIP"
+    var3 = datetime(1994, 1, 1)
+    var4 = datetime(1995, 1, 1)
+
+    jn = orders_ds.merge(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
+    # Filter step by step, like the Narwhals query does, so that both
+    # sides materialise the same intermediate frames.
+    jn = jn[jn["l_shipmode"].isin([var1, var2])]
+    jn = jn[jn["l_commitdate"] < jn["l_receiptdate"]]
+    jn = jn[jn["l_shipdate"] < jn["l_commitdate"]]
+    jn = jn[(jn["l_receiptdate"] >= var3) & (jn["l_receiptdate"] < var4)]
+
+    is_high = jn["o_orderpriority"].isin(["1-URGENT", "2-HIGH"])
+    jn["high_line_count"] = is_high.astype("int64")
+    jn["low_line_count"] = (~is_high).astype("int64")
+
+    gb = jn.groupby("l_shipmode", as_index=False)
+    agg = gb.agg(
+        high_line_count=pd.NamedAgg(column="high_line_count", aggfunc="sum"),
+        low_line_count=pd.NamedAgg(column="low_line_count", aggfunc="sum"),
+    )
+    return agg.sort_values("l_shipmode")
+
+
+def _q14_native(lineitem_ds: pd.DataFrame, part_ds: pd.DataFrame) -> pd.DataFrame:
+    var1 = datetime(1995, 9, 1)
+    var2 = datetime(1995, 10, 1)
+
+    jn = lineitem_ds.merge(part_ds, left_on="l_partkey", right_on="p_partkey")
+    jn = jn[(jn["l_shipdate"] >= var1) & (jn["l_shipdate"] < var2)]
+
+    revenue = jn["l_extendedprice"] * (1 - jn["l_discount"])
+    promo_revenue = revenue.where(jn["p_type"].str.startswith("PROMO"), 0)
+    return pd.DataFrame({"promo_revenue": [100.00 * promo_revenue.sum() / revenue.sum()]})
+
+
 CASES: list[tuple[str, Callable[..., object], Callable[..., object], tuple[str, ...]]] = [
     ("q1", _q1_native, _q1.query, ("lineitem",)),
     ("q2", _q2_native, _q2.query, ("region", "nation", "supplier", "part", "partsupp")),
     ("q3", _q3_native, _q3.query, ("customer", "lineitem", "orders")),
     ("q4", _q4_native, _q4.query, ("lineitem", "orders")),
+    (
+        "q5",
+        _q5_native,
+        _q5.query,
+        ("region", "nation", "customer", "lineitem", "orders", "supplier"),
+    ),
+    ("q6", _q6_native, _q6.query, ("lineitem",)),
+    (
+        "q9",
+        _q9_native,
+        _q9.query,
+        ("part", "partsupp", "nation", "lineitem", "orders", "supplier"),
+    ),
+    ("q10", _q10_native, _q10.query, ("customer", "nation", "lineitem", "orders")),
+    ("q12", _q12_native, _q12.query, ("lineitem", "orders")),
+    ("q14", _q14_native, _q14.query, ("lineitem", "part")),
 ]
 
 
