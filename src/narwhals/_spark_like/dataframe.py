@@ -548,6 +548,7 @@ class SparkLikeLazyFrame(
         if not order_by:
             msg = "Must pass `order_by` to `with_row_index` for PySpark-like"
             raise TypeError(msg)
+        check_column_names_are_unique([name, *self.columns])
         row_index_expr = (
             self._F.row_number().over(
                 self._Window.partitionBy(self._F.lit(1)).orderBy(

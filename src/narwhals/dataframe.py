@@ -204,6 +204,8 @@ class BaseFrame(Generic[_FrameT]):
 
     def drop_nulls(self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
+        if subset is not None and not subset:
+            return self
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
 
     @property
