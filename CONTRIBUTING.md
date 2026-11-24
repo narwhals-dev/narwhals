@@ -271,11 +271,9 @@ When you have resolved your issue, [open a pull request](https://docs.github.com
 Please adhere to the following guidelines:
 
 1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
-
    **TLDR**: The PR title should start with any of these abbreviations:
    `build`, `chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`.
    Add a `!`at the end, if it is a breaking change. For example `refactor!`.
-
 2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
 3. Please follow the instructions in the pull request form and submit.
 
@@ -310,47 +308,34 @@ In general we assume that dataframes are used to store and process columnar data
 ### Backend-specific considerations
 
 - pandas:
-
   - Don't use `apply` or `map`. The only place we currently use `apply` is in `group_by` for operations
     which the pandas API just doesn't support, and even then, it's accompanied by a big warning.
   - Don't use inplace methods, unless you're creating a new object and are sure it's safe to modify
     it. In particular, you should never ever modify the user's input data.
   - Please remember that `assign`, `drop`, `reset_index`, and `rename`, though seemingly harmless, make
     full copies of the input data.
-
     - Instead of `assign`, prefer using `with_columns` at the compliant level.
     - For `drop` and `reset_index`, use `inplace=True`, so long as you're only modifying a new object which
       you created. Again, you should never modify user input. This may need updating if/when it's
       deprecated/removed, but please keep it for older pandas versions
       https://github.com/pandas-dev/pandas/pull/51466/files.
     - Instead of `rename`, prefer `alias` at the compliant level.
-
   - pandas supports any hashable object as a column name, whereas other libraries tend to only support
     strings. We tend to just type `: str` in places which accept column names, with the understanding
     that for pandas, other data types will silently work.
-
 - Polars:
-
   - Never use `map_elements`.
-
 - DuckDB / PySpark / anything lazy-only:
-
   - Never assume that your data is ordered in any pre-defined way.
   - Never materialise your data (only exception: `collect`).
   - Avoid calling the schema / column names unnecessarily.
-
-- DuckDB:
-
-  In addition to the above:
-
+- DuckDB, in addition to the above:
   - Use the Python API as much as possible, only falling
     back to SQL as the last resort for operations not yet supported
     in their Python API (e.g. `over`).
   - Use standard SQL constructs where possible instead of non-standard
     ones such as `GROUP BY ALL` or `EXCLUDE`.
-
 - Dask:
-
   - Dask support is moving to the `narwhals-dask` plugin in `packages/narwhals-dask`.
     The built-in `src/narwhals/_dask` is frozen and only kept as a fallback during the
     deprecation period: make fixes and new features in the plugin only.
@@ -368,7 +353,6 @@ Note: While we're not currently totally consistent with these patterns, any effo
        request.applymarker(pytest.mark.xfail)
        # Test implementation for planned feature
    ```
-
 2. `pytest.mark.skipif`: Used when there's a condition under which the test cannot run (e.g., unsupported pandas versions).
 
    ```python
@@ -380,7 +364,6 @@ Note: While we're not currently totally consistent with these patterns, any effo
    def test_version_dependent():
        # Test implementation
    ```
-
 3. `pytest.raises`: Used for testing that code raises expected exceptions.
 
    ```python
@@ -442,19 +425,14 @@ The aim is to keep maintainer time focused on review quality, not on triaging ma
    has a dedicated field that must be flagged to disclose whether or not the changes are
    AI assisted and which tools and models were used to achieve that.
    Disclosure is for transparency; it does not affect whether your PR is accepted.
-
 2. **You are responsible for every line you submit, regardless of how it was produced**:
    the disclosure does not transfer responsibility to the tool.
    Before opening a PR, read through your diff and make sure you can explain and defend each change in review.
-
 3. **Engage with review feedback**: we reserve the right to close, without extended discussion,
    pull requests where the author does not engage with reviewer comments.
-
    **This applies whether or not AI was used.**
-
 4. **First-time contributors** are asked to keep at most one open pull request at a time, so
    reviewers can give it proper attention before you open the next one.
-
 5. When interacting in issues, pull requests, discussion, discord, etc., **do not use LLMs to speak for you**,
    except for translation or grammar edits. Human-to-human communication is foundational to open source communities.
 
