@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from importlib.util import find_spec
 
 import pytest
 
@@ -12,6 +13,8 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 TOLERANCE = 2.0
 N = 1000
 data = {"a": list(range(N)), "z": [float(i) for i in range(N)]}
+# The built-in Dask backend is frozen, so only `narwhals-dask` has `approx_quantile`.
+BUILTIN_DASK = find_spec("narwhals_dask") is None
 
 
 @pytest.mark.parametrize(("q", "expected"), [(0.1, 99.9), (0.5, 499.5), (0.9, 899.1)])
@@ -130,7 +133,11 @@ def test_approx_quantile_group_by_key_named_like_native_output(
     assert_equal_data(result, {"a_tdigest": [1, 2], "a": [2.0, 4.0]})
 
 
-def test_approx_quantile_over(constructor: Constructor) -> None:
+def test_approx_quantile_over(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor) and BUILTIN_DASK:
+        request.applymarker(pytest.mark.xfail(reason="needs narwhals-dask"))
     df = nw.from_native(
         constructor({"i": [0, 1, 2], "g": [1, 1, 2], "a": [2.0, 2.0, 4.0]})
     ).lazy()
@@ -148,6 +155,8 @@ def test_approx_quantile_dask_multiple_partitions_raises(
 ) -> None:
     if "dask_lazy_p2" not in str(constructor):
         pytest.skip()
+    if BUILTIN_DASK:
+        pytest.skip(reason="needs narwhals-dask")
     df = nw.from_native(constructor(data)).lazy()
     msg = re.escape(
         "`Expr.approx_quantile` is not supported for Dask backend with multiple partitions."

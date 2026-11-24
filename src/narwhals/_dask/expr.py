@@ -481,17 +481,6 @@ class DaskExpr(
     def len(self) -> Self:
         return self._with_callable(lambda expr: expr.size.to_series())
 
-    def approx_quantile(self, quantile: float) -> Self:
-        def func(expr: dx.Series) -> dx.Series:
-            if expr.npartitions > 1:
-                msg = "`Expr.approx_quantile` is not supported for Dask backend with multiple partitions."
-                raise NotImplementedError(msg)
-            return expr.quantile(
-                q=quantile, method="dask"
-            ).to_series()  # pragma: no cover
-
-        return self._with_callable(func)
-
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
@@ -750,6 +739,7 @@ class DaskExpr(
         return DaskExprListNamespace(self)
 
     any_value = not_implemented()
+    approx_quantile = not_implemented()
     filter = not_implemented(
         hint=length_changing_hint(
             instead_of="lf.select(nw.col('a').filter(nw.col('b') > 0))",

@@ -60,6 +60,7 @@ NarwhalsAggregation: TypeAlias = Literal[
     "n_unique",
     "count",
     "quantile",
+    "approx_quantile",
     "all",
     "any",
     "first",
@@ -300,6 +301,7 @@ PANDAS_REMAP_AGGS: Mapping[NarwhalsAggregation, str] = {
     "n_unique": "nunique",
     "count": "count",
     "quantile": "quantile",
+    "approx_quantile": "quantile",
     "all": "all",
     "any": "any",
     "first": "nth",
@@ -402,8 +404,9 @@ def window_kwargs_to_pandas_equivalent(
         return {"dropna": False}
     if function_name in {"std", "var"}:
         return {"ddof": kwargs["ddof"]}
-    if function_name == "quantile":
-        return {"q": kwargs["quantile"], "interpolation": kwargs["interpolation"]}
+    if function_name in {"quantile", "approx_quantile"}:
+        interpolation = kwargs.get("interpolation", "linear")
+        return {"q": kwargs["quantile"], "interpolation": interpolation}
     return {}
 
 
