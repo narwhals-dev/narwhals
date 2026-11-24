@@ -60,7 +60,10 @@ Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1,
 
 ## Limitations
 
-Parquet isn't supported: read files with pyarrow and convert them,
+`pz.read_parquet` uses a small pure-Python reader. It handles flat (non-nested) columns, the
+`PLAIN`, dictionary and boolean `RLE` encodings, and uncompressed, snappy, gzip and zstd
+compression. Zstd, Polars' default, needs Python 3.14+ or `pip install pizzlies[zstd]`. Other
+files raise `NotImplementedError`: read them with pyarrow and convert them,
 `pz.from_arrow(pq.read_table(path))`. `Map` dtypes aren't supported, and dtypes are inferred
 from the Python values, so e.g. integers are always `Int64`. Like Python, and unlike Polars,
 `pizzlies` ignores `fold` when comparing time-zone aware datetimes, so the two occurrences

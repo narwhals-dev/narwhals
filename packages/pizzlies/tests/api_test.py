@@ -20,7 +20,9 @@ OWN_API = {
     "from_numpy",
     "new_series",
     "read_csv",
+    "read_parquet",
     "scan_csv",
+    "scan_parquet",
 }
 
 
