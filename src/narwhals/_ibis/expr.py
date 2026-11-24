@@ -7,6 +7,7 @@ import ibis
 
 from narwhals._ibis.expr_dt import IbisExprDateTimeNamespace
 from narwhals._ibis.expr_list import IbisExprListNamespace
+from narwhals._ibis.expr_map import IbisExprMapNamespace
 from narwhals._ibis.expr_str import IbisExprStringNamespace
 from narwhals._ibis.expr_struct import IbisExprStructNamespace
 from narwhals._ibis.utils import (
@@ -426,6 +427,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     @property
     def list(self) -> IbisExprListNamespace:
         return IbisExprListNamespace(self)
+
+    @property
+    def map(self) -> IbisExprMapNamespace:
+        return IbisExprMapNamespace(self)
 
     @property
     def struct(self) -> IbisExprStructNamespace:

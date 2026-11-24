@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+import statistics
+from itertools import chain
+from typing import TYPE_CHECKING, Any
+
+from narwhals.compliant import ListNamespace
+from narwhals.exceptions import InvalidOperationError
+from pizzlies._plugin._vendored import SeriesNamespace
+from pizzlies._plugin.utils import infer_dtype, non_null, sort_with_nulls
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    from narwhals.typing import NonNestedLiteral
+    from pizzlies._plugin.series import DictSeries
+
+
+def _unique(values: Sequence[Any]) -> list[Any]:
+    try:
+        return list(dict.fromkeys(values))
+    except TypeError:
+        # Unhashable inner values, e.g. nested lists.
+        unique: list[Any] = []
+        for value in values:
+            if value not in unique:
+                unique.append(value)
+        return unique
+
+
+class DictSeriesListNamespace(SeriesNamespace["DictSeries"], ListNamespace["DictSeries"]):
+    def _unary(self, fn: Callable[[Sequence[Any]], Any]) -> DictSeries:
+        """Apply `fn` to each inner list, propagating outer nulls."""
+        return self.with_native(
+            [None if values is None else fn(values) for values in self.native]
+        )
+
+    def len(self) -> DictSeries:
+        return self._unary(len)
+
+    def get(self, index: int) -> DictSeries:
+        return self._unary(lambda values: values[index] if index < len(values) else None)
+
+    def contains(self, item: NonNestedLiteral) -> DictSeries:
+        if item is not None:
+            self._ensure_comparable(item)
+        return self._unary(lambda values: item in values)
+
+    def _ensure_comparable(self, item: NonNestedLiteral) -> None:
+        # Like Polars, reject an item that can't match the inner dtype (e.g. `True` in
+        # a list of ints, or a tz-aware datetime in a naive one). Without inner values
+        # the dtype is unknown, so nothing can be checked.
+        version = self.compliant._version
+        inner = infer_dtype(chain.from_iterable(filter(None, self.native)), version)
+        item_dtype = infer_dtype([item], version)
+        if (
+            isinstance(inner, version.dtypes.Unknown)
+            or inner == item_dtype
+            or (inner.is_numeric() and item_dtype.is_numeric())
+        ):
+            return
+        msg = f"Unable to compare item of type {type(item)} with list of inner type {inner}."
+        raise InvalidOperationError(msg)
+
+    def unique(self, *, maintain_order: bool) -> DictSeries:
+        # First-appearance order satisfies both settings.
+        return self._unary(_unique)
+
+    def min(self) -> DictSeries:
+        return self._unary(
+            lambda values: min(vals) if (vals := non_null(values)) else None
+        )
+
+    def max(self) -> DictSeries:
+        return self._unary(
+            lambda values: max(vals) if (vals := non_null(values)) else None
+        )
+
+    def mean(self) -> DictSeries:
+        return self._unary(
+            lambda values: sum(vals) / len(vals) if (vals := non_null(values)) else None
+        )
+
+    def median(self) -> DictSeries:
+        return self._unary(
+            lambda values: statistics.median(vals) if (vals := non_null(values)) else None
+        )
+
+    def sum(self) -> DictSeries:
+        return self._unary(lambda values: sum(non_null(values)))
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> DictSeries:
+        return self._unary(
+            lambda values: sort_with_nulls(
+                values, descending=descending, nulls_last=nulls_last
+            )
+        )

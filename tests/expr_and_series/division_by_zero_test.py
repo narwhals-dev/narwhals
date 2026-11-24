@@ -171,7 +171,7 @@ def test_floordiv_by_mixed_divisor(
         floordiv=nw.col("a") // nw.col("b"),
         rfloordiv=7 // nw.col("b"),
         broadcast_dividend=nw.col("a").max() // nw.col("b"),
-        scalar_zero=nw.col("a") // 0,
+        scalar_zero=nw.col("a") // 0,  # pyrefly: ignore[division-by-zero]
     ).sort("i")
     expected = {
         "i": [0, 1, 2, 3],
@@ -211,5 +211,8 @@ def test_floordiv_by_zero_keeps_dtype(
 
     df = nw.from_native(constructor({"a": [6.0, 7.0]}))
     a = nw.col("a").cast(nw.Float32)
-    schema = df.select(by_zero=a // 0, by_two=a // 2).collect_schema()
+    schema = df.select(
+        by_zero=a // 0,  # pyrefly: ignore[division-by-zero]
+        by_two=a // 2,
+    ).collect_schema()
     assert schema["by_zero"] == schema["by_two"]

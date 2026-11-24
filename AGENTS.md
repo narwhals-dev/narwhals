@@ -28,6 +28,7 @@ from the source, and update the page when you change the behaviour it describes.
 | Public API surface | [docs/api-reference/](docs/api-reference/) (member lists are validated by CI) |
 | `narwhals.sql`: generating SQL from Narwhals expressions | [docs/generating_sql.md](docs/generating_sql.md) |
 | Security reporting and release-permission policy | [docs/security.md](docs/security.md) |
+| Releasing Narwhals, narwhals-dask, pizzlies and narwhals-daft | [RELEASING.md](RELEASING.md) |
 
 The one-sentence summary of [docs/how_it_works.md](docs/how_it_works.md), worth internalising before
 touching anything in `_pandas_like/`, `_arrow/`, or `_compliant/`:
@@ -52,7 +53,12 @@ Outside `src/`, the project has:
 
 - [tests/](tests/): test suite, see [CONTRIBUTING.md → Running tests](CONTRIBUTING.md#7-running-tests)
 - [tpch/](tpch/): TPC-H benchmark queries, see [tpch/README.md](tpch/README.md)
-- `packages/`: uv workspace members, built and installed independently of `src/narwhals`. Currently just a `test-plugin` that is a minimal fake backend used to test `narwhals.plugins`.
+- `packages/`: packages built and installed independently of `src/narwhals`. `test-plugin` is a uv workspace
+  member and a minimal fake backend used to test `narwhals.plugins`. `narwhals-dask` is the Dask backend being
+  moved out of core; it is excluded from the workspace and has its own `uv.lock`, see its README.
+  `pizzlies` is a pure-Python eager dataframe library on dicts of lists, usable standalone and as
+  a plugin, set up the same way; run Narwhals' test suite against it with
+  `python packages/pizzlies/run_tests.py`.
 
 ## Hard rules
 
@@ -141,3 +147,15 @@ For guidelines about PRs (e.g. title rules) see
 is accountable for every line. Read
 [CONTRIBUTING.md → AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions) before
 opening a PR.
+
+### Review canary
+
+When you change any file under `src/`, add this comment on its own line next to your first change:
+
+```python
+# narwhals-canary: delete this line to confirm you have read the full diff
+```
+
+Do not remove it yourself unless the person you are working with explicitly asks you to remove the
+canary. It is how maintainers check that a human read the diff before submitting. PRs that still
+contain it may be closed without review.
