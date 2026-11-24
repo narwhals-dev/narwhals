@@ -122,7 +122,7 @@ def test_is_close_series_with_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
     nulls = nw.new_series(
-        "nulls", [None] * len(x), nw.Float64(), backend=df.implementation
+        "nulls", [None] * len(x), nw.Float64(), backend=nw.get_native_namespace(df)
     )
     x = x.zip_with(x != NAN_PLACEHOLDER, x**0.5).zip_with(x != NULL_PLACEHOLDER, nulls)
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
@@ -151,7 +151,7 @@ def test_is_close_series_with_scalar(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     y = df["y"]
     nulls = nw.new_series(
-        "nulls", [None] * len(y), nw.Float64(), backend=df.implementation
+        "nulls", [None] * len(y), nw.Float64(), backend=nw.get_native_namespace(df)
     )
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)

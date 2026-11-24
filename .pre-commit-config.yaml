@@ -1,7 +1,7 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.17.3'
+  rev: 'v0.17.4'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -30,7 +30,7 @@ repos:
       args: [--no-progress, --fix]
 - repo: https://github.com/adhtruong/mirrors-typos
   # Use mirror to avoid autoupdate issue: https://github.com/crate-ci/typos/issues/390
-  rev: 'v1.51.1'
+  rev: 'v1.52.0'
   hooks:
     - id: typos
 -   repo: https://github.com/pycqa/flake8
@@ -51,7 +51,8 @@ repos:
                 # Internal use only, less urgent
                 ^utils/.*|
                 # Soft-deprecated, so less crucial to document so carefully
-                src/narwhals/stable/v1/.*
+                src/narwhals/stable/v1/.*|
+                packages/.*
             )$
         # Keep in sync with `flake8-typing-imports` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
@@ -84,6 +85,12 @@ repos:
       entry: uv lock --directory packages/narwhals-dask
       language: system
       files: ^(pyproject\.toml|packages/narwhals-dask/(pyproject\.toml|uv\.lock))$
+    - id: uv-lock-pizzlies
+      name: uv-lock (pizzlies)
+      pass_filenames: false
+      entry: uv lock --directory packages/pizzlies
+      language: system
+      files: ^(pyproject\.toml|packages/pizzlies/(pyproject\.toml|uv\.lock))$
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false

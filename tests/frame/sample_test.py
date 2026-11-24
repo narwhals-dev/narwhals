@@ -65,13 +65,16 @@ def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
     assert result_expr == expected_expr
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*all arguments of to_dict except for the argument:FutureWarning"
+)
 def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     size, n = 100, 10
     df = nw.from_native(constructor_eager({"a": range(size)}), eager_only=True)
 
-    r1 = nw.to_native(df.sample(n=n, seed=123))
-    r2 = nw.to_native(df.sample(n=n, seed=123))
-    r3 = nw.to_native(df.sample(n=n, seed=42))
+    r1 = df.sample(n=n, seed=123).to_dict(as_series=False)
+    r2 = df.sample(n=n, seed=123).to_dict(as_series=False)
+    r3 = df.sample(n=n, seed=42).to_dict(as_series=False)
 
-    assert r1.equals(r2)  # type: ignore[attr-defined]
-    assert not r1.equals(r3)  # type: ignore[attr-defined]
+    assert r1 == r2
+    assert r1 != r3

@@ -44,6 +44,7 @@ from narwhals._utils import (
     is_sequence_like,
     is_sequence_of,
     is_slice_none,
+    native_repr,
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
@@ -203,6 +204,8 @@ class BaseFrame(Generic[_FrameT]):
 
     def drop_nulls(self, subset: str | list[str] | None) -> Self:
         subset = [subset] if isinstance(subset, str) else subset
+        if subset is not None and not subset:
+            return self
         return self._with_compliant(self._compliant_frame.drop_nulls(subset=subset))
 
     @property
@@ -804,7 +807,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return self._compliant_frame.__array__(dtype, copy=copy)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals DataFrame", self.to_native().__repr__())
+        return generate_repr("Narwhals DataFrame", native_repr(self._compliant_frame))
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:
         """Export a DataFrame via the Arrow PyCapsule Interface.
@@ -2494,7 +2497,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             raise AssertionError(msg)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals LazyFrame", self.to_native().__repr__())
+        return generate_repr("Narwhals LazyFrame", native_repr(self._compliant_frame))
 
     def __getitem__(self, item: str | slice) -> NoReturn:
         msg = "Slicing is not supported on LazyFrame"

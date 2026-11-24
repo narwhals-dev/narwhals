@@ -117,4 +117,9 @@ print(duckdb.sql("from df select a, a == a as a_equals_a"))
 Furthermore, Polars [excludes NaN values in `max`](https://github.com/pola-rs/polars/issues/23635)
 whereas DuckDB treats them as larger than any other floating-point value.
 
+Where NaN ends up when ordering values differs too: Polars and DuckDB sort it above every
+other floating-point value, PyArrow puts it next to the nulls, and classic pandas treats it as
+null. So the position of NaN in `sort`, `top_k` and `over(order_by=...)` depends on the
+backend.
+
 For all these reasons it bears reiterating that our recommendation is to only handle null values in applications, and leave NaN values as an edge case resulting from users having performed undefined mathematical operations.

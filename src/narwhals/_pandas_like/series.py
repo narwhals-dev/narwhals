@@ -38,7 +38,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
@@ -320,17 +320,34 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> Self | None:
         # !NOTE: See conversation at https://github.com/narwhals-dev/narwhals/pull/3444#discussion_r2787546529
         # to understand why signature differs from `CompliantSeries`
+        import numpy as np  # ignore-banned-import
+
         impl = self._implementation
         native_series, indices_native = self.native, indices.native
+        if indices_native.isna().any():
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
         target_index = native_series.index[indices_native]
         values_native = values.native
+        values_dtype, target_dtype = values_native.dtype, native_series.dtype
+        if (
+            values_dtype != target_dtype
+            and isinstance(values_dtype, np.dtype)
+            and isinstance(target_dtype, np.dtype)
+            and values_dtype.kind in {"i", "u"}
+            and target_dtype.kind in {"i", "u"}
+        ):
+            # pandas 3 refuses to set e.g. int64 values into an int32 column (pandas 2
+            # upcasts the column instead), so cast them, but only when they fit:
+            # `astype` to a narrower integer wraps around instead of raising.
+            info = np.iinfo(target_dtype)
+            if info.min <= values_native.min() and values_native.max() <= info.max:
+                values_native = values_native.astype(target_dtype)
         if len(values_native) == 1 and len(target_index) > 1:
             values_native = values_native.repeat(len(target_index))
         if len(values_native) == len(target_index):
             # Pyarrow-backed dtypes keep the *first* value for a repeated position on
             # `iloc` assignment, whereas Polars (and NumPy) keep the last one.
-            import numpy as np  # ignore-banned-import
-
             positions = indices_native.to_numpy().astype(np.intp) % len(native_series)
             _, last_from_end = np.unique(positions[::-1], return_index=True)
             if len(last_from_end) < len(positions):

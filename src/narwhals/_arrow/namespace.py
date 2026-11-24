@@ -17,6 +17,7 @@ from narwhals._arrow.utils import (
     build_list_array,
     cast_to_comparable_string_types,
     chunked_array,
+    lit,
 )
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
@@ -164,7 +165,11 @@ class ArrowNamespace(
             expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
             series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
             non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
-            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
+            denominator = reduce(operator.add, non_na)
+            denominator = denominator._with_native(
+                pc.if_else(pc.equal(denominator.native, lit(0)), None, denominator.native)
+            )
+            return [reduce(operator.add, series) / denominator]
 
         return self._expr._from_callable(
             func=func,

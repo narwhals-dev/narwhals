@@ -88,9 +88,19 @@ See [Expression Metadata](how_it_works.md#expression-metadata) for what each pie
     `_metadata` is plugin-facing but **not** covered by Narwhals' [backwards-compatibility
     policy](backcompat.md): it may change between minor releases. Plugins which use it should
     set a tight lower bound on `narwhals` and test against the minimum version they support.
+    They should also test against Narwhals' `main` branch, and release a new plugin version
+    when `_metadata` changes, as a newer Narwhals release may break an already-released plugin.
 
 Other private modules (e.g. `narwhals._utils`) are not plugin-facing. If you need something
 from them, vendor it into your plugin.
+
+### Custom repr
+
+The repr of a Narwhals `DataFrame`, `LazyFrame` or `Series` wraps the repr of its native object.
+If that isn't informative (e.g. if the native object is a plain `dict`), a compliant dataframe,
+lazyframe or series can define a `native_repr(self) -> str` method, whose result is used instead.
+Every line of it must fit within the terminal width minus 2 (for the box borders), otherwise
+Narwhals shows a placeholder asking the user to call `.to_native()` instead.
 
 ## Supporting `backend=...` in Narwhals functions
 

@@ -40,6 +40,13 @@ PACKAGES = {
             "narwhals-dask-v",
             "release: Bump narwhals-dask version to",
         ),
+        Package(
+            "pizzlies",
+            Path("packages") / "pizzlies",
+            "bump-pizzlies",
+            "pizzlies-v",
+            "release: Bump pizzlies version to",
+        ),
     )
 }
 

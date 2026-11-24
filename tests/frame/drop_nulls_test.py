@@ -20,6 +20,7 @@ def test_drop_nulls(constructor: Constructor) -> None:
         ("alpha", {"alpha": [1, 2.0, 4.0], "beta gamma": [None, 3.0, 5.0]}),
         (["alpha"], {"alpha": [1, 2.0, 4.0], "beta gamma": [None, 3.0, 5.0]}),
         (["alpha", "beta gamma"], {"alpha": [2.0, 4.0], "beta gamma": [3.0, 5.0]}),
+        ([], data),
     ],
 )
 def test_drop_nulls_subset(

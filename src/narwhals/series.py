@@ -17,6 +17,7 @@ from narwhals._utils import (
     generate_repr,
     is_compliant_series,
     is_index_selector,
+    native_repr,
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
@@ -579,7 +580,7 @@ class Series(Generic[IntoSeriesT]):
         return function(self, *args, **kwargs)
 
     def __repr__(self) -> str:  # pragma: no cover
-        return generate_repr("Narwhals Series", self.to_native().__repr__())
+        return generate_repr("Narwhals Series", native_repr(self._compliant_series))
 
     def __len__(self) -> int:
         return len(self._compliant_series)
