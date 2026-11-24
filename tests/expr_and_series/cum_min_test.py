@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 from packaging.version import Version as PkgVersion
 
@@ -13,6 +15,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    uses_pyarrow_backend,
 )
 
 data = {"a": [3, 1, None, 2]}
@@ -213,3 +216,40 @@ def test_cum_min_series(
         cum_min=df["a"].cum_min(), reverse_cum_min=df["a"].cum_min(reverse=True)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected_cum_min", "expected_reverse_cum_min"),
+    [
+        ([float("inf")], [float("inf")], [float("inf")]),
+        ([float("inf"), 3.0, 4.0], [float("inf"), 3.0, 3.0], [3.0, 3.0, 4.0]),
+        ([float("inf"), None, 3.0], [float("inf"), None, 3.0], [3.0, None, 3.0]),
+    ],
+)
+@pytest.mark.parametrize("reverse", [True, False])
+def test_cum_min_infinite_floats(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    values: list[float | None],
+    expected_cum_min: list[float | None],
+    expected_reverse_cum_min: list[float | None],
+    *,
+    reverse: bool,
+) -> None:
+    if uses_pyarrow_backend(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
+        # pandas and Modin call the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
+        pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.31"):
+        # Polars<1.31 seeds the cumulative kernel with the largest finite value, so a
+        # leading (in accumulation order) infinity is replaced by it.
+        ordered = values[::-1] if reverse else values
+        if math.isinf(next(v for v in ordered if v is not None)):
+            request.applymarker(
+                pytest.mark.xfail(reason="fixed upstream in Polars 1.31", strict=True)
+            )
+
+    df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
+    result = df.select(nw.col("a").cum_min(reverse=reverse))
+
+    expected = expected_reverse_cum_min if reverse else expected_cum_min
+    assert_equal_data(result, {"a": expected})
