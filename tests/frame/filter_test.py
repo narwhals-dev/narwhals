@@ -159,7 +159,7 @@ def test_filter_with_predicates_and_constraints(
     assert_equal_data(result, expected_mixed)
 
     result = df.filter(
-        mask, nw.Series.from_iterable("mask", mask_2, backend=df.implementation)
+        mask, nw.Series.from_iterable("mask", mask_2, backend=nw.get_native_namespace(df))
     )
     assert_equal_data(result, expected_mixed)
 
