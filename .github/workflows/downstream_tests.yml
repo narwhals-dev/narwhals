@@ -99,10 +99,6 @@ jobs:
         run: |
           cd marimo
           uv add ../ --editable
-          # Temporary pins to get CI green: marimo is not yet compatible with DuckDB 2.0
-          # (`rel.fetchone()` was removed) nor with bokeh 3.10 (`from_panel.py` imports
-          # `curstate` from `bokeh.io.notebook`, which no longer exposes it).
-          uv add --group test-optional "duckdb<2" "bokeh<3.10"
       - name: show-deps
         run: |
           cd marimo
@@ -158,8 +154,6 @@ jobs:
       - name: install-scikit-lego-dev
         run: |
           cd scikit-lego
-          # Temporary pin to get CI green https://github.com/koaning/scikit-lego/issues/818.
-          uv pip install "pandas<3"
           uv pip install -e ".[test]"
       - name: install-narwhals-dev
         run: |
@@ -218,6 +212,10 @@ jobs:
           # defined as instance methods, which pytest-playwright 0.10.0's fallback
           # `base_url` is, and py-shiny turns that warning into a setup error.
           uv pip install "pytest<9.2"
+          # Temporary pin to get CI green: pyrefly 1.5.0 reports py-shiny's
+          # `# pyrefly: ignore[bad-return]` comments as unused. Remove once
+          # https://github.com/posit-dev/py-shiny/pull/2617 is merged.
+          uv pip install "pyrefly<1.5"
       - name: show-deps
         env:
           UV_SYSTEM_PYTHON: "1"
@@ -411,9 +409,7 @@ jobs:
       - name: install-deps
         run: |
           cd hierarchicalforecast
-          # Temporary pin to get CI green: pytest-benchmark 5.3.0 reads `Function._nodeid`,
-          # which pytest 9.2.0 removed.
-          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" "pytest<9.2" pytest-benchmark pytest-cov
+          uv pip install datasetsforecast "statsforecast>=1.0.0" scipy "polars[numpy]<=1.32.0" pytest pytest-benchmark pytest-cov
           uv pip install .
       - name: install-narwhals-dev
         run: |
@@ -460,8 +456,6 @@ jobs:
       - name: install-formulaic-dev
         run: |
           cd formulaic
-          # Temporary pin until it's addressed upstream.
-          hatch run uv pip install "pandas<3"
           hatch run uv pip install -e ".[arrow,calculus]"
       - name: install-narwhals-dev
         run: |
