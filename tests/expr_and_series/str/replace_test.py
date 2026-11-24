@@ -322,8 +322,13 @@ def test_str_replace_null_value_series(
     assert_equal_data({"a": result_series}, {"a": ["aXc", "def"]})
 
 
+@pytest.mark.parametrize("n", [1, -1])
+@pytest.mark.parametrize("literal", [True, False])
 def test_str_replace_null_value_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    n: int,
+    literal: bool,  # noqa: FBT001
 ) -> None:
     if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
@@ -340,7 +345,7 @@ def test_str_replace_null_value_expr(
         request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
     df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
     result_df = df.select(
-        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=1, literal=True)
+        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=n, literal=literal)
     )
     assert_equal_data(result_df, {"a": ["aXc", "def"]})
 
