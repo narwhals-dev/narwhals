@@ -242,8 +242,9 @@ def test_cum_max_non_positive_floats(
             )
 
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
-    result = df.select(nw.col("a").cast(dtype).cum_max(reverse=reverse))
+    casted = nw.col("a").cast(dtype)
+    result = df.select(casted.cum_max(reverse=reverse))
 
-    assert result.schema == {"a": dtype}
+    assert result.schema == df.select(casted).schema
     expected = expected_reverse_cum_max if reverse else expected_cum_max
     assert_equal_data(result, {"a": expected})
