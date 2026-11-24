@@ -71,9 +71,14 @@ def test_approx_quantile_out_of_bounds_raises(
         series.approx_quantile(q)
 
 
-def test_approx_quantile_keeps_datetime(constructor: Constructor) -> None:
-    if not any(x in str(constructor) for x in ("polars", "duckdb")):
-        pytest.skip()
+def test_approx_quantile_keeps_datetime(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "ibis")):
+        reason = "no approximate quantile for datetimes"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    if "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="single partition only"))
     values = [datetime(2020, 1, 1), datetime(2021, 1, 1), datetime(2022, 1, 1)]
     df = nw.from_native(constructor({"a": values})).lazy()
     result = df.select(nw.col("a").approx_quantile(0.5)).collect()
