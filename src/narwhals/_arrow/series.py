@@ -968,37 +968,28 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         dtypes = self._version.dtypes
         return (~self.is_null()).cast(dtypes.UInt32()).cum_sum(reverse=reverse)
 
-    def cum_min(self, *, reverse: bool) -> Self:
+    def _cum_min_max(
+        self, func: Callable[..., ChunkedArrayAny], inf: float, *, reverse: bool
+    ) -> Self:
         native = self.native
-        # PyArrow<26 seeds floats with the largest finite value instead of `+inf`:
+        # PyArrow<26 seeds float accumulators with finite values instead of `±inf`:
         # https://github.com/apache/arrow/issues/51194
         start = (
-            pa.scalar(float("inf"), native.type)
+            pa.scalar(inf, native.type)
             if BACKEND_VERSION < (26,) and pa.types.is_floating(native.type)
             else None
         )
-        result = (
-            pc.cumulative_min(native, start=start, skip_nulls=True)
-            if not reverse
-            else pc.cumulative_min(native[::-1], start=start, skip_nulls=True)[::-1]
-        )
-        return self._with_native(result)
+        if reverse:
+            return self._with_native(
+                func(native[::-1], start=start, skip_nulls=True)[::-1]
+            )
+        return self._with_native(func(native, start=start, skip_nulls=True))
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._cum_min_max(pc.cumulative_min, float("inf"), reverse=reverse)
 
     def cum_max(self, *, reverse: bool) -> Self:
-        native = self.native
-        # PyArrow<26 seeds floats with the smallest positive value instead of `-inf`:
-        # https://github.com/apache/arrow/issues/51194
-        start = (
-            pa.scalar(float("-inf"), native.type)
-            if BACKEND_VERSION < (26,) and pa.types.is_floating(native.type)
-            else None
-        )
-        result = (
-            pc.cumulative_max(native, start=start, skip_nulls=True)
-            if not reverse
-            else pc.cumulative_max(native[::-1], start=start, skip_nulls=True)[::-1]
-        )
-        return self._with_native(result)
+        return self._cum_min_max(pc.cumulative_max, float("-inf"), reverse=reverse)
 
     def cum_prod(self, *, reverse: bool) -> Self:
         result = (
