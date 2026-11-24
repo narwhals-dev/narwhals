@@ -533,6 +533,7 @@ class DictDataFrame(
             order = self._sorted_indices(order_by, descending=False, nulls_last=False)
             for rank, original in enumerate(order):
                 index_column[original] = rank
+        check_column_names_are_unique([name, *self.columns])
         return self._with_native({name: index_column, **self.native})
 
     # Conversions

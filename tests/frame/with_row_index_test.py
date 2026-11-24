@@ -115,3 +115,19 @@ def test_with_row_index_order_by_w_null(
     df = nw.from_native(constructor({"c": ["dog", "cat", None], "n": [1, 2, 3]}))
     result = df.with_row_index("i", order_by="c").sort("n").select("i", "n")
     assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})
+
+
+def test_with_row_index_existing_name(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with pytest.raises(nw.exceptions.DuplicateError):
+        df.with_row_index("xyz")
+
+
+def test_with_row_index_existing_name_order_by(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
+        pytest.skip()
+    df = nw.from_native(constructor(data))
+    with pytest.raises(nw.exceptions.DuplicateError):
+        df.with_row_index("xyz", order_by="abc").lazy().collect()

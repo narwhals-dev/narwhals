@@ -427,6 +427,7 @@ class IbisLazyFrame(
         if not order_by:
             msg = "Must pass `order_by` to `with_row_index` for Ibis"
             raise TypeError(msg)
+        check_column_names_are_unique([name, *self.columns])
         sort_cols = (
             list(IbisExpr._sort(*order_by, descending=False, nulls_last=False))
             if order_by
