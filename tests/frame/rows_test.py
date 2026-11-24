@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -41,6 +42,7 @@ def test_iter_rows(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = list(df.iter_rows(named=named))
     assert result == expected
+    assert list(df.iter_rows(named=named, buffer_size=2)) == expected
 
 
 @pytest.mark.filterwarnings(
@@ -183,25 +185,18 @@ def test_rows_pandas_nullable_dtypes() -> None:
         assert is_pd_na(b_missing)
 
 
-def test_rows_pandas_temporal_scalars() -> None:
-    # Regression coverage for datetime/timedelta values after replacing itertuples.
-    pd = pytest.importorskip("pandas")
-    native = pd.DataFrame(
-        {
-            "date": pd.to_datetime(["2026-01-01", "2026-01-02"]),
-            "duration": pd.to_timedelta(["1 day", "2 days"]),
-        }
-    )
-    df = nw.from_native(native, eager_only=True)
-
-    for named in (False, True):
-        for row_method in (df.rows, df.iter_rows):
-            result = list(row_method(named=named))
-            assert len(result) == 2
-            for i, row in enumerate(result):
-                date = row["date"] if named else row[0]
-                duration = row["duration"] if named else row[1]
-                assert isinstance(date, pd.Timestamp)
-                assert isinstance(duration, pd.Timedelta)
-                assert date == native["date"].iloc[i]
-                assert duration == native["duration"].iloc[i]
+def test_rows_temporal(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor_eager):
+        # cudf intentionally doesn't support itertuples / iter_rows
+        request.applymarker(pytest.mark.xfail)
+    data = {"date": [datetime(2026, 1, 1)], "duration": [timedelta(days=1)]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    unnamed = [*df.rows(named=False), *df.iter_rows(named=False)]
+    named = [*df.rows(named=True), *df.iter_rows(named=True)]
+    for date, duration in [*unnamed, *(tuple(row.values()) for row in named)]:
+        assert isinstance(date, datetime)
+        assert date == data["date"][0]
+        assert isinstance(duration, timedelta)
+        assert duration == data["duration"][0]
