@@ -28,14 +28,19 @@ if TYPE_CHECKING:
 def _unnest_tdigest(
     table: pa.Table, aggs: Sequence[tuple[str, Aggregation, AggregateOptions | None]]
 ) -> pa.Table:
-    """`tdigest` returns one list per group, with one value per `q`."""
+    """Unwrap `tdigest` output: one list per group, with one value per `q`."""
     names = {f"{name}_tdigest" for name, agg, _ in aggs if agg == "tdigest"}
-    for i, field in enumerate(table.schema):
-        # A group key can share the name, but PyArrow can't group by a list.
-        if field.name in names and pa.types.is_fixed_size_list(field.type):
-            values = pc.list_element(table.column(i), 0)
-            table = table.set_column(i, field.name, values)
-    return table
+    if not names:
+        return table
+    # A group key can share the name, but PyArrow can't group by a list.
+    # NOTE: one rebuild, because `set_column` in a loop is quadratic on wide tables.
+    columns = [
+        pc.list_element(column, 0)
+        if field.name in names and pa.types.is_fixed_size_list(field.type)
+        else column
+        for field, column in zip(table.schema, table.columns, strict=True)
+    ]
+    return pa.Table.from_arrays(columns, names=table.column_names)
 
 
 class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
