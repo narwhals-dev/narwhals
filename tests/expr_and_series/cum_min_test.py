@@ -239,9 +239,6 @@ def test_cum_min_infinite_floats(
     if uses_pyarrow_backend(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
         # pandas and Modin call the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
         pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.1"):
-        # pandas<2.1 has no Arrow cumulative kernels and raises `NotImplementedError`
-        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
     if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.31"):
         # Polars<1.31 seeds the cumulative kernel with the largest finite value, so a
         # leading (in accumulation order) infinity is replaced by it.
