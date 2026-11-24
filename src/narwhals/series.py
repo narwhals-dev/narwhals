@@ -2112,16 +2112,15 @@ class Series(Generic[IntoSeriesT]):
         Approximate quantiles trade accuracy for speed and memory use, so results
         can differ between backends and between runs.
 
-        Note:
-            - pandas-like backends, and Polars before version 2.0, have no approximate
-                method. They compute the exact quantile with linear interpolation.
-            - The result type follows the backend. For integer input, Polars returns
-                an integer, whereas pandas and PyArrow return a float.
-            - NaN values are not treated the same way by all backends. For example,
-                Polars counts them as values, whereas pandas and PyArrow ignore them.
-
         Arguments:
             quantile: Quantile between 0.0 and 1.0.
+
+        Note:
+            - pandas-like backends and Polars before 2.0 compute the exact quantile with
+                linear interpolation.
+            - The result type follows the backend: for integer input, Polars returns
+                an integer, whereas pandas and PyArrow return a float.
+            - Polars counts NaN as a value, whereas pandas and PyArrow ignore it.
 
         Examples:
             >>> import polars as pl

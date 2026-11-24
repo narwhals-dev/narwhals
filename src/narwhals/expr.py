@@ -1533,16 +1533,14 @@ class Expr:
             quantile: Quantile between 0.0 and 1.0.
 
         Note:
-            - pandas-like backends, and Polars before version 2.0, have no approximate
-                method. They compute the exact quantile with linear interpolation.
-                Ibis before version 9.4 also uses its exact quantile.
-            - Outside of `over`, Dask is limited to a single partition, the same as
-                `Expr.quantile`, because its approximate method can be very inaccurate
-                with multiple partitions.
-            - The result dtype follows the backend. For integer input, Polars and
-                DuckDB return integers, whereas pandas and PyArrow return floats.
-            - NaN values are not treated the same way by all backends. For example,
-                Polars counts them as values, whereas pandas and PyArrow ignore them.
+            - pandas-like backends and Polars before 2.0 compute the exact quantile with
+                linear interpolation. Ibis before 9.4 uses its exact quantile.
+            - Outside of `over`, Dask supports a single partition only, as in
+                `Expr.quantile`: its approximate method is very inaccurate across
+                partitions.
+            - The result dtype follows the backend: for integer input, Polars returns
+                integers and pandas returns floats, for example.
+            - Polars counts NaN as a value, whereas pandas and PyArrow ignore it.
 
         Examples:
             >>> import pandas as pd
