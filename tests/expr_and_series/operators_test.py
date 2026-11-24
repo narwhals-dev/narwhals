@@ -4,7 +4,13 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DASK_VERSION,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -131,8 +137,12 @@ def test_logic_operators_kleene_all_null(
     result = df.select("i", b=getattr(all_null, operator)(nw.col("b"))).sort("i")
     if any(x in str(constructor) for x in ("pandas_constructor", "modin_constructor")):
         # NumPy booleans can't hold null: the literal is cast to `False`, and the
-        # all-null column is `object` dtype, where any null operand gives `False`.
-        expected = expected_pandas if null == "literal" else [False, False, False]
+        # all-null column is `object` dtype. Before pandas 3.2, a null on the left
+        # of an `object` logical op gave `False` (pandas-dev/pandas#71998).
+        if null == "literal" or PANDAS_VERSION >= PkgVersion("3.2"):
+            expected = expected_pandas
+        else:
+            expected = [False, False, False]
     assert_equal_data(result.select("b"), {"b": expected})
 
 
