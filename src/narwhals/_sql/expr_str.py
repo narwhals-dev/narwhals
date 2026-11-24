@@ -57,7 +57,6 @@ class SQLExprStringNamespace(
         options: list[Any] = []
         if not literal and self.compliant._implementation.is_duckdb():
             options = [self._lit("g")]
-        # narwhals-canary: delete this line to confirm you have read the full diff
         # A null `value` leaves the string unchanged (as in Polars). Falling back to the
         # match itself does that without repeating `expr`, which grows exponentially
         # when calls are chained.
