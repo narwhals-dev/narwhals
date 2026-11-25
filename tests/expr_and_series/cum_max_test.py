@@ -290,8 +290,7 @@ def test_cum_max_leading_nan(
         pytest.skip(reason="pandas treats NaN as missing")
     if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.31"):
         ordered = [v for v in (values[::-1] if reverse else values) if v is not None]
-        first_non_nan = next((v for v in ordered if not math.isnan(v)), None)
-        if first_non_nan is not None and math.isinf(first_non_nan):
+        if ordered and not math.isfinite(ordered[0]):
             request.applymarker(
                 pytest.mark.xfail(reason="fixed upstream in Polars 1.31", strict=True)
             )
@@ -302,6 +301,9 @@ def test_cum_max_leading_nan(
     series_result = df.select(casted)["a"].cum_max(reverse=reverse)
 
     expected = expected_reverse_cum_max if reverse else expected_cum_max
+    expected_nulls = [v is None for v in expected]
     assert expr_result.schema == df.select(casted).schema
     assert_equal_data(expr_result, {"a": expected})
     assert_equal_data({"a": series_result}, {"a": expected})
+    assert expr_result["a"].is_null().to_list() == expected_nulls
+    assert series_result.is_null().to_list() == expected_nulls
