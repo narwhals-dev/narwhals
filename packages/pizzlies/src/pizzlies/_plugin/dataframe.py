@@ -22,10 +22,14 @@ from pizzlies._plugin._vendored import (
 from pizzlies._plugin.repr import frame_repr
 from pizzlies._plugin.series import DictSeries
 from pizzlies._plugin.utils import (
+    asof_excluded_right,
     canonical_nans,
+    cast_values,
+    dtypes_compatible,
     gatherer,
     infer_dtype,
     is_native_frame,
+    nan_last,
     nan_last_column,
 )
 
@@ -312,7 +316,9 @@ class DictDataFrame(
 
     def with_columns(self, *exprs: DictExpr) -> Self:
         native = dict(self.native)
-        for series in self._evaluate_exprs(*exprs):
+        new_series = self._evaluate_exprs(*exprs)
+        check_column_names_are_unique([series.name for series in new_series])
+        for series in new_series:
             native[series.name] = self._extract_comparand(series)
         return self._with_native(native, validate_column_names=False)
 
@@ -930,16 +936,13 @@ class DictDataFrame(
         """Raise on keys of different dtypes, as Polars does.
 
         Python would otherwise match e.g. `True` with `1`, and `1` with `1.0`. `Unknown`
-        (an all-null column) matches anything.
+        (an empty or all-null column) matches anything, see `dtypes_compatible`.
         """
         version = self._version
-        unknown = version.dtypes.Unknown
         for left, right in zip(left_on, right_on, strict=True):
             left_dtype = infer_dtype(self.native[left], version)
             right_dtype = infer_dtype(other.native[right], version)
-            if left_dtype != right_dtype and not (
-                isinstance(left_dtype, unknown) or isinstance(right_dtype, unknown)
-            ):
+            if not dtypes_compatible(left_dtype, right_dtype, version):
                 msg = (
                     f"datatypes of join keys don't match - `{left}`: {left_dtype} on "
                     f"left does not match `{right}`: {right_dtype} on right"
@@ -989,7 +992,8 @@ class DictDataFrame(
 
         Rows with a null asof key (or any null `by` key) are never match
         candidates. Keys are sorted here rather than validated as sorted, so
-        the probe side needs no ordering assumptions at all.
+        the probe side needs no ordering assumptions at all. They're `nan_last`
+        keys: Polars orders NaN after every other value.
         """
         groups: dict[Any, list[tuple[Any, int]]] = {}
         by_keys: Iterable[Any] = repeat(None) if by is None else self._join_keys(by)
@@ -999,8 +1003,10 @@ class DictDataFrame(
             groups.setdefault(by_key, []).append((key, row))
         result: dict[Any, tuple[list[Any], list[int]]] = {}
         for by_key, pairs in groups.items():
-            pairs.sort(key=operator.itemgetter(0))
-            result[by_key] = ([key for key, _ in pairs], [row for _, row in pairs])
+            keyed = sorted(
+                ((nan_last(key), row) for key, row in pairs), key=operator.itemgetter(0)
+            )
+            result[by_key] = ([key for key, _ in keyed], [row for _, row in keyed])
         return result
 
     def join_asof(
@@ -1031,16 +1037,20 @@ class DictDataFrame(
                 right_indices.append(None)
                 continue
             keys, rows = group
-            backward = bisect_right(keys, key) - 1  # last right key <= left key
-            forward = bisect_left(keys, key)  # first right key >= left key
+            probe = nan_last(key)
+            backward = bisect_right(keys, probe) - 1  # last right key <= left key
+            forward = bisect_left(keys, probe)  # first right key >= left key
             if strategy == "backward":
                 match = rows[backward] if backward >= 0 else None
             elif strategy == "forward":
                 match = rows[forward] if forward < len(rows) else None
-            elif forward >= len(rows):
+            elif forward >= len(rows) or probe[0]:
+                # Nothing above, or a NaN left key (NaN is the largest value): backward.
+                # A NaN right key above compares as no closer, so it's taken, as Polars.
                 match = rows[backward] if backward >= 0 else None
             elif backward >= 0 and (
-                keys[backward] == key or key - keys[backward] < keys[forward] - key
+                keys[backward] == probe
+                or key - keys[backward][1] < keys[forward][1] - key
             ):
                 # nearest resolving backward: `backward` is already the last
                 # row holding the winning value (exact match included).
@@ -1050,10 +1060,13 @@ class DictDataFrame(
                 # duplicates of the winning value polars takes the last row.
                 match = rows[bisect_right(keys, keys[forward]) - 1]
             right_indices.append(match)
-        # One output row per left row: left columns pass through untouched, the
-        # asof key is coalesced and right `by` columns are dropped (like polars).
+        # One output row per left row: left columns pass through untouched, right
+        # `by` columns are dropped, and so is the right asof key if it has the left
+        # one's name (like Polars).
         right_names = self._join_output_names(
-            other, exclude_right={right_on, *(by_right or ())}, suffix=suffix
+            other,
+            exclude_right=asof_excluded_right(left_on, right_on, by_right),
+            suffix=suffix,
         )
         take_right = (
             _nullable_gatherer(right_indices)
@@ -1228,8 +1241,31 @@ class DictDataFrame(
             for name in index
         }
         result[variable_name] = list(chain.from_iterable(repeat(name, n) for name in on))
-        result[value_name] = list(chain.from_iterable(native[name] for name in on))
+        values = [native[name] for name in on]
+        if (supertype := self._unpivot_supertype(values)) is not None:
+            values = [cast_values(column, supertype, self._version) for column in values]
+        result[value_name] = list(chain.from_iterable(values))
         return self._with_native(result)
+
+    def _unpivot_supertype(self, columns: Sequence[Sequence[Any]]) -> DType | None:
+        """The dtype to cast `unpivot`'s value columns to, if they differ (as Polars)."""
+        dtypes = self._version.dtypes
+        found = {infer_dtype(column, self._version) for column in columns}
+        found = {dtype for dtype in found if dtype.base_type() is not dtypes.Unknown}
+        if not found or all(
+            dtypes_compatible(dtype, other, self._version)
+            for dtype in found
+            for other in found
+        ):
+            return None
+        if any(dtype == dtypes.String for dtype in found):
+            return dtypes.String()
+        if all(dtype.is_numeric() or dtype == dtypes.Boolean for dtype in found):
+            return (
+                dtypes.Float64() if any(d.is_float() for d in found) else dtypes.Int64()
+            )
+        msg = f"`unpivot` columns have no common dtype: {sorted(map(str, found))}."
+        raise InvalidOperationError(msg)
 
     def explode(
         self,

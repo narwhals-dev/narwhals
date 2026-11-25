@@ -5,6 +5,7 @@ from itertools import chain, compress, repeat
 from typing import TYPE_CHECKING, Any, cast
 
 from narwhals.compliant import EagerNamespace
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals.utils import Implementation
 from pizzlies._plugin._vendored import (
     check_column_names_are_unique,
@@ -15,11 +16,19 @@ from pizzlies._plugin.dataframe import DictDataFrame
 from pizzlies._plugin.expr import DictExpr
 from pizzlies._plugin.selectors import DictSelectorNamespace
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import csv_to_native, has_nan, skip_nan
+from pizzlies._plugin.utils import (
+    csv_to_native,
+    dtypes_compatible,
+    float_if_mixed,
+    has_nan,
+    infer_dtype,
+    skip_nan,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from narwhals.dtypes import DType
     from narwhals.typing import (
         CorrelationMethod,
         IntoDType,
@@ -232,7 +241,8 @@ class DictNamespace(
     ) -> NativeSeries:
         if otherwise is None:
             return [t if w else None for w, t in zip(when, then, strict=True)]
-        return [t if w else o for w, t, o in zip(when, then, otherwise, strict=True)]
+        result = [t if w else o for w, t, o in zip(when, then, otherwise, strict=True)]
+        return float_if_mixed(result, then, otherwise)
 
     # Concatenation of native frames
     def _concat_horizontal(self, dfs: Sequence[DictFrame | Any], /) -> DictFrame:
@@ -248,6 +258,23 @@ class DictNamespace(
             for name, column in df.items()
         }
 
+    def _check_dtypes(self, dfs: Sequence[DictFrame]) -> None:
+        """Raise if a column's dtypes differ between `dfs`, as Polars does."""
+        dtypes: dict[str, DType] = {}
+        for df in dfs:
+            for name, values in df.items():
+                dtype = infer_dtype(values, self._version)
+                if (seen := dtypes.setdefault(name, dtype)) is not dtype and not (
+                    dtypes_compatible(seen, dtype, self._version)
+                ):
+                    msg = (
+                        f"unable to vstack, column {name!r} has dtypes {seen} and "
+                        f"{dtype}: inputs should all have the same schema."
+                    )
+                    raise InvalidOperationError(msg)
+                if seen.base_type() is self._version.dtypes.Unknown:
+                    dtypes[name] = dtype
+
     def _concat_vertical(self, dfs: Sequence[DictFrame], /) -> DictFrame:
         columns_0 = list(dfs[0])
         for i, df in enumerate(dfs[1:], start=1):
@@ -257,12 +284,14 @@ class DictNamespace(
                     f"   - dataframe 0: {columns_0}\n"
                     f"   - dataframe {i}: {columns_current}\n"
                 )
-                raise TypeError(msg)
+                raise ShapeError(msg)
+        self._check_dtypes(dfs)
         return {
             name: list(chain.from_iterable(df[name] for df in dfs)) for name in columns_0
         }
 
     def _concat_diagonal(self, dfs: Sequence[DictFrame], /) -> DictFrame:
+        self._check_dtypes(dfs)
         names = list(dict.fromkeys(chain.from_iterable(df.keys() for df in dfs)))
         lengths = [len(next(iter(df.values()), [])) for df in dfs]
         return {

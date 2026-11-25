@@ -22,13 +22,14 @@ from pizzlies._plugin.utils import (
     canonical_nans,
     cast_values,
     first_non_null,
+    float_if_mixed,
     infer_dtype,
     is_native_column,
+    key_originals,
     kleene_and,
     kleene_or,
     nan_last_column,
     nan_last_key,
-    promote_decimal_mix,
     skip_nan,
     sort_with_nulls,
 )
@@ -336,19 +337,42 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         # Polars floors the IEEE-754 quotient: `1.0 // 0.1 == 10.0` (Python gives
         # 9.0), and dividing by zero gives `±inf`/NaN as in true division.
         quotient = cls._truediv(numerator, denominator)
-        return float(math.floor(quotient)) if math.isfinite(quotient) else quotient
+        if not math.isfinite(quotient):
+            return quotient
+        # `or`: `math.floor` drops the sign of a zero, e.g. `-0.0 // 1.0 == -0.0`.
+        return float(math.floor(quotient)) or math.copysign(0.0, quotient)
 
-    def _floordiv_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
-        """Pick the float or the integer kernel once, from both operands' dtypes."""
+    @staticmethod
+    def _mod(numerator: int, denominator: int) -> int | None:
+        # Integer modulo by zero: Polars returns null.
+        try:
+            return numerator % denominator
+        except ZeroDivisionError:
+            return None
+
+    @staticmethod
+    def _float_mod(numerator: float, denominator: float) -> float:
+        # Polars gives NaN for a zero or infinite divisor (Python: an error, or e.g.
+        # `5.0 % inf == 5.0`).
+        if not denominator or math.isinf(denominator):
+            return float("nan")
+        return numerator % denominator
+
+    def _is_float_operation(self, other: Any) -> bool:
         rhs, rhs_is_scalar = self._extract_comparand(other)
         rhs_is_float = (
             isinstance(rhs, float)
             if rhs_is_scalar
             else infer_dtype(rhs, self._version).is_float()
         )
-        if rhs_is_float or self.dtype.is_float():
-            return self._float_floordiv
-        return self._floordiv
+        return rhs_is_float or self.dtype.is_float()
+
+    def _floordiv_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        """Pick the float or the integer kernel once, from both operands' dtypes."""
+        return self._float_floordiv if self._is_float_operation(other) else self._floordiv
+
+    def _mod_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        return self._float_mod if self._is_float_operation(other) else self._mod
 
     def __truediv__(self, other: Self) -> Self:
         return self._with_binary(self._truediv, other)
@@ -376,10 +400,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_binary_right(self._pow, other)
 
     def __mod__(self, other: Self) -> Self:
-        return self._with_binary(operator.mod, other)
+        return self._with_binary(self._mod_kernel(other), other)
 
     def __rmod__(self, other: Self) -> Self:
-        return self._with_binary_right(operator.mod, other)
+        return self._with_binary_right(self._mod_kernel(other), other)
 
     # Unary operations
     def __invert__(self) -> Self:
@@ -436,25 +460,27 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             cast_values(self.native, dtype, self._version), preserve_broadcast=True
         )
 
+    @staticmethod
+    def _clip_op(pick: Callable[[Any, Any], Any]) -> Callable[[Any, Any], Any]:
+        """`pick` (`max` or `min`) of a value and a bound, as Polars' `clip`."""
+
+        def op(value: Any, bound: Any) -> Any:
+            if value is None or bound is None:  # a null bound is no bound
+                return value
+            result = pick(value, bound)
+            # e.g. an int bound on a float column still gives a float.
+            return float(result) if isinstance(value, float) else result
+
+        return op
+
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
-        lower, lower_is_scalar = self._extract_comparand(lower_bound)
-        upper, upper_is_scalar = self._extract_comparand(upper_bound)
-        if self._broadcast or not (lower_is_scalar and upper_is_scalar):
-            # Column bounds or a scalar receiver need `_with_binary`'s alignment.
-            return self.clip_lower(lower_bound).clip_upper(upper_bound)
-        if lower is None or upper is None:
-            return self._with_native([None] * len(self.native))
-        values, lower = promote_decimal_mix(self.native, lower, is_scalar=True)
-        values, upper = promote_decimal_mix(values, upper, is_scalar=True)
-        return self._with_native(
-            [None if value is None else min(max(value, lower), upper) for value in values]
-        )
+        return self.clip_lower(lower_bound).clip_upper(upper_bound)
 
     def clip_lower(self, lower_bound: Any) -> Self:
-        return self._with_binary(max, lower_bound)
+        return self._with_binary(self._clip_op(max), lower_bound, propagate_null=False)
 
     def clip_upper(self, upper_bound: Any) -> Self:
-        return self._with_binary(min, upper_bound)
+        return self._with_binary(self._clip_op(min), upper_bound, propagate_null=False)
 
     # TODO(FBruzzesi): Do not fallback to super implementation
     def is_between(
@@ -579,6 +605,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                 result = higher
             case "midpoint":
                 result = (lower + higher) / 2
+            case "linear" if lower == higher:
+                # Not interpolated: `inf - inf` would give NaN.
+                result = lower
             case "linear":
                 result = lower + (higher - lower) * (position - math.floor(position))
             case "nearest":
@@ -698,6 +727,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         fill, is_scalar = self._extract_comparand(value)
         if is_scalar:
             result = [fill if current is None else current for current in self.native]
+            result = float_if_mixed(result, self.native, (fill,))
         elif self._broadcast:
             # e.g. `lit(None).fill_null(col("a"))`: broadcast the scalar receiver.
             receiver = self.native[0]
@@ -708,6 +738,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                 new if current is None else current
                 for current, new in zip(self.native, fill, strict=True)
             ]
+            result = float_if_mixed(result, self.native, fill)
         return self._with_native(result, preserve_broadcast=True)
 
     def fill_nan(self, value: float | None) -> Self:
@@ -775,8 +806,13 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         values = canonical_nans(self.native)
         if keep == "all":
-            return self._with_native(statistics.multimode(values))
-        return self._with_native([statistics.mode(values)] if values else [])
+            modes = statistics.multimode(values)
+        else:
+            modes = [statistics.mode(values)] if values else []
+        if values is not self.native:
+            originals = key_originals(self.native, values)
+            modes = [originals[mode] for mode in modes]
+        return self._with_native(list(modes))
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         keys = nan_last_column(self.native)
@@ -1135,7 +1171,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(native)
 
     def unique(self, *, maintain_order: bool = False) -> Self:
-        return self._with_native(list(dict.fromkeys(canonical_nans(self.native))))
+        keys = canonical_nans(self.native)
+        if keys is self.native:
+            return self._with_native(list(dict.fromkeys(keys)))
+        return self._with_native(list(key_originals(self.native, keys).values()))
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
         return self._with_native(
@@ -1172,8 +1211,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
         value_name = name or ("proportion" if normalize else "count")
         check_column_names_are_unique([self.name, value_name])
-        counter = Counter(canonical_nans(self.native))
+        keys = canonical_nans(self.native)
+        counter = Counter(keys)
         items = counter.most_common() if sort else list(counter.items())
+        if keys is not self.native:
+            originals = key_originals(self.native, keys)
+            items = [(originals[key], count) for key, count in items]
         total = len(self.native)
         return DictDataFrame(
             {
