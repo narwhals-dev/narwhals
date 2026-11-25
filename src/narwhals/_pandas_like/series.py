@@ -615,7 +615,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
-        return self._float_or_nan(self.native.median())
+        with warnings.catch_warnings():
+            # Older pandas warns when a masked array is all null.
+            warnings.filterwarnings("ignore", message="Mean of empty slice")
+            return self._float_or_nan(self.native.median())
 
     def std(self, *, ddof: int) -> float:
         return self._float_or_nan(self.native.std(ddof=ddof))

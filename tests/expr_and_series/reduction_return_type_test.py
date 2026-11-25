@@ -32,6 +32,9 @@ NUMERIC_REDUCTIONS = [
 def test_numeric_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, reduction: str
 ) -> None:
+    if reduction == "mean" and "modin_pyarrow" in str(constructor):
+        reason = "modin divides a zero sum by a zero count and raises ZeroDivisionError."
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if reduction in {"skew", "kurtosis"} and any(
         x in str(constructor)
         for x in (
