@@ -31,18 +31,33 @@ EXPECTED: dict[str, Any] = {
     # and read three rows" (as Polars does).
     "data/empty_data_pages_v1.parquet": {"int64": [1, 2, 3]},
     "data/empty_data_pages_v2.parquet": {"int64": [1, 2, 3]},
+    # PyArrow and Polars reject the optional map key, we read it anyway.
+    "data/incorrect_map_schema.parquet": {
+        "my_map": [
+            [{"key": "parent", "value": "another"}, {"key": "name", "value": "report"}]
+        ]
+    },
 }
 RAISES: dict[str, str] = {
     # Spark-written INT96 timestamps beyond the year 9999, which PyArrow wraps around.
     "data/int96_from_spark.parquet": "can't represent",
     # The page header reports the wrong size. PyArrow reads it anyway, Polars raises.
     "data/nation.dict-malformed.parquet": "may be corrupt",
+    # Deliberately corrupted, which PyArrow doesn't check by default.
+    "data/datapage_v1-corrupt-checksum.parquet": "checksum mismatch",
+    "data/rle-dict-uncompressed-corrupt-checksum.parquet": "checksum mismatch",
 }
 
 
 def _normalise(value: Any) -> Any:
     if hasattr(value, "to_pydatetime"):  # nanosecond `pd.Timestamp`s, truncated as we do
         return value.to_pydatetime(warn=False)
+    if isinstance(value, list):
+        return [_normalise(v) for v in value]
+    if isinstance(value, tuple):  # PyArrow's map entries
+        return {"key": _normalise(value[0]), "value": _normalise(value[1])}
+    if isinstance(value, dict):
+        return {k: _normalise(v) for k, v in value.items()}
     if value != value:  # noqa: PLR0124
         return "NaN"
     return value

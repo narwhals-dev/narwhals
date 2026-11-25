@@ -2,14 +2,18 @@
 
 Supported:
 
-- flat (non-nested) columns, required or optional;
+- flat and nested columns: lists (including the legacy two-level and unannotated
+  layouts), structs, and maps (as lists of `{"key": ..., "value": ...}` structs);
 - data pages V1 and V2, and dictionary pages;
-- `PLAIN`, `PLAIN_DICTIONARY`/`RLE_DICTIONARY` and (for booleans) `RLE` encodings;
-- uncompressed, snappy and gzip compression, and zstd with `compression.zstd` (Python
-  3.14+) or else the optional `backports.zstd`;
-- strings, enums, JSON, decimals, dates, times, timestamps, and (un)signed integers.
+- `PLAIN`, `PLAIN_DICTIONARY`/`RLE_DICTIONARY`, `RLE` (booleans), `BYTE_STREAM_SPLIT`,
+  `DELTA_BINARY_PACKED`, `DELTA_LENGTH_BYTE_ARRAY` and `DELTA_BYTE_ARRAY` encodings;
+- uncompressed, snappy, gzip, LZ4 (raw and Hadoop-framed) compression, and zstd with
+  `compression.zstd` (Python 3.14+) or else the optional `backports.zstd`;
+- strings, enums, JSON, decimals, dates, times, timestamps, (un)signed integers, and
+  16-bit floats.
 
-Anything else raises `NotImplementedError`.
+Anything else raises `NotImplementedError`. Corrupt data raises `ValueError`: page sizes,
+page checksums (when the writer stored them) and row counts are all checked.
 
 The format is specified at https://github.com/apache/parquet-format, and the metadata is
 serialized with Thrift's compact protocol. Thrift structs are decoded generically, into
@@ -23,10 +27,11 @@ import operator
 import struct
 import sys
 import zlib
+from contextlib import contextmanager
 from decimal import Decimal
-from functools import cache
-from itertools import chain
-from typing import TYPE_CHECKING, Any, NoReturn
+from functools import cache, partial
+from itertools import accumulate, chain, islice, pairwise
+from typing import TYPE_CHECKING, Any, NoReturn, TypeAlias
 
 from pizzlies._plugin._vendored import check_column_names_are_unique
 
@@ -35,42 +40,41 @@ if TYPE_CHECKING:
     from typing import BinaryIO
 
     Converter = Callable[[Any], Any]
+    Ranges: TypeAlias = "dict[int, list[tuple[int, int]]]"
 
 MAGIC = b"PAR1"
 
 # `Type`
 BOOLEAN, INT32, INT64, INT96, FLOAT, DOUBLE, BYTE_ARRAY, FIXED_LEN_BYTE_ARRAY = range(8)
 _STRUCT_FORMATS = {INT32: "i", INT64: "q", FLOAT: "f", DOUBLE: "d"}
+_BITS = {INT32: 32, INT64: 64}
 
 # `FieldRepetitionType`
-OPTIONAL, REPEATED = 1, 2
+REQUIRED, OPTIONAL, REPEATED = 0, 1, 2
 
 # `PageType`
 DATA_PAGE, DICTIONARY_PAGE, DATA_PAGE_V2 = 0, 2, 3
 
 # `Encoding`
 PLAIN, PLAIN_DICTIONARY, RLE, RLE_DICTIONARY = 0, 2, 3, 8
-_ENCODING_NAMES = {
-    4: "BIT_PACKED",
-    5: "DELTA_BINARY_PACKED",
-    6: "DELTA_LENGTH_BYTE_ARRAY",
-    7: "DELTA_BYTE_ARRAY",
-    9: "BYTE_STREAM_SPLIT",
-}
+DELTA_BINARY_PACKED, DELTA_LENGTH_BYTE_ARRAY, DELTA_BYTE_ARRAY = 5, 6, 7
+BYTE_STREAM_SPLIT = 9
+_ENCODING_NAMES = {4: "BIT_PACKED"}
 
 # `CompressionCodec`
-UNCOMPRESSED, SNAPPY, GZIP, ZSTD = 0, 1, 2, 6
-_CODEC_NAMES = {3: "LZO", 4: "BROTLI", 5: "LZ4", 7: "LZ4_RAW"}
+UNCOMPRESSED, SNAPPY, GZIP, LZ4, ZSTD, LZ4_RAW = 0, 1, 2, 5, 6, 7
+_CODEC_NAMES = {3: "LZO", 4: "BROTLI"}
 
 # `ConvertedType`, for files which predate logical types
-_UTF8, _ENUM, _DECIMAL, _DATE, _TIME_MILLIS, _TIME_MICROS = 0, 4, 5, 6, 7, 8
-_TIMESTAMP_MILLIS, _TIMESTAMP_MICROS, _JSON = 9, 10, 19
+_UTF8, _MAP, _MAP_KEY_VALUE, _LIST, _ENUM, _DECIMAL = 0, 1, 2, 3, 4, 5
+_DATE, _TIME_MILLIS, _TIME_MICROS, _TIMESTAMP_MILLIS, _TIMESTAMP_MICROS = 6, 7, 8, 9, 10
+_JSON = 19
 _UNSIGNED_BITS = {11: 8, 12: 16, 13: 32, 14: 64}
 
 # `LogicalType` union members
-_L_STRING, _L_ENUM, _L_DECIMAL, _L_DATE, _L_TIME, _L_TIMESTAMP = 1, 4, 5, 6, 7, 8
-_L_INTEGER, _L_JSON = 10, 12
-_L_UNSUPPORTED = {2: "MAP", 3: "LIST", 15: "FLOAT16", 16: "VARIANT"}
+_L_STRING, _L_MAP, _L_LIST, _L_ENUM, _L_DECIMAL, _L_DATE = 1, 2, 3, 4, 5, 6
+_L_TIME, _L_TIMESTAMP, _L_INTEGER, _L_JSON, _L_FLOAT16 = 7, 8, 10, 12, 15
+_L_UNSUPPORTED = {16: "VARIANT"}
 
 # Annotations which are only valid on INT32 and INT64 columns.
 _INT_ONLY = {_DATE, _TIME_MILLIS, _TIME_MICROS, _TIMESTAMP_MILLIS, _TIMESTAMP_MICROS}
@@ -82,6 +86,22 @@ _MILLIS, _MICROS, _NANOS = 1, 2, 3
 
 _EPOCH_ORDINAL = dt.date(1970, 1, 1).toordinal()
 _JULIAN_EPOCH = 2_440_588  # Julian day number of 1970-01-01, for INT96 timestamps
+
+_CORRUPT_MESSAGE = "Truncated or invalid Parquet data, the file may be corrupt."
+
+# What malformed metadata or data surfaces as, deep in the decoder: e.g. a missing
+# Thrift field (`KeyError`), one of the wrong type (`TypeError`), or reading past the
+# end of a buffer (`IndexError`).
+_CORRUPTION_ERRORS = (
+    AttributeError,
+    IndexError,
+    KeyError,
+    RecursionError,
+    TypeError,
+    UnicodeDecodeError,  # e.g. in a column name: invalid values raise a clearer error
+    ZeroDivisionError,
+    struct.error,
+)
 
 
 class _Reader:
@@ -113,6 +133,8 @@ class _Reader:
         return (n >> 1) ^ -(n & 1)
 
     def read(self, n: int) -> bytes:
+        if n < 0 or self.pos + n > len(self.buf):
+            _raise_corrupt()
         value = self.buf[self.pos : self.pos + n]
         self.pos += n
         return value
@@ -147,8 +169,7 @@ def _read_value(r: _Reader, kind: int) -> Any:  # noqa: C901, PLR0911
         }
     if kind == 12:  # STRUCT
         return _read_struct(r)
-    msg = f"Unexpected Thrift compact type {kind}, the Parquet file may be corrupt."
-    raise ValueError(msg)
+    raise ValueError(_CORRUPT_MESSAGE)
 
 
 def _read_struct(r: _Reader) -> dict[int, Any]:
@@ -161,11 +182,23 @@ def _read_struct(r: _Reader) -> dict[int, Any]:
     return fields
 
 
-def _snappy_decompress(data: bytes) -> bytes:
+def _copy_back(out: bytearray, offset: int, length: int) -> None:
+    """Append `length` bytes copied from `offset` bytes back, as LZ77 compressors do."""
+    if not 0 < offset <= len(out):
+        _raise_corrupt()
+    start = len(out) - offset
+    if offset >= length:
+        out += out[start : start + length]
+    else:  # the copy overlaps what it produces, so it repeats the last `offset` bytes
+        out += (out[start:] * (length // offset + 1))[:length]
+
+
+def _snappy_decompress(data: bytes, size: int) -> bytes:
     r = _Reader(data)
-    r.varint()  # uncompressed length
+    if r.varint() != size:
+        _raise_corrupt()
     pos, end, out = r.pos, len(data), bytearray()
-    while pos < end:
+    while pos < end:  # no bomb: a tag of 1+ bytes yields at most 64 bytes
         tag = data[pos]
         pos += 1
         kind = tag & 0b11
@@ -188,53 +221,132 @@ def _snappy_decompress(data: bytes) -> bytes:
             length = (tag >> 2) + 1
             offset = int.from_bytes(data[pos : pos + n_bytes], "little")
             pos += n_bytes
-        start = len(out) - offset
+        # `_copy_back`, inlined as this loop runs once per tag.
+        if (start := len(out) - offset) < 0 or not offset:
+            _raise_corrupt()
         if offset >= length:
             out += out[start : start + length]
         else:  # the copy overlaps what it produces, so it repeats the last `offset` bytes
             out += (out[start:] * (length // offset + 1))[:length]
+    if pos != end:  # a literal or an offset ran past the end
+        _raise_corrupt()
     return bytes(out)
 
 
-def _gzip_decompress(data: bytes) -> bytes:
-    # A page may hold several concatenated gzip members, and a single `zlib.decompress`
-    # call would silently stop after the first one.
-    out = []
-    while data:
-        decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 32)
+def _lz4_length(data: bytes, pos: int, length: int) -> tuple[int, int]:
+    """Read the extra bytes of an LZ4 length whose 4-bit nibble is saturated."""
+    if length == 15:
+        while True:
+            byte = data[pos]
+            pos += 1
+            length += byte
+            if byte != 255:
+                break
+    return length, pos
+
+
+def _lz4_block_decompress(data: bytes, size: int) -> bytes:
+    pos, end, out = 0, len(data), bytearray()
+    while pos < end and len(out) <= size:
+        token = data[pos]
+        length, pos = _lz4_length(data, pos + 1, token >> 4)
+        if pos + length > end:
+            _raise_corrupt()
+        out += data[pos : pos + length]
+        pos += length
+        if pos == end:  # the last sequence has literals only
+            break
+        if pos + 2 > end:
+            _raise_corrupt()
+        offset = int.from_bytes(data[pos : pos + 2], "little")
+        length, pos = _lz4_length(data, pos + 2, token & 0x0F)
+        _copy_back(out, offset, length + 4)
+    return bytes(out)
+
+
+def _hadoop_lz4_decompress(data: bytes, size: int) -> bytes | None:
+    """Hadoop's framing of LZ4 blocks, each prefixed by its sizes, or `None` if not it."""
+    pos, out = 0, bytearray()
+    while pos < len(data):
+        if pos + 8 > len(data):
+            return None
+        expected = int.from_bytes(data[pos : pos + 4], "big")
+        compressed = int.from_bytes(data[pos + 4 : pos + 8], "big")
+        pos += 8
+        if pos + compressed > len(data) or len(out) + expected > size:
+            return None
         try:
-            out.append(decompressor.decompress(data))
-        except zlib.error:
-            _raise_corrupt()
-        if not decompressor.eof:
-            _raise_corrupt()
-        data = decompressor.unused_data
-    return b"".join(out)
+            block = _lz4_block_decompress(data[pos : pos + compressed], expected)
+        except (ValueError, IndexError):
+            return None
+        if len(block) != expected:
+            return None
+        out += block
+        pos += compressed
+    return bytes(out)
 
 
-def _decompress(codec: int, data: bytes) -> bytes:
+def _stream_decompress(
+    decompressor: Callable[[], Any], error: type[Exception], data: bytes, size: int
+) -> bytes:
+    """Decompress every concatenated member (gzip) or frame (zstd), up to `size` bytes."""
+    out = bytearray()
+    while data:
+        d = decompressor()
+        try:
+            # At most one byte more than expected, enough to detect a size mismatch
+            # without inflating a decompression bomb.
+            out += d.decompress(data, size + 1 - len(out))
+        except error:
+            _raise_corrupt()
+        if not d.eof or len(out) > size:
+            _raise_corrupt()
+        data = d.unused_data
+    return bytes(out)
+
+
+def _zstd() -> Any:
+    if sys.version_info >= (3, 14):
+        from compression import zstd
+    else:
+        try:  # optional: `pip install pizzlies[zstd]`
+            from backports import zstd  # type: ignore[import-not-found,unused-ignore]  # pyright: ignore[reportMissingImports]
+        except ImportError:
+            msg = (
+                "Reading zstd-compressed Parquet needs Python 3.14+, or the "
+                "`backports.zstd` package (`pip install pizzlies[zstd]`)."
+            )
+            raise NotImplementedError(msg) from None
+    return zstd
+
+
+def _decompress(codec: int, data: bytes, size: int) -> bytes:
+    """Decompress `data`, which must decompress to `size` bytes."""
     if codec == UNCOMPRESSED:
         return data
     if codec == SNAPPY:
-        return _snappy_decompress(data)
-    if codec == GZIP:
-        return _gzip_decompress(data)
-    if codec == ZSTD:
-        if sys.version_info >= (3, 14):
-            from compression import zstd
-        else:
-            try:  # optional: `pip install pizzlies[zstd]`
-                from backports import zstd  # type: ignore[import-not-found,unused-ignore]  # pyright: ignore[reportMissingImports]
-            except ImportError:
-                msg = (
-                    "Reading zstd-compressed Parquet needs Python 3.14+, or the "
-                    "`backports.zstd` package (`pip install pizzlies[zstd]`)."
-                )
-                raise NotImplementedError(msg) from None
-        result: bytes = zstd.decompress(data)
-        return result
-    msg = f"Parquet compression codec {_CODEC_NAMES.get(codec, codec)} is not supported."
-    raise NotImplementedError(msg)
+        out = _snappy_decompress(data, size)
+    elif codec == GZIP:
+
+        def gzip() -> Any:
+            return zlib.decompressobj(wbits=zlib.MAX_WBITS | 32)
+
+        out = _stream_decompress(gzip, zlib.error, data, size)
+    elif codec == ZSTD:
+        zstd = _zstd()
+        out = _stream_decompress(zstd.ZstdDecompressor, zstd.ZstdError, data, size)
+    elif codec == LZ4_RAW:
+        out = _lz4_block_decompress(data, size)
+    elif codec == LZ4:
+        # Ambiguous: Hadoop's framing, or else (as old parquet-cpp wrote) a raw block.
+        hadoop = _hadoop_lz4_decompress(data, size)
+        out = _lz4_block_decompress(data, size) if hadoop is None else hadoop
+    else:
+        msg = f"Parquet compression codec {_CODEC_NAMES.get(codec, codec)} is not supported."
+        raise NotImplementedError(msg)
+    if len(out) != size:
+        _raise_corrupt()
+    return out
 
 
 @cache
@@ -324,9 +436,78 @@ def _decode_rle_bitpacked(
     return out
 
 
+def _decode_delta_binary_packed(buf: bytes, pos: int, bits: int) -> tuple[list[int], int]:
+    """Decode `bits`-bit integers, and return them with the position after them."""
+    r = _Reader(buf, pos)
+    block_size, n_miniblocks, total, first = (
+        r.varint(),
+        r.varint(),
+        r.varint(),
+        r.zigzag(),
+    )
+    if not n_miniblocks or block_size % n_miniblocks or block_size // n_miniblocks % 8:
+        _raise_corrupt()
+    per_miniblock = block_size // n_miniblocks
+    deltas: list[int] = []
+    remaining = total - 1
+    while remaining > 0:
+        min_delta = r.zigzag()
+        for width in r.read(n_miniblocks):
+            if remaining <= 0:  # the last block's unneeded miniblocks hold no data
+                break
+            if width > bits:
+                _raise_corrupt()
+            packed = r.read(per_miniblock * width // 8)
+            n = min(per_miniblock, remaining)
+            unpacked = _unpack_bits(packed, width)[:n] if width else [0] * n
+            deltas += [min_delta + delta for delta in unpacked]
+            remaining -= n
+    values = list(accumulate(deltas, initial=first)) if total else []
+    # Deltas may overflow, so the running sums are wrapped to `bits` bits, as stored.
+    half = 1 << (bits - 1)
+    if any(not -half <= value < half for value in values):
+        mask = (1 << bits) - 1
+        values = [((value + half) & mask) - half for value in values]
+    return values, r.pos
+
+
+def _decode_delta_length_byte_arrays(
+    buf: bytes, pos: int, count: int
+) -> tuple[list[bytes], int]:
+    lengths, pos = _decode_delta_binary_packed(buf, pos, 32)
+    if len(lengths) != count or any(length < 0 for length in lengths):
+        _raise_corrupt()
+    ends = list(accumulate(lengths, initial=pos))
+    _check_available(buf, ends[-1])
+    return [buf[start:end] for start, end in pairwise(ends)], ends[-1]
+
+
+def _decode_delta_byte_arrays(buf: bytes, pos: int, count: int) -> list[bytes]:
+    prefixes, pos = _decode_delta_binary_packed(buf, pos, 32)
+    suffixes, _ = _decode_delta_length_byte_arrays(buf, pos, count)
+    if len(prefixes) != count:
+        _raise_corrupt()
+    out = []
+    previous = b""
+    for prefix, suffix in zip(prefixes, suffixes, strict=True):
+        if not 0 <= prefix <= len(previous):
+            _raise_corrupt()
+        previous = previous[:prefix] + suffix
+        out.append(previous)
+    return out
+
+
+def _byte_stream_split(buf: bytes, pos: int, count: int, width: int) -> bytes:
+    """Interleave the `width` streams back: stream `k` holds byte `k` of every value."""
+    _check_available(buf, pos + count * width)
+    out = bytearray(count * width)
+    for k in range(width):
+        out[k::width] = buf[pos + k * count : pos + (k + 1) * count]
+    return bytes(out)
+
+
 def _raise_corrupt() -> NoReturn:
-    msg = "Truncated or invalid Parquet data, the file may be corrupt."
-    raise ValueError(msg)
+    raise ValueError(_CORRUPT_MESSAGE)
 
 
 def _check_available(buf: bytes, end: int) -> None:
@@ -362,15 +543,14 @@ def _decode_byte_arrays(buf: bytes, pos: int, count: int, *, utf8: bool) -> list
     return out
 
 
-def _decode_plain_values(page: bytes, pos: int, count: int, column: _Column) -> list[Any]:
-    """`_decode_plain`, converted to Python values."""
-    if column.physical == BYTE_ARRAY and column.convert is bytes.decode:
-        return _decode_byte_arrays(page, pos, count, utf8=True)
-    values = _decode_plain(page, pos, column.physical, count, column.type_length)
+def _convert(values: list[Any], column: _Column) -> list[Any]:
     if column.convert is None:
         return values
     try:
         return list(map(column.convert, values))
+    except UnicodeDecodeError as exc:
+        msg = f"Parquet column {column.name!r} holds invalid UTF-8: {exc}"
+        raise ValueError(msg) from exc
     except (OverflowError, ValueError) as exc:  # e.g. a timestamp beyond the year 9999
         msg = (
             f"Parquet column {column.name!r} holds a value Python can't represent: {exc}"
@@ -378,9 +558,23 @@ def _decode_plain_values(page: bytes, pos: int, count: int, column: _Column) -> 
         raise ValueError(msg) from exc
 
 
+def _decode_plain_values(page: bytes, pos: int, count: int, column: _Column) -> list[Any]:
+    """`_decode_plain`, converted to Python values."""
+    if column.physical == BYTE_ARRAY and column.convert is bytes.decode:
+        try:
+            return _decode_byte_arrays(page, pos, count, utf8=True)
+        except UnicodeDecodeError as exc:
+            msg = f"Parquet column {column.name!r} holds invalid UTF-8: {exc}"
+            raise ValueError(msg) from exc
+    values = _decode_plain(page, pos, column.physical, count, column.type_length)
+    return _convert(values, column)
+
+
 def _decode_plain(
     buf: bytes, pos: int, physical: int, count: int, type_length: int | None
 ) -> list[Any]:
+    if count < 0:
+        _raise_corrupt()
     if physical == BYTE_ARRAY:
         return _decode_byte_arrays(buf, pos, count, utf8=False)
     if fmt := _STRUCT_FORMATS.get(physical):
@@ -390,11 +584,20 @@ def _decode_plain(
     if physical == BOOLEAN:
         _check_available(buf, pos + (count + 7) // 8)
         return [bool((buf[pos + i // 8] >> (i % 8)) & 1) for i in range(count)]
-    width = 12 if physical == INT96 else type_length
-    if width is None:
-        _raise_corrupt()
+    width = _value_width(physical, type_length)
     _check_available(buf, pos + count * width)
     return [buf[pos + i * width : pos + (i + 1) * width] for i in range(count)]
+
+
+def _value_width(physical: int, type_length: int | None) -> int:
+    """The size of a fixed-width value, in bytes."""
+    if physical in _STRUCT_FORMATS:
+        return struct.calcsize(_STRUCT_FORMATS[physical])
+    if physical == INT96:
+        return 12
+    if physical != FIXED_LEN_BYTE_ARRAY or type_length is None or type_length < 0:
+        _raise_corrupt()
+    return type_length
 
 
 def _timestamp_converter(unit: int, *, utc: bool) -> Converter:
@@ -426,6 +629,11 @@ def _int96_to_datetime(raw: bytes) -> dt.datetime:
     )
 
 
+def _float16(raw: bytes) -> float:
+    value: float = struct.unpack("<e", raw)[0]
+    return value
+
+
 def _converter(element: dict[int, Any]) -> Converter | None:  # noqa: C901, PLR0911, PLR0912
     """Map a stored (physical) value to a Python value, or `None` for no conversion."""
     physical = element[1]
@@ -440,6 +648,10 @@ def _converter(element: dict[int, Any]) -> Converter | None:  # noqa: C901, PLR0
         _JSON,
     }:
         return bytes.decode
+    if _L_FLOAT16 in logical:
+        if physical != FIXED_LEN_BYTE_ARRAY or element.get(2) != 2:
+            _raise_corrupt()
+        return _float16
     if _L_DECIMAL in logical or converted == _DECIMAL:
         scale = (
             logical[_L_DECIMAL].get(1, 0) if _L_DECIMAL in logical else element.get(7, 0)
@@ -480,27 +692,312 @@ def _converter(element: dict[int, Any]) -> Converter | None:  # noqa: C901, PLR0
 
 
 class _Column:
-    __slots__ = ("convert", "max_def", "name", "physical", "type_length")
+    """A leaf of the schema: a physical column, with one column chunk per row group."""
 
-    def __init__(self, element: dict[int, Any]) -> None:
-        self.name: str = element[4].decode()
+    __slots__ = ("convert", "max_def", "max_rep", "name", "physical", "type_length")
+
+    def __init__(
+        self,
+        element: dict[int, Any],
+        *,
+        name: str | None = None,
+        max_def: int | None = None,
+        max_rep: int = 0,
+    ) -> None:
+        self.name: str = name or element[4].decode()
         self.physical: int = element[1]
         self.type_length: int | None = element.get(2)
-        self.max_def = int(element.get(3) == OPTIONAL)
+        self.max_def = int(element.get(3) == OPTIONAL) if max_def is None else max_def
+        self.max_rep = max_rep
         self.convert = _converter(element)
 
 
-def _columns(schema: list[dict[int, Any]]) -> list[_Column]:
-    root, *elements = schema
-    if any(5 in el or el.get(3) == REPEATED for el in elements) or root.get(5) != len(
-        elements
-    ):
-        msg = "Nested Parquet columns (lists, structs, maps) are not supported."
-        raise NotImplementedError(msg)
-    return [_Column(el) for el in elements]
+# How a top-level column's values are assembled from its leaf columns' levels and values.
+# `leaves` are the indices of the leaf columns below each node. `present` is the
+# definition level from which an optional node isn't null, `None` if it's required.
+class _LeafShape:
+    __slots__ = ("index", "leaves")
+
+    def __init__(self, index: int) -> None:
+        self.index = index
+        self.leaves: list[int] = [index]
 
 
-def _decode_values(
+class _StructShape:
+    __slots__ = ("fields", "leaves", "present")
+
+    def __init__(self, fields: list[tuple[str, Shape]], present: int | None) -> None:
+        if not fields:
+            _raise_corrupt()
+        self.fields = fields
+        self.present = present
+        self.leaves: list[int] = [i for _, shape in fields for i in shape.leaves]
+
+
+class _ListShape:
+    """A list, whose `element`s are at repetition level `rep`.
+
+    A list is empty below definition level `nonempty`, that of its repeated node.
+    """
+
+    __slots__ = ("element", "leaves", "nonempty", "present", "rep")
+
+    def __init__(
+        self, element: Shape, *, present: int | None, nonempty: int, rep: int
+    ) -> None:
+        self.element = element
+        self.present = present
+        self.nonempty = nonempty
+        self.rep = rep
+        self.leaves: list[int] = element.leaves
+
+
+Shape: TypeAlias = _LeafShape | _StructShape | _ListShape
+_SchemaNode: TypeAlias = "tuple[dict[int, Any], list[_SchemaNode]]"
+
+
+class _Schema:
+    """The top-level fields of a file's schema, and its leaf columns."""
+
+    def __init__(self, elements: list[dict[int, Any]]) -> None:
+        root, end = self._tree(elements, 0)
+        if end != len(elements):
+            _raise_corrupt()
+        self.leaves: list[_Column] = []
+        self.fields: list[tuple[str, Shape]] = [
+            (element[4].decode(), self._node(element, children, 0, 0, ()))
+            for element, children in root[1]
+        ]
+
+    @classmethod
+    def _tree(cls, elements: list[dict[int, Any]], i: int) -> tuple[_SchemaNode, int]:
+        """Rebuild the tree from its depth-first list, where groups count their children."""
+        element = elements[i]
+        children: list[_SchemaNode] = []
+        i += 1
+        for _ in range(element.get(5, 0)):
+            child, i = cls._tree(elements, i)
+            children.append(child)
+        return (element, children), i
+
+    def _node(
+        self,
+        element: dict[int, Any],
+        children: list[_SchemaNode],
+        parent_def: int,
+        parent_rep: int,
+        path: tuple[str, ...],
+    ) -> Shape:
+        repetition = element.get(3, REQUIRED)
+        level_def = parent_def + (repetition != REQUIRED)
+        level_rep = parent_rep + (repetition == REPEATED)
+        path = (*path, element[4].decode())
+        if repetition == REPEATED:
+            # Not part of a `LIST` or `MAP`: a required list of required elements.
+            element_shape = self._inner(
+                element, children, level_def, level_rep, path, present=None
+            )
+            return _ListShape(
+                element_shape, present=None, nonempty=level_def, rep=level_rep
+            )
+        present = level_def if repetition == OPTIONAL else None
+        return self._inner(element, children, level_def, level_rep, path, present=present)
+
+    def _inner(
+        self,
+        element: dict[int, Any],
+        children: list[_SchemaNode],
+        level_def: int,
+        level_rep: int,
+        path: tuple[str, ...],
+        *,
+        present: int | None,
+    ) -> Shape:
+        """The shape of a node whose own repetition was accounted for by the caller."""
+        if 5 not in element:
+            self.leaves.append(
+                _Column(
+                    element, name=".".join(path), max_def=level_def, max_rep=level_rep
+                )
+            )
+            return _LeafShape(len(self.leaves) - 1)
+        logical: dict[int, Any] = element.get(10) or {}
+        converted = element.get(6)
+        repeated = len(children) == 1 and children[0][0].get(3) == REPEATED
+        if _L_LIST in logical or converted == _LIST:
+            if not repeated:
+                msg = f"Unsupported layout of the Parquet LIST {'.'.join(path)!r}."
+                raise NotImplementedError(msg)
+            ((child, grandchildren),) = children
+            name = child[4].decode()
+            child_def, child_rep = level_def + 1, level_rep + 1
+            child_path = (*path, name)
+            if (
+                5 not in child
+                or len(grandchildren) != 1
+                or name in {"array", f"{path[-1]}_tuple"}
+            ):
+                # Legacy two-level list: the repeated node is the element itself.
+                element_shape = self._inner(
+                    child, grandchildren, child_def, child_rep, child_path, present=None
+                )
+            else:
+                ((leaf, leaf_children),) = grandchildren
+                element_shape = self._node(
+                    leaf, leaf_children, child_def, child_rep, child_path
+                )
+            return _ListShape(
+                element_shape, present=present, nonempty=child_def, rep=child_rep
+            )
+        if (_L_MAP in logical or converted in {_MAP, _MAP_KEY_VALUE}) and repeated:
+            ((child, grandchildren),) = children
+            if not 1 <= len(grandchildren) <= 2:
+                msg = f"Unsupported layout of the Parquet MAP {'.'.join(path)!r}."
+                raise NotImplementedError(msg)
+            child_def, child_rep = level_def + 1, level_rep + 1
+            child_path = (*path, child[4].decode())
+            entry = [
+                (name, self._node(*node, child_def, child_rep, child_path))
+                for name, node in zip(("key", "value"), grandchildren, strict=False)
+            ]
+            # Without values, as PyArrow does, a list of the keys.
+            element_shape = _StructShape(entry, None) if len(entry) == 2 else entry[0][1]
+            return _ListShape(
+                element_shape, present=present, nonempty=child_def, rep=child_rep
+            )
+        fields = [
+            (
+                child[4].decode(),
+                self._node(child, grandchildren, level_def, level_rep, path),
+            )
+            for child, grandchildren in children
+        ]
+        return _StructShape(fields, present)
+
+
+class _LeafData:
+    """The levels and (non-null) values of a leaf column, in one row group."""
+
+    __slots__ = ("defs", "max_def", "reps", "values")
+
+    def __init__(
+        self,
+        defs: list[int] | None,
+        reps: list[int] | None,
+        values: list[Any],
+        max_def: int,
+    ) -> None:
+        self.defs = defs
+        self.reps = reps
+        self.values = values
+        self.max_def = max_def
+
+    def __len__(self) -> int:
+        return len(self.values) if self.defs is None else len(self.defs)
+
+    def aligned(self) -> list[Any]:
+        """One value per level, `None` where it's null (or an ancestor is)."""
+        if self.defs is None:
+            return self.values
+        it = iter(self.values)
+        max_def = self.max_def
+        return [next(it) if level == max_def else None for level in self.defs]
+
+
+def _levels(levels: list[int] | None) -> list[int]:
+    if levels is None:  # e.g. a nested schema whose leaves have no levels
+        _raise_corrupt()
+    return levels
+
+
+def _row_ranges(leaf: _LeafData, n_rows: int) -> list[tuple[int, int]]:
+    """The `[start, end)` level ranges of each row: a new row starts at repetition 0."""
+    if leaf.reps is None:
+        if len(leaf) != n_rows:
+            _raise_corrupt()
+        return [(i, i + 1) for i in range(n_rows)]
+    starts = [i for i, level in enumerate(leaf.reps) if level == 0]
+    if len(starts) != n_rows or (starts and starts[0] != 0):
+        _raise_corrupt()
+    return list(pairwise([*starts, len(leaf)]))
+
+
+def _split_lists(
+    leaf: _LeafData, ranges: list[tuple[int, int]], shape: _ListShape
+) -> tuple[list[tuple[int, int]], list[int | None]]:
+    """Split each list's level range into its elements' ranges.
+
+    Also return each list's length, or `None` for a null list.
+    """
+    defs, reps = _levels(leaf.defs), _levels(leaf.reps)
+    present, nonempty, rep = shape.present, shape.nonempty, shape.rep
+    elements: list[tuple[int, int]] = []
+    lengths: list[int | None] = []
+    for start, end in ranges:
+        level = defs[start]
+        if level < nonempty:
+            lengths.append(None if present is not None and level < present else 0)
+            continue
+        n_before = len(elements)
+        element_start = start
+        for i in range(start + 1, end):
+            if reps[i] <= rep:  # a new element of this list (not of a nested one)
+                elements.append((element_start, i))
+                element_start = i
+        elements.append((element_start, end))
+        lengths.append(len(elements) - n_before)
+    return elements, lengths
+
+
+def _assemble(shape: Shape, ranges: Ranges, data: dict[int, _LeafData]) -> list[Any]:
+    """Build one value per range, from the levels and values of `shape`'s leaves."""
+    if isinstance(shape, _LeafShape):
+        leaf_ranges = ranges[shape.index]
+        if any(end - start != 1 for start, end in leaf_ranges):
+            _raise_corrupt()
+        values = data[shape.index].aligned()
+        return [values[start] for start, _ in leaf_ranges]
+    if isinstance(shape, _StructShape):
+        names = [name for name, _ in shape.fields]
+        columns = [_assemble(child, ranges, data) for _, child in shape.fields]
+        rows: list[Any] = [
+            dict(zip(names, row, strict=True)) for row in zip(*columns, strict=True)
+        ]
+        if (present := shape.present) is not None:
+            first = shape.leaves[0]
+            defs = _levels(data[first].defs)
+            rows = [
+                row if defs[start] >= present else None
+                for row, (start, _) in zip(rows, ranges[first], strict=True)
+            ]
+        return rows
+    element_ranges: Ranges = {}
+    lengths: list[int | None] | None = None
+    for index in shape.leaves:
+        element_ranges[index], leaf_lengths = _split_lists(
+            data[index], ranges[index], shape
+        )
+        if lengths is None:
+            lengths = leaf_lengths
+        elif leaf_lengths != lengths:  # all leaves must agree on every list's length
+            _raise_corrupt()
+    elements = iter(_assemble(shape.element, element_ranges, data))
+    return [None if n is None else list(islice(elements, n)) for n in lengths or []]
+
+
+def _column_values(shape: Shape, data: dict[int, _LeafData], n_rows: int) -> list[Any]:
+    """A top-level column's values, in one row group."""
+    if isinstance(shape, _LeafShape):  # flat, the common case: skip the assembly
+        leaf = data[shape.index]
+        values = _with_nulls(leaf.values, leaf.defs)
+        if len(values) != n_rows:
+            _raise_corrupt()
+        return values
+    ranges = {index: _row_ranges(data[index], n_rows) for index in shape.leaves}
+    return _assemble(shape, ranges, data)
+
+
+def _decode_values(  # noqa: C901
     page: bytes,
     pos: int,
     encoding: int,
@@ -511,19 +1008,35 @@ def _decode_values(
 ) -> list[Any]:
     if count == 0:  # e.g. an all-null page, which may have no value bytes at all
         return []
+    physical = column.physical
     if encoding == PLAIN:
         return _decode_plain_values(page, pos, count, column)
     if encoding in {PLAIN_DICTIONARY, RLE_DICTIONARY}:
-        if dictionary is None:
+        if dictionary is None or (bit_width := page[pos]) > 32:
             _raise_corrupt()
-        indices = _decode_rle_bitpacked(page, pos + 1, len(page), page[pos], count)
+        indices = _decode_rle_bitpacked(page, pos + 1, len(page), bit_width, count)
         return list(map(dictionary.__getitem__, indices))
-    if encoding == RLE and column.physical == BOOLEAN:
+    if encoding == RLE and physical == BOOLEAN:
         length = int.from_bytes(page[pos : pos + 4], "little")
         bits = _decode_rle_bitpacked(page, pos + 4, pos + 4 + length, 1, count)
         return [bool(bit) for bit in bits]
-    msg = f"Parquet encoding {_ENCODING_NAMES.get(encoding, encoding)} is not supported."
-    raise NotImplementedError(msg)
+    if encoding == BYTE_STREAM_SPLIT and physical not in {BOOLEAN, BYTE_ARRAY}:
+        width = _value_width(physical, column.type_length)
+        data = _byte_stream_split(page, pos, count, width)
+        return _convert(_decode_plain(data, 0, physical, count, width), column)
+    if encoding == DELTA_BINARY_PACKED and physical in _BITS:
+        values, _ = _decode_delta_binary_packed(page, pos, _BITS[physical])
+    elif encoding == DELTA_LENGTH_BYTE_ARRAY and physical == BYTE_ARRAY:
+        values, _ = _decode_delta_length_byte_arrays(page, pos, count)
+    elif encoding == DELTA_BYTE_ARRAY and physical in {BYTE_ARRAY, FIXED_LEN_BYTE_ARRAY}:
+        values = _decode_delta_byte_arrays(page, pos, count)
+    else:
+        name = _ENCODING_NAMES.get(encoding, encoding)
+        msg = f"Parquet encoding {name} is not supported for column {column.name!r}."
+        raise NotImplementedError(msg)
+    if len(values) != count:
+        _raise_corrupt()
+    return _convert(values, column)
 
 
 def _with_nulls(values: list[Any], levels: list[int] | None) -> list[Any]:
@@ -534,48 +1047,76 @@ def _with_nulls(values: list[Any], levels: list[int] | None) -> list[Any]:
     return [next(it) if level else None for level in levels]
 
 
-def _read_data_page_v1(
-    page: bytes, header: dict[int, Any], column: _Column, dictionary: list[Any] | None
-) -> list[Any]:
-    count, encoding, level_encoding = header[1], header[2], header[3]
-    if not column.max_def:
-        return _decode_values(
-            page, 0, encoding, count, column=column, dictionary=dictionary
-        )
-    if level_encoding != RLE:
-        msg = "Only RLE-encoded definition levels are supported."
+Levels: TypeAlias = "list[int] | None"
+PageData: TypeAlias = "tuple[Levels, Levels, list[Any]]"
+
+
+def _read_levels_v1(
+    page: bytes, pos: int, max_level: int, count: int, encoding: int
+) -> tuple[list[int] | None, int]:
+    """Read the 4-byte length-prefixed levels at `pos`, if there are any."""
+    if not max_level:
+        return None, pos
+    if encoding != RLE:
+        msg = "Only RLE-encoded repetition and definition levels are supported."
         raise NotImplementedError(msg)
-    length = int.from_bytes(page[:4], "little")
-    levels = _decode_rle_bitpacked(page, 4, 4 + length, 1, count)
+    _check_available(page, pos + 4)
+    length = int.from_bytes(page[pos : pos + 4], "little")
+    end = pos + 4 + length
+    _check_available(page, end)
+    return _decode_rle_bitpacked(page, pos + 4, end, max_level.bit_length(), count), end
+
+
+def _read_data_page_v1(
+    page: bytes, header: dict[int, Any], *, column: _Column, dictionary: list[Any] | None
+) -> PageData:
+    count, encoding = header[1], header[2]
+    if count == 0:
+        return [], [], []
+    reps, pos = _read_levels_v1(page, 0, column.max_rep, count, header.get(4, RLE))
+    defs, pos = _read_levels_v1(page, pos, column.max_def, count, header.get(3, RLE))
+    n_values = count if defs is None else defs.count(column.max_def)
     values = _decode_values(
-        page, 4 + length, encoding, sum(levels), column=column, dictionary=dictionary
+        page, pos, encoding, n_values, column=column, dictionary=dictionary
     )
-    return _with_nulls(values, levels)
+    return defs, reps, values
 
 
 def _read_data_page_v2(
     raw: bytes,
     header: dict[int, Any],
     codec: int,
+    size: int,
+    *,
     column: _Column,
     dictionary: list[Any] | None,
-) -> list[Any]:
+) -> PageData:
     # Unlike V1, levels come first and uncompressed, and only the values may be compressed.
-    count, n_nulls, encoding = header[1], header[2], header[4]
-    rep_length = header[6]
-    levels_end = rep_length + header[5]
-    levels = (
-        _decode_rle_bitpacked(raw, rep_length, levels_end, 1, count)
+    count, encoding, def_length, rep_length = header[1], header[4], header[5], header[6]
+    levels_end = rep_length + def_length
+    if def_length < 0 or rep_length < 0 or levels_end > min(len(raw), size):
+        _raise_corrupt()
+    reps = (
+        _decode_rle_bitpacked(raw, 0, rep_length, column.max_rep.bit_length(), count)
+        if column.max_rep
+        else None
+    )
+    defs = (
+        _decode_rle_bitpacked(
+            raw, rep_length, levels_end, column.max_def.bit_length(), count
+        )
         if column.max_def
         else None
     )
     body = raw[levels_end:]
     # An all-null page may have an empty body, which e.g. snappy can't decompress.
-    page = _decompress(codec, body) if body and header.get(7, True) else body
+    compressed = bool(body) and header.get(7, True)
+    page = _decompress(codec, body, size - levels_end) if compressed else body
+    n_values = count if defs is None else defs.count(column.max_def)
     values = _decode_values(
-        page, 0, encoding, count - n_nulls, column=column, dictionary=dictionary
+        page, 0, encoding, n_values, column=column, dictionary=dictionary
     )
-    return _with_nulls(values, levels)
+    return defs, reps, values
 
 
 def _chunk_range(meta: dict[int, Any]) -> tuple[int, int]:
@@ -588,36 +1129,71 @@ def _chunk_range(meta: dict[int, Any]) -> tuple[int, int]:
     return start, size
 
 
-def _read_column_chunk(
-    buf: bytes, meta: dict[int, Any], column: _Column, *, offset: int = 0
-) -> list[Any]:
-    """Decode a column chunk from `buf`, which starts at file position `offset`."""
-    codec: int = meta[4]
-    start, size = _chunk_range(meta)
-    pos = start - offset
-    end = pos + size
-    if end > len(buf):
-        _raise_corrupt()
-    dictionary: list[Any] | None = None
-    out: list[Any] = []
+def _pages(
+    buf: bytes, pos: int, end: int, column: _Column
+) -> Iterator[tuple[dict[int, Any], bytes]]:
+    """Each page's header and (still compressed) bytes, between `pos` and `end`."""
     while pos < end:
         r = _Reader(buf, pos)
         header = _read_struct(r)
-        page_type, compressed_size = header[1], header[3]
-        if compressed_size < 0 or r.pos + compressed_size > end:
+        if header[2] < 0 or header[3] < 0 or r.pos + header[3] > end:
             _raise_corrupt()
-        raw = buf[r.pos : r.pos + compressed_size]
-        pos = r.pos + compressed_size
-        if page_type == DICTIONARY_PAGE:
-            page = _decompress(codec, raw)
-            dictionary = _decode_plain_values(page, 0, header[7][1], column)
-        elif page_type == DATA_PAGE:
-            page = _decompress(codec, raw)
-            out += _read_data_page_v1(page, header[5], column, dictionary)
-        elif page_type == DATA_PAGE_V2:
-            out += _read_data_page_v2(raw, header[8], codec, column, dictionary)
-        # Other page types (index pages) carry no data.
-    return out
+        pos = r.pos + header[3]
+        raw = buf[r.pos : pos]
+        if (crc := header.get(4)) is not None and zlib.crc32(raw) != crc & 0xFFFFFFFF:
+            msg = f"Parquet page checksum mismatch in column {column.name!r}, the file may be corrupt."
+            raise ValueError(msg)
+        yield header, raw
+
+
+def _read_column_chunk(
+    buf: bytes, meta: dict[int, Any], column: _Column, *, offset: int = 0
+) -> _LeafData:
+    """Decode a column chunk from `buf`, which starts at file position `offset`."""
+    codec: int = meta[4]
+    n_expected: int = meta[5]
+    start, size = _chunk_range(meta)
+    if start < offset or start - offset + size > len(buf):
+        _raise_corrupt()
+    dictionary: list[Any] | None = None
+    defs: list[int] = []
+    reps: list[int] = []
+    values: list[Any] = []
+    n_levels = 0
+    for header, raw in _pages(buf, start - offset, start - offset + size, column):
+        page_size = header[2]
+        if header[1] == DICTIONARY_PAGE:
+            dictionary = _decode_plain_values(
+                _decompress(codec, raw, page_size), 0, header[7][1], column
+            )
+            continue
+        if header[1] == DATA_PAGE:
+            page_header = header[5]
+            read_page = partial(
+                _read_data_page_v1, _decompress(codec, raw, page_size), page_header
+            )
+        elif header[1] == DATA_PAGE_V2:
+            page_header = header[8]
+            read_page = partial(_read_data_page_v2, raw, page_header, codec, page_size)
+        else:  # e.g. index pages: no data
+            continue
+        if not 0 <= page_header[1] <= n_expected - n_levels:
+            _raise_corrupt()
+        n_levels += page_header[1]
+        page_defs, page_reps, page_values = read_page(
+            column=column, dictionary=dictionary
+        )
+        defs += page_defs or ()
+        reps += page_reps or ()
+        values += page_values
+    if n_levels != n_expected:
+        _raise_corrupt()
+    return _LeafData(
+        defs if column.max_def else None,
+        reps if column.max_rep else None,
+        values,
+        column.max_def,
+    )
 
 
 def _check_magic(head: bytes, tail: bytes) -> None:
@@ -628,64 +1204,89 @@ def _check_magic(head: bytes, tail: bytes) -> None:
 
 def _read_footer(stream: BinaryIO) -> dict[int, Any]:
     head = stream.read(4)
+    file_size = stream.seek(0, 2)
+    if file_size < 12:
+        _check_magic(head, b"")
     stream.seek(-8, 2)
     tail = stream.read(8)
     _check_magic(head, tail[4:])
     metadata_length = int.from_bytes(tail[:4], "little")
+    if metadata_length > file_size - 12:
+        _raise_corrupt()
     stream.seek(-8 - metadata_length, 2)
     return _read_struct(_Reader(stream.read(metadata_length)))
 
 
 def _buffer_footer(buf: bytes) -> dict[int, Any]:
-    _check_magic(buf[:4], buf[-4:])
+    _check_magic(buf[:4], buf[-4:] if len(buf) >= 12 else b"")
     metadata_length = int.from_bytes(buf[-8:-4], "little")
+    if metadata_length > len(buf) - 12:
+        _raise_corrupt()
     return _read_struct(_Reader(buf, len(buf) - 8 - metadata_length))
+
+
+@contextmanager
+def _corruption_as_value_error() -> Iterator[None]:
+    try:
+        yield
+    except _CORRUPTION_ERRORS as exc:
+        raise ValueError(_CORRUPT_MESSAGE) from exc
 
 
 def read_parquet(
     source: str | bytes | BinaryIO, columns: Sequence[str] | None = None
 ) -> dict[str, list[Any]]:
-    """Read a flat Parquet file into a dict of lists, optionally only some `columns`."""
+    """Read a Parquet file into a dict of lists, optionally only some `columns`."""
     if isinstance(source, str):
         # Read only the footer and the wanted column chunks, not the whole file.
         with open(source, "rb") as stream:  # noqa: PTH123
 
-            def read_chunk(meta: dict[int, Any], column: _Column) -> list[Any]:
+            def read_chunk(meta: dict[int, Any], column: _Column) -> _LeafData:
                 start, size = _chunk_range(meta)
                 stream.seek(start)
                 buf = stream.read(size)
                 return _read_column_chunk(buf, meta, column, offset=start)
 
-            return _read_parquet(_read_footer(stream), columns, read_chunk)
+            with _corruption_as_value_error():
+                return _read_parquet(_read_footer(stream), columns, read_chunk)
     buf = source if isinstance(source, bytes) else source.read()
-    return _read_parquet(
-        _buffer_footer(buf),
-        columns,
-        lambda meta, column: _read_column_chunk(buf, meta, column),
-    )
+    with _corruption_as_value_error():
+        return _read_parquet(
+            _buffer_footer(buf),
+            columns,
+            lambda meta, column: _read_column_chunk(buf, meta, column),
+        )
 
 
 def _read_parquet(
     metadata: dict[int, Any],
     columns: Sequence[str] | None,
-    read_chunk: Callable[[dict[int, Any], _Column], list[Any]],
+    read_chunk: Callable[[dict[int, Any], _Column], _LeafData],
 ) -> dict[str, list[Any]]:
-    all_columns = _columns(metadata[2])
-    names = [column.name for column in all_columns]
+    schema = _Schema(metadata[2])
+    names = [name for name, _ in schema.fields]
     check_column_names_are_unique(names)
     if columns is not None and (missing := set(columns).difference(names)):
         msg = f"Columns not found in the Parquet file: {sorted(missing)}."
         raise ValueError(msg)
-    wanted = set(names if columns is None else columns)
-    result: dict[str, list[Any]] = {
-        name: [] for name in (names if columns is None else columns)
-    }
-    for row_group in metadata.get(4, []):
-        for column, chunk in zip(all_columns, row_group[1], strict=True):
-            if column.name not in wanted:
-                continue
-            if 1 in chunk:
-                msg = "Parquet column chunks stored in other files are not supported."
-                raise NotImplementedError(msg)
-            result[column.name] += read_chunk(chunk[3], column)
+    shapes = dict(schema.fields)
+    wanted = dict.fromkeys(names if columns is None else columns)
+    selected = [(name, shapes[name]) for name in wanted]
+    result: dict[str, list[Any]] = {name: [] for name, _ in selected}
+    row_groups = metadata.get(4, [])
+    # Old writers (e.g. parquet-rs 0.3) left the file's row count at 0.
+    if metadata[3] and sum(row_group[3] for row_group in row_groups) != metadata[3]:
+        _raise_corrupt()
+    for row_group in row_groups:
+        chunks, n_rows = row_group[1], row_group[3]
+        if len(chunks) != len(schema.leaves):
+            _raise_corrupt()
+        for name, shape in selected:
+            data: dict[int, _LeafData] = {}
+            for index in shape.leaves:
+                if 1 in chunks[index]:
+                    msg = "Parquet column chunks stored in other files are not supported."
+                    raise NotImplementedError(msg)
+                data[index] = read_chunk(chunks[index][3], schema.leaves[index])
+            result[name] += _column_values(shape, data, n_rows)
     return result

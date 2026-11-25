@@ -4,6 +4,8 @@ import datetime as dt
 import random
 import string
 import sys
+import zlib
+from contextlib import suppress
 from decimal import Decimal
 from importlib.util import find_spec
 from io import BytesIO
@@ -14,18 +16,33 @@ import pytest
 from pizzlies._plugin.parquet import (
     BOOLEAN,
     BYTE_ARRAY,
+    DELTA_BINARY_PACKED,
+    DELTA_BYTE_ARRAY,
+    DELTA_LENGTH_BYTE_ARRAY,
     FIXED_LEN_BYTE_ARRAY,
     GZIP,
+    INT32,
     INT64,
+    LZ4,
     OPTIONAL,
     PLAIN,
+    REPEATED,
     RLE_DICTIONARY,
     SNAPPY,
+    _buffer_footer,
     _Column,
+    _column_values,
     _decode_plain,
+    _decode_plain_values,
     _decode_rle_bitpacked,
+    _decode_values,
     _decompress,
+    _LeafData,
+    _ListShape,
+    _read_column_chunk,
     _read_data_page_v2,
+    _read_parquet,
+    _Schema,
     read_parquet,
 )
 
@@ -35,7 +52,7 @@ if TYPE_CHECKING:
 pa = pytest.importorskip("pyarrow")
 pq = pytest.importorskip("pyarrow.parquet")
 
-CODECS = ["none", "snappy", "gzip", "zstd"]
+CODECS = ["none", "snappy", "gzip", "lz4", "zstd"]
 UTC = dt.timezone.utc
 
 
@@ -285,30 +302,14 @@ def test_truncated_or_oversized_rle_runs() -> None:
             _decode_rle_bitpacked(buf, 0, end, 1, 3)
 
 
-@pytest.mark.parametrize(
-    ("table", "kwargs", "match"),
-    [
-        ({"a": [[1, 2], [3]]}, {}, "Nested"),
-        ({"a": [{"x": 1}]}, {}, "Nested"),
-        ({"a": [1, 2]}, {"compression": "brotli"}, "BROTLI"),
-        ({"a": [1, 2]}, {"compression": "lz4"}, "LZ4"),
-        (
-            {"a": [1, 2]},
-            {"use_dictionary": False, "column_encoding": "DELTA_BINARY_PACKED"},
-            "DELTA_BINARY_PACKED",
-        ),
-        (
-            {"a": [1.0, 2.0]},
-            {"use_dictionary": False, "column_encoding": "BYTE_STREAM_SPLIT"},
-            "BYTE_STREAM_SPLIT",
-        ),
-        ({"a": pa.array([1.0], pa.float16())}, {}, "FLOAT16"),
-    ],
-)
-def test_unsupported(table: Any, kwargs: Any, match: str) -> None:
-    buf = _write(pa.table(table), **kwargs)
-    with pytest.raises(NotImplementedError, match=match):
-        read_parquet(buf)
+def test_unsupported() -> None:
+    with pytest.raises(NotImplementedError, match="BROTLI"):
+        read_parquet(_write(pa.table({"a": [1, 2]}), compression="brotli"))
+    column = _Column({1: INT32, 4: b"a"})
+    with pytest.raises(NotImplementedError, match="BIT_PACKED"):
+        _decode_values(b"\x00", 0, 4, 1, column=column, dictionary=None)
+    with pytest.raises(NotImplementedError, match="encoding 6"):  # not for integers
+        _decode_values(b"\x00", 0, 6, 1, column=column, dictionary=None)
 
 
 @pytest.mark.skipif(sys.version_info >= (3, 14), reason="the stdlib has zstd")
@@ -328,14 +329,19 @@ def test_all_null_v2_page_with_empty_body(encoding: int) -> None:
     column = _Column({1: INT64, 3: OPTIONAL, 4: b"a"})
     levels = b"\x06\x00"  # an RLE run of three 0s: three nulls
     header = {1: 3, 2: 3, 4: encoding, 5: len(levels), 6: 0}
-    assert _read_data_page_v2(levels, header, SNAPPY, column, None) == [None] * 3
+    page = _read_data_page_v2(
+        levels, header, SNAPPY, len(levels), column=column, dictionary=None
+    )
+    assert page == ([0, 0, 0], None, [])
 
 
 def test_dictionary_page_missing() -> None:
     column = _Column({1: INT64, 4: b"a"})
     header = {1: 1, 2: 0, 4: RLE_DICTIONARY, 5: 0, 6: 0, 7: False}
     with pytest.raises(ValueError, match="may be corrupt"):
-        _read_data_page_v2(b"\x01\x02\x00", header, SNAPPY, column, None)
+        _read_data_page_v2(
+            b"\x01\x02\x00", header, SNAPPY, 3, column=column, dictionary=None
+        )
 
 
 def test_annotation_on_wrong_physical_type() -> None:
@@ -357,12 +363,12 @@ def test_gzip_multiple_members() -> None:
     import zlib
 
     first, second = gzip.compress(b"abc"), gzip.compress(b"def")
-    assert _decompress(GZIP, first + second) == b"abcdef"
-    assert _decompress(GZIP, zlib.compress(b"abc")) == b"abc"
+    assert _decompress(GZIP, first + second, 6) == b"abcdef"
+    assert _decompress(GZIP, zlib.compress(b"abc"), 3) == b"abc"
     with pytest.raises(ValueError, match="may be corrupt"):
-        _decompress(GZIP, first + second[:-4])
+        _decompress(GZIP, first + second[:-4], 6)
     with pytest.raises(ValueError, match="may be corrupt"):
-        _decompress(GZIP, first + b"garbage")
+        _decompress(GZIP, first + b"garbage", 6)
 
 
 def test_duplicate_column_names() -> None:
@@ -390,3 +396,462 @@ def test_path_reads_only_selected_column_chunks(tmp_path: Path) -> None:
     assert read_parquet(str(path), ["c", "a"]) == {"c": [1.5, 2.5], "a": [1, 2]}
     with pytest.raises(ValueError, match="may be corrupt"):
         read_parquet(str(path), ["b"])
+
+
+def _pydict(table: Any) -> dict[str, list[Any]]:
+    """`table.to_pydict()`, with maps as lists of `{"key": ..., "value": ...}` structs."""
+
+    def convert(value: Any) -> Any:
+        if isinstance(value, list):
+            return [convert(v) for v in value]
+        if isinstance(value, tuple):
+            return {"key": convert(value[0]), "value": convert(value[1])}
+        if isinstance(value, dict):
+            return {k: convert(v) for k, v in value.items()}
+        return value
+
+    return {k: convert(v) for k, v in table.to_pydict().items()}
+
+
+def _random_with_nulls(rng: random.Random, values: list[Any]) -> list[Any]:
+    return [None if rng.random() < 0.1 else v for v in values]
+
+
+@pytest.mark.parametrize("data_page_version", ["1.0", "2.0"])
+@pytest.mark.parametrize(
+    ("dtype", "encoding"),
+    [
+        (pa.int32(), "DELTA_BINARY_PACKED"),
+        (pa.int64(), "DELTA_BINARY_PACKED"),
+        (pa.timestamp("us"), "DELTA_BINARY_PACKED"),
+        (pa.string(), "DELTA_LENGTH_BYTE_ARRAY"),
+        (pa.string(), "DELTA_BYTE_ARRAY"),
+        (pa.binary(), "DELTA_BYTE_ARRAY"),
+        (pa.float32(), "BYTE_STREAM_SPLIT"),
+        (pa.float64(), "BYTE_STREAM_SPLIT"),
+        (pa.int32(), "BYTE_STREAM_SPLIT"),
+        (pa.int64(), "BYTE_STREAM_SPLIT"),
+        (pa.binary(3), "BYTE_STREAM_SPLIT"),
+    ],
+)
+def test_encodings(dtype: Any, encoding: str, data_page_version: str) -> None:
+    rng = random.Random(0)  # noqa: S311
+    n = 2000
+    if pa.types.is_timestamp(dtype):
+        values = [rng.randint(0, 2**50) for _ in range(n)]
+    elif pa.types.is_integer(dtype):
+        bits = dtype.bit_width
+        lo, hi = -(2 ** (bits - 1)), 2 ** (bits - 1) - 1
+        # Extremes make the deltas overflow, and small values vary their bit widths.
+        choices = [lo, hi, 0]
+        values = [
+            rng.choice([*choices, rng.randint(lo, hi), rng.randint(-5, 5)])
+            for _ in range(n)
+        ]
+    elif pa.types.is_floating(dtype):
+        values = [rng.uniform(-1e6, 1e6) for _ in range(n)]
+    elif pa.types.is_fixed_size_binary(dtype):
+        values = [rng.randbytes(3) for _ in range(n)]
+    else:
+        # Shared prefixes exercise `DELTA_BYTE_ARRAY`'s prefix lengths.
+        stems = ["", "prefix", "prefix_longer", "日本"]
+        values = [rng.choice(stems) + str(rng.randint(0, 99)) for _ in range(n)]
+        if dtype == pa.binary():
+            values = [v.encode() for v in values]
+    table = pa.table({"a": pa.array(_random_with_nulls(rng, values), dtype)})
+    buf = _write(
+        table,
+        use_dictionary=False,
+        column_encoding={"a": encoding},
+        data_page_version=data_page_version,
+        data_page_size=1024,
+    )
+    assert read_parquet(buf) == table.to_pydict()
+
+
+def test_float16() -> None:
+    values = [1.5, None, float("inf"), -0.0, 65504.0, 2.0**-24]
+    result = read_parquet(_write(pa.table({"a": pa.array(values, pa.float16())})))
+    assert result == {"a": values}
+
+
+def test_lz4_framing() -> None:
+    # An LZ4 block: the literals "abc", then a match of 6 bytes, 3 bytes back.
+    block = b"\x32abc\x03\x00"
+    assert _decompress(LZ4, block, 9) == b"abcabcabc"
+    hadoop = len(b"abcabcabc").to_bytes(4, "big") + len(block).to_bytes(4, "big") + block
+    assert _decompress(LZ4, hadoop * 2, 18) == b"abcabcabc" * 2
+    for corrupt in [b"\x32abc\x00\x00", b"\x32abc\x04\x00", b"\x32abc\x03", b"\x50abc"]:
+        with pytest.raises(ValueError, match="may be corrupt"):
+            _decompress(LZ4, corrupt, 9)
+
+
+@pytest.mark.parametrize(
+    ("codec", "data", "size"),
+    [
+        (SNAPPY, b"\x05\x10hello", 4),  # declares 5 bytes, but the page has 4
+        (SNAPPY, b"\x03\x08ab", 3),  # a literal longer than the data
+        (SNAPPY, b"\x06\x08abc\x01\x00", 6),  # a copy from offset 0
+        (SNAPPY, b"\x06\x08abc\x01\x09", 6),  # a copy from before the start
+        (SNAPPY, b"\x06\x08abc\x0a\x03", 6),  # a 2-byte offset, cut short
+        (GZIP, zlib.compress(b"\x00" * 10_000_000), 100),  # a decompression bomb
+    ],
+)
+def test_decompressed_size_checked(codec: int, data: bytes, size: int) -> None:
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decompress(codec, data, size)
+
+
+def _nested_table(n: int = 200) -> Any:
+    rng = random.Random(1)  # noqa: S311
+
+    def maybe(value: Any, p: float = 0.15) -> Any:
+        return None if rng.random() < p else value
+
+    def ints(k: int) -> list[Any]:
+        return [maybe(rng.randint(-9, 9)) for _ in range(k)]
+
+    struct_type = pa.struct(
+        [("x", pa.int64()), ("y", pa.string()), ("z", pa.list_(pa.int64()))]
+    )
+    required_list = pa.field(
+        "required", pa.list_(pa.field("item", pa.int64(), nullable=False)), nullable=False
+    )
+    columns = {
+        "list": pa.array(
+            [maybe(ints(rng.randint(0, 4))) for _ in range(n)], pa.list_(pa.int64())
+        ),
+        "nested_list": pa.array(
+            [
+                maybe(
+                    [
+                        maybe([maybe(rng.choice("ab")) for _ in range(rng.randint(0, 3))])
+                        for _ in range(rng.randint(0, 3))
+                    ]
+                )
+                for _ in range(n)
+            ],
+            pa.list_(pa.list_(pa.string())),
+        ),
+        "struct": pa.array(
+            [
+                maybe(
+                    {
+                        "x": maybe(rng.randint(0, 9)),
+                        "y": maybe("s"),
+                        "z": maybe(ints(rng.randint(0, 2))),
+                    }
+                )
+                for _ in range(n)
+            ],
+            struct_type,
+        ),
+        "list_of_structs": pa.array(
+            [
+                maybe(
+                    [
+                        maybe({"x": maybe(1), "y": "t", "z": []})
+                        for _ in range(rng.randint(0, 3))
+                    ]
+                )
+                for _ in range(n)
+            ],
+            pa.list_(struct_type),
+        ),
+        "map": pa.array(
+            [
+                maybe([(f"k{j}", maybe(j)) for j in range(rng.randint(0, 3))])
+                for _ in range(n)
+            ],
+            pa.map_(pa.string(), pa.int64()),
+        ),
+        "large_list": pa.array(
+            [maybe(ints(rng.randint(0, 3))) for _ in range(n)], pa.large_list(pa.int64())
+        ),
+        "fixed_size_list": pa.array(
+            [maybe(ints(2)) for _ in range(n)], pa.list_(pa.int64(), 2)
+        ),
+    }
+    required = [[rng.randint(0, 9) for _ in range(rng.randint(0, 3))] for _ in range(n)]
+    return pa.table(columns).append_column(
+        required_list, pa.array(required, required_list.type)
+    )
+
+
+@pytest.mark.parametrize("codec", [_codec_param(c) for c in ["none", "snappy"]])
+@pytest.mark.parametrize("data_page_version", ["1.0", "2.0"])
+@pytest.mark.parametrize("use_dictionary", [True, False])
+def test_nested(codec: str, data_page_version: str, use_dictionary: bool) -> None:  # noqa: FBT001
+    table = _nested_table()
+    buf = _write(
+        table,
+        compression=codec,
+        data_page_version=data_page_version,
+        use_dictionary=use_dictionary,
+        row_group_size=64,
+        data_page_size=256,
+    ).getvalue()
+    assert read_parquet(buf) == _pydict(table)
+    assert read_parquet(buf, ["map", "list"]) == {
+        "map": _pydict(table)["map"],
+        "list": _pydict(table)["list"],
+    }
+
+
+def test_nested_written_by_polars() -> None:
+    pl = pytest.importorskip("polars")
+    df = pl.DataFrame(
+        {
+            "a": [[1, None], None, []],
+            "b": [{"x": 1, "y": [["a"]]}, None, {"x": None, "y": None}],
+            "c": [[{"k": "v"}], [], None],
+        }
+    )
+    buf = BytesIO()
+    df.write_parquet(buf, compression="snappy")
+    buf.seek(0)
+    assert read_parquet(buf) == df.to_dict(as_series=False)
+
+
+def test_legacy_lists() -> None:
+    # An unannotated repeated field, and a two-level `LIST` whose repeated group is the
+    # element (a struct), and a three-level one: see the parquet-format spec's
+    # backward-compatibility rules for lists.
+    schema = _Schema(
+        [
+            {4: b"root", 5: 4},
+            {1: INT32, 3: REPEATED, 4: b"unannotated"},
+            {3: OPTIONAL, 4: b"two_level", 5: 1, 6: 3},
+            {1: INT32, 3: REPEATED, 4: b"element"},
+            {3: OPTIONAL, 4: b"array_struct", 5: 1, 6: 3},
+            {3: REPEATED, 4: b"array", 5: 1},
+            {1: INT32, 4: b"x"},
+            {3: OPTIONAL, 4: b"three_level", 5: 1, 6: 3},
+            {3: REPEATED, 4: b"list", 5: 1},
+            {1: INT32, 3: OPTIONAL, 4: b"element"},
+        ]
+    )
+    shapes = dict(schema.fields)
+    assert all(isinstance(shape, _ListShape) for shape in shapes.values())
+    assert [(c.name, c.max_def, c.max_rep) for c in schema.leaves] == [
+        ("unannotated", 1, 1),
+        ("two_level.element", 2, 1),
+        ("array_struct.array.x", 2, 1),
+        ("three_level.list.element", 3, 1),
+    ]
+    # Rows `[1, 2]`, `[]` and `[3]` of the unannotated list.
+    leaf = _LeafData([1, 1, 0, 1], [0, 1, 0, 0], [1, 2, 3], 1)
+    assert _column_values(shapes["unannotated"], {0: leaf}, 3) == [[1, 2], [], [3]]
+    with pytest.raises(ValueError, match="may be corrupt"):  # a row too many
+        _column_values(shapes["unannotated"], {0: leaf}, 4)
+    leaf = _LeafData([2, 0, 1], [0, 0, 0], [5], 2)
+    assert _column_values(shapes["array_struct"], {2: leaf}, 3) == [[{"x": 5}], None, []]
+
+
+@pytest.mark.parametrize(
+    "elements",
+    [
+        [{4: b"root", 5: 1}, {3: OPTIONAL, 4: b"l", 5: 1, 6: 3}, {1: INT32, 4: b"x"}],
+        [
+            {4: b"root", 5: 1},
+            {3: OPTIONAL, 4: b"m", 5: 1, 6: 1},
+            {3: REPEATED, 4: b"kv", 5: 3},
+            {1: INT32, 4: b"k"},
+            {1: INT32, 4: b"v"},
+            {1: INT32, 4: b"w"},
+        ],
+    ],
+)
+def test_unsupported_nested_layouts(elements: list[dict[int, Any]]) -> None:
+    with pytest.raises(NotImplementedError, match="Unsupported layout"):
+        _Schema(elements)
+
+
+def test_page_checksums() -> None:
+    raw = bytearray(
+        _write(pa.table({"a": [1, 2, 3]}), write_page_checksum=True).getvalue()
+    )
+    meta = pq.ParquetFile(BytesIO(bytes(raw))).metadata.row_group(0).column(0)
+    assert read_parquet(bytes(raw)) == {"a": [1, 2, 3]}
+    # The last byte of the column chunk is in its data page's values.
+    start = meta.dictionary_page_offset or meta.data_page_offset
+    raw[start + meta.total_compressed_size - 1] ^= 1
+    with pytest.raises(ValueError, match="checksum mismatch in column 'a'"):
+        read_parquet(bytes(raw))
+
+
+def test_row_counts_checked() -> None:
+    buf = _write(pa.table({"a": [1, 2, 3], "b": [[1], [], None]})).getvalue()
+    metadata = _buffer_footer(buf)
+
+    def read_chunk(meta: dict[int, Any], column: Any) -> Any:
+        return _read_column_chunk(buf, meta, column)
+
+    metadata[3] += 1  # the file's row count
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _read_parquet(metadata, None, read_chunk)
+    metadata[3] -= 1
+    metadata[4][0][3] += 1  # and the row group's
+    metadata[3] += 1
+    for columns in (["a"], ["b"]):
+        with pytest.raises(ValueError, match="may be corrupt"):
+            _read_parquet(metadata, columns, read_chunk)
+
+
+def test_invalid_utf8() -> None:
+    column = _Column({1: BYTE_ARRAY, 4: b"s", 6: 0})
+    with pytest.raises(ValueError, match="'s' holds invalid UTF-8"):
+        _decode_plain_values(b"\x01\x00\x00\x00\xff", 0, 1, column)
+    column = _Column({1: FIXED_LEN_BYTE_ARRAY, 2: 1, 4: b"s", 6: 0})
+    with pytest.raises(ValueError, match="'s' holds invalid UTF-8"):
+        _decode_values(b"\xff", 0, PLAIN, 1, column=column, dictionary=None)
+
+
+def test_columns_deduplicated() -> None:
+    assert read_parquet(_write(pa.table({"a": [1]})), ["a", "a"]) == {"a": [1]}
+
+
+@pytest.mark.parametrize("raw", [b"PAR1", b"PAR1" + b"\xff\xff\x00\x00PAR1"])
+def test_truncated_footer(tmp_path: Path, raw: bytes) -> None:
+    path = tmp_path / "data.parquet"
+    path.write_bytes(raw)
+    match = "Not a Parquet file" if len(raw) < 12 else "may be corrupt"
+    for source in (raw, str(path)):
+        with pytest.raises(ValueError, match=match):
+            read_parquet(source)
+
+
+def test_fuzz() -> None:
+    # Whatever the corruption, only `ValueError` or `NotImplementedError` may escape.
+    rng = random.Random(0)  # noqa: S311
+    table = pa.table(
+        {
+            "i": [1, None, 3, 4] * 25,
+            "s": ["a", "bb", None, "ccc"] * 25,
+            "l": [[1, 2], None, [], [None, 5]] * 25,
+            "m": pa.array(
+                [[("k", 1)], None, [], [("a", None)]] * 25,
+                pa.map_(pa.string(), pa.int64()),
+            ),
+        }
+    )
+    seeds = [
+        _write(
+            table, compression=codec, data_page_version=version, row_group_size=40
+        ).getvalue()
+        for codec in ("none", "snappy", "gzip", "lz4")
+        for version in ("1.0", "2.0")
+    ]
+    seeds.append(
+        _write(
+            table.select(["i", "s"]),
+            use_dictionary=False,
+            column_encoding={"i": "DELTA_BINARY_PACKED", "s": "DELTA_BYTE_ARRAY"},
+        ).getvalue()
+    )
+    for _ in range(500):
+        raw = bytearray(rng.choice(seeds))
+        for _ in range(rng.choice([1, 1, 2, 4])):
+            raw[rng.randrange(len(raw))] = rng.randrange(256)
+        if rng.random() < 0.1:
+            raw = raw[: rng.randrange(len(raw))]
+        with suppress(ValueError, NotImplementedError):
+            read_parquet(bytes(raw))
+
+
+# `DELTA_BINARY_PACKED` headers: a block of 128 values in 4 miniblocks, then the value
+# count and the first value (zigzag-encoded), then for more values, a block's minimum
+# delta and its miniblocks' bit widths (0: no data).
+_ONE_ZERO = b"\x80\x01\x04\x01\x00"
+_TWO_ZEROS = b"\x80\x01\x04\x02\x00" + b"\x00" + b"\x00" * 4
+_ONE_FIVE = b"\x80\x01\x04\x01\x0a"
+
+
+@pytest.mark.parametrize(
+    ("data", "encoding", "physical", "count"),
+    [
+        (_ONE_ZERO, DELTA_BINARY_PACKED, INT32, 2),  # one value instead of two
+        (b"\x80\x01\x03\x01\x00", DELTA_BINARY_PACKED, INT32, 1),  # 128 / 3 miniblocks
+        (_TWO_ZEROS[:-1], DELTA_BINARY_PACKED, INT32, 2),  # a bit width missing
+        (
+            _TWO_ZEROS[:-4] + b"\x21" + b"\x00" * 3,
+            DELTA_BINARY_PACKED,
+            INT32,
+            2,
+        ),  # 33 bits
+        (_ONE_ZERO, DELTA_LENGTH_BYTE_ARRAY, BYTE_ARRAY, 2),  # one length instead of two
+        (_ONE_FIVE, DELTA_LENGTH_BYTE_ARRAY, BYTE_ARRAY, 1),  # 5 bytes, none there
+        (_TWO_ZEROS + _ONE_ZERO, DELTA_BYTE_ARRAY, BYTE_ARRAY, 1),  # two prefixes
+        (
+            _ONE_FIVE + _ONE_ZERO,
+            DELTA_BYTE_ARRAY,
+            BYTE_ARRAY,
+            1,
+        ),  # a 5-byte prefix of b""
+    ],
+)
+def test_corrupt_delta_encodings(
+    data: bytes, encoding: int, physical: int, count: int
+) -> None:
+    column = _Column({1: physical, 4: b"a"})
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decode_values(data, 0, encoding, count, column=column, dictionary=None)
+
+
+def test_corrupt_lz4() -> None:
+    block = b"\x32abc\x00\x00"  # a match from offset 0
+    hadoop = (9).to_bytes(4, "big") + len(block).to_bytes(4, "big") + block
+    wrong_size = (5).to_bytes(4, "big") + (6).to_bytes(4, "big") + b"\x32abc\x03\x00"
+    for data in (hadoop, wrong_size, hadoop[:6], (99).to_bytes(4, "big") * 2):
+        with pytest.raises(ValueError, match="may be corrupt"):
+            _decompress(LZ4, data, 9)
+
+
+@pytest.mark.parametrize(
+    "elements",
+    [
+        [{4: b"root", 5: 1}, {4: b"s", 5: 0}],  # a struct without fields
+        [{4: b"root", 5: 0}, {1: INT32, 4: b"a"}],  # more elements than the tree has
+    ],
+)
+def test_corrupt_schema(elements: list[dict[int, Any]]) -> None:
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _Schema(elements)
+
+
+@pytest.mark.parametrize(
+    ("leaf", "n_rows"),
+    [
+        (_LeafData(None, None, [1], 1), 1),  # no levels for a list
+        (_LeafData(None, None, [1], 1), 2),  # a row too few
+        (_LeafData([1, 1], [0, 2], [1, 2], 1), 1),  # repetition deeper than the schema
+    ],
+)
+def test_corrupt_levels(leaf: _LeafData, n_rows: int) -> None:
+    (shape,) = (
+        s for _, s in _Schema([{4: b"r", 5: 1}, {1: INT32, 3: REPEATED, 4: b"a"}]).fields
+    )
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _column_values(shape, {0: leaf}, n_rows)
+
+
+def test_corrupt_v2_level_lengths() -> None:
+    column = _Column({1: INT64, 3: OPTIONAL, 4: b"a"})
+    header = {1: 3, 2: 3, 4: PLAIN, 5: -1, 6: 0}
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _read_data_page_v2(b"\x06\x00", header, SNAPPY, 2, column=column, dictionary=None)
+
+
+def test_corrupt_chunk_count() -> None:
+    buf = _write(pa.table({"a": [1], "b": [2]})).getvalue()
+    metadata = _buffer_footer(buf)
+    metadata[4][0][1].pop()
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _read_parquet(
+            metadata, None, lambda meta, column: _read_column_chunk(buf, meta, column)
+        )
+
+
+def test_float16_of_wrong_width() -> None:
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _Column({1: FIXED_LEN_BYTE_ARRAY, 2: 3, 4: b"a", 10: {15: {}}})
