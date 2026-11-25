@@ -284,6 +284,13 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
+        if isinstance(native_object, LazyFrame) and (
+            eager_only or eager_or_interchange_only
+        ):
+            if not pass_through:
+                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
+                raise TypeError(msg)
+            return native_object
         if native_object._version is version:
             return native_object
 
