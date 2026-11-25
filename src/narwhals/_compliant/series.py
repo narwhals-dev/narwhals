@@ -391,7 +391,8 @@ class EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):  # type: ignore[mis
 
     # NOTE: **Should** be handled at narwhals-level
     def data_empty(self) -> HistData[NativeSeriesT, _CountsT_co]:
-        return {"breakpoint": [], "count": []} if self._breakpoint else {"count": []}
+        # No bins: typed like the result of a series that has data, not as plain lists
+        return self.series_empty(0)
 
     # NOTE: *Could* be handled at narwhals-level, **iff** we add `nw.repeat`, `nw.linear_space`
     # See https://github.com/narwhals-dev/narwhals/pull/2839#discussion_r2215630696
