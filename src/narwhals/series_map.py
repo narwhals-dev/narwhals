@@ -15,11 +15,15 @@ class SeriesMapNamespace(Generic[SeriesT]):
     def len(self) -> SeriesT:
         """Return the number of entries in each map.
 
-        Null maps return null. Entries with null values count towards the total.
+        Empty maps return zero, and null maps return null. Entries with null values
+        count towards the total.
         The result has dtype `UInt32`. Supported on PyArrow, Polars 2.0 or newer,
         pandas, and Modin. On pandas and Modin, this requires a PyArrow-backed
-        `Map` Series and pandas 2.2 or newer. For DuckDB and Ibis with DuckDB, use
-        `Expr.map.len()` with a lazy frame.
+        `Map` Series and pandas 2.2 or newer.
+
+        Use `Expr.map.len()` with a lazy frame on DuckDB and Ibis with DuckDB.
+        The lazy expression also supports PySpark, Spark Connect, and SQLFrame
+        with DuckDB, where it returns `Int32`.
 
         Examples:
             >>> import polars as pl

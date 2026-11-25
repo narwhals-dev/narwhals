@@ -18,9 +18,12 @@ class ExprMapNamespace(Generic[ExprT]):
     def len(self) -> ExprT:
         """Return the number of entries in each map.
 
-        Null maps return null. Entries with null values count towards the total.
-        The result has dtype `UInt32`. Supported on DuckDB, Ibis with DuckDB,
-        PyArrow, Polars 2.0 or newer, pandas, and Modin. On pandas and Modin, this
+        Empty maps return zero, and null maps return null. Entries with null values
+        count towards the total.
+
+        PySpark, Spark Connect, and SQLFrame with DuckDB support this operation on
+        lazy frames and return `Int32`. DuckDB, Ibis with DuckDB, PyArrow, Polars
+        2.0 or newer, pandas, and Modin return `UInt32`. On pandas and Modin, this
         requires a PyArrow-backed `Map` column and pandas 2.2 or newer.
 
         Examples:

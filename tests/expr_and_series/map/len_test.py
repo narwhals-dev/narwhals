@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
-    from tests.utils import ConstructorPandasLike
+    from tests.utils import Constructor, ConstructorPandasLike
 
 # A null map has no length, but a null value still counts as an entry.
 expected = {"a": [2, 0, None, 1]}
@@ -113,6 +113,39 @@ def test_len_duckdb_non_map(list_size: int) -> None:
         match=r"(?i)not a map|map_keys\(",
     ):
         frame.select(nw.col("a").map.len())
+
+
+@pytest.fixture
+def spark_like_constructor(constructor: Constructor) -> Constructor:
+    if not any(backend in str(constructor) for backend in ("sqlframe", "pyspark")):
+        pytest.skip(reason="requires a Spark-like constructor")
+    return constructor
+
+
+def test_len_spark_like_expr(spark_like_constructor: Constructor) -> None:
+    row_ids = [0, 1, 2, 3]
+    data = {"row_id": row_ids, "a": [{"x": 1, "y": 2}, {}, None, {"x": None}]}
+    frame = nw.from_native(spark_like_constructor(data))
+    result = frame.select("row_id", nw.col("a").map.len()).sort("row_id")
+
+    assert_equal_data(result, {"row_id": row_ids, **expected})
+    assert result.collect_schema()["a"] == nw.Int32
+
+
+def test_len_spark_like_non_map(spark_like_constructor: Constructor) -> None:
+    frame = nw.from_native(spark_like_constructor({"a": [[1, 2]]}))
+    errors: tuple[type[Exception], ...]
+    if frame.implementation.is_pyspark() or frame.implementation.is_pyspark_connect():
+        from pyspark.errors import AnalysisException
+
+        errors = (AnalysisException,)
+    else:
+        from duckdb import BinderException, InvalidInputException
+
+        errors = (BinderException, InvalidInputException)
+
+    with pytest.raises(errors, match=r"(?i)map_keys|not a map"):
+        frame.select(nw.col("a").map.len()).collect_schema()
 
 
 def test_len_arrow_sliced_chunks() -> None:
