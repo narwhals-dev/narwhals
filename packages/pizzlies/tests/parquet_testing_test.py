@@ -31,6 +31,9 @@ EXPECTED: dict[str, Any] = {
     # and read three rows" (as Polars does).
     "data/empty_data_pages_v1.parquet": {"int64": [1, 2, 3]},
     "data/empty_data_pages_v2.parquet": {"int64": [1, 2, 3]},
+    # PyArrow < 26 rejects the UUID annotation on INT32, but the README says that readers
+    # should ignore it, and read the INT32 values.
+    "data/int32_with_uuid_logical_type.parquet": {"int32_uuid": list(range(10))},
     # PyArrow and Polars reject the optional map key, we read it anyway.
     "data/incorrect_map_schema.parquet": {
         "my_map": [
