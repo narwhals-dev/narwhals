@@ -27,6 +27,7 @@ from narwhals.exceptions import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
+    from typing import Literal
 
     from typing_extensions import TypeIs
 
@@ -86,6 +87,12 @@ BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 """Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32` promotion).
 
 https://github.com/pola-rs/polars/pull/24594
+"""
+
+CUM_MAX_MIN_KEEPS_LEADING_INFINITY: Final[bool] = BACKEND_VERSION >= (1, 31, 0)
+"""Polars < 1.31 seeds `cum_max`/`cum_min` with the lowest/largest finite float.
+
+A leading (in accumulation order) `-inf`/`inf` is then replaced by that finite value.
 """
 
 
@@ -379,6 +386,21 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     to_uppercase: Method[CompliantT]
     pad_start: Method[CompliantT]
     pad_end: Method[CompliantT]
+
+
+def cum_extreme_keeping_leading_infinity(
+    native: pl.Expr, function: Literal["cum_max", "cum_min"], *, reverse: bool
+) -> pl.Expr:  # pragma: no cover
+    """Patch `cum_max`/`cum_min` on Polars<1.31 so that a leading infinity is kept.
+
+    A running maximum (minimum) is always one of the values seen so far, so it is first
+    reached where the input equals the result. Before that point the result is the seed
+    of the Polars kernel rather than a value from the data. The only inputs that can be
+    there are nulls, NaN, and the infinity that the seed hides: we return the input instead.
+    """
+    result: pl.Expr = getattr(native, function)(reverse=reverse)
+    reached = (native == result).fill_null(False).cast(pl.UInt8)
+    return pl.when(reached.cum_max(reverse=reverse) == 1).then(result).otherwise(native)
 
 
 def native_get_categories(native: pl.Series) -> pl.Series:

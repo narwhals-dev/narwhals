@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    CUM_MAX_MIN_KEEPS_LEADING_INFINITY,
     SERIES_ACCEPTS_PD_INDEX,
     SERIES_RESPECTS_DTYPE,
     PolarsAnyNamespace,
@@ -16,6 +17,7 @@ from narwhals._polars.utils import (
     PolarsStringNamespace,
     PolarsStructNamespace,
     catch_polars_exception,
+    cum_extreme_keeping_leading_infinity,
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
@@ -96,8 +98,6 @@ INHERITED_METHODS = frozenset(
         "clip",
         "cos",
         "count",
-        "cum_max",
-        "cum_min",
         "cum_prod",
         "cum_sum",
         "diff",
@@ -579,6 +579,25 @@ class PolarsSeries:
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
+    def _cum_extreme(
+        self, function: Literal["cum_max", "cum_min"], *, reverse: bool
+    ) -> Self:
+        native = self.native
+        if CUM_MAX_MIN_KEEPS_LEADING_INFINITY or not native.dtype.is_float():
+            return self._with_native(getattr(native, function)(reverse=reverse))
+        expr = cum_extreme_keeping_leading_infinity(  # pragma: no cover
+            pl.all(), function, reverse=reverse
+        )
+        return self._with_native(  # pragma: no cover
+            native.to_frame().select(expr).to_series()
+        )
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._cum_extreme("cum_max", reverse=reverse)
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._cum_extreme("cum_min", reverse=reverse)
+
     def __contains__(self, other: Any) -> bool:
         try:
             return self.native.__contains__(other)
@@ -762,8 +781,6 @@ class PolarsSeries:
     ceil: Method[Self]
     count: Method[int]
     cos: Method[Self]
-    cum_max: Method[Self]
-    cum_min: Method[Self]
     cum_prod: Method[Self]
     cum_sum: Method[Self]
     diff: Method[Self]
