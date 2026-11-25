@@ -261,6 +261,7 @@ def test_invalid_page_size(compressed_size: int) -> None:
         (b"\x00" * 12, INT64, 2, None),
         (b"\x00", BOOLEAN, 9, None),
         (b"\x00" * 7, FIXED_LEN_BYTE_ARRAY, 2, 4),
+        (b"\x00" * 8, FIXED_LEN_BYTE_ARRAY, 2, None),  # no `type_length` in the schema
         (b"\x03\x00\x00\x00ab", BYTE_ARRAY, 1, None),
         (b"\x00\x00\x00\x00", BYTE_ARRAY, 2, None),
     ],
@@ -328,6 +329,27 @@ def test_all_null_v2_page_with_empty_body(encoding: int) -> None:
     levels = b"\x06\x00"  # an RLE run of three 0s: three nulls
     header = {1: 3, 2: 3, 4: encoding, 5: len(levels), 6: 0}
     assert _read_data_page_v2(levels, header, SNAPPY, column, None) == [None] * 3
+
+
+def test_dictionary_page_missing() -> None:
+    column = _Column({1: INT64, 4: b"a"})
+    header = {1: 1, 2: 0, 4: RLE_DICTIONARY, 5: 0, 6: 0, 7: False}
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _read_data_page_v2(b"\x01\x02\x00", header, SNAPPY, column, None)
+
+
+def test_annotation_on_wrong_physical_type() -> None:
+    # A TIMESTAMP_MILLIS converted type on a 12-byte FIXED_LEN_BYTE_ARRAY.
+    with pytest.raises(NotImplementedError, match="INT32 or INT64"):
+        _Column({1: FIXED_LEN_BYTE_ARRAY, 2: 12, 4: b"a", 6: 9})
+
+
+@pytest.mark.parametrize(
+    "array", [pa.array([0, 2**62], pa.timestamp("us")), pa.array([0, 2**30], pa.date32())]
+)
+def test_value_out_of_python_range(array: Any) -> None:
+    with pytest.raises(ValueError, match="'a' holds a value Python can't represent"):
+        read_parquet(_write(pa.table({"a": array})))
 
 
 def test_gzip_multiple_members() -> None:

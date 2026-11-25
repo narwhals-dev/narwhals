@@ -72,6 +72,11 @@ _L_STRING, _L_ENUM, _L_DECIMAL, _L_DATE, _L_TIME, _L_TIMESTAMP = 1, 4, 5, 6, 7, 
 _L_INTEGER, _L_JSON = 10, 12
 _L_UNSUPPORTED = {2: "MAP", 3: "LIST", 15: "FLOAT16", 16: "VARIANT"}
 
+# Annotations which are only valid on INT32 and INT64 columns.
+_INT_ONLY = {_DATE, _TIME_MILLIS, _TIME_MICROS, _TIMESTAMP_MILLIS, _TIMESTAMP_MICROS}
+_INT_ONLY |= _UNSIGNED_BITS.keys()
+_L_INT_ONLY = {_L_DATE, _L_TIME, _L_TIMESTAMP, _L_INTEGER}
+
 # `TimeUnit` union members, to a divisor which turns the stored value into microseconds
 _MILLIS, _MICROS, _NANOS = 1, 2, 3
 
@@ -362,7 +367,15 @@ def _decode_plain_values(page: bytes, pos: int, count: int, column: _Column) -> 
     if column.physical == BYTE_ARRAY and column.convert is bytes.decode:
         return _decode_byte_arrays(page, pos, count, utf8=True)
     values = _decode_plain(page, pos, column.physical, count, column.type_length)
-    return list(map(column.convert, values)) if column.convert else values
+    if column.convert is None:
+        return values
+    try:
+        return list(map(column.convert, values))
+    except (OverflowError, ValueError) as exc:  # e.g. a timestamp beyond the year 9999
+        msg = (
+            f"Parquet column {column.name!r} holds a value Python can't represent: {exc}"
+        )
+        raise ValueError(msg) from exc
 
 
 def _decode_plain(
@@ -378,7 +391,8 @@ def _decode_plain(
         _check_available(buf, pos + (count + 7) // 8)
         return [bool((buf[pos + i // 8] >> (i % 8)) & 1) for i in range(count)]
     width = 12 if physical == INT96 else type_length
-    assert width is not None  # noqa: S101
+    if width is None:
+        _raise_corrupt()
     _check_available(buf, pos + count * width)
     return [buf[pos + i * width : pos + (i + 1) * width] for i in range(count)]
 
@@ -434,6 +448,11 @@ def _converter(element: dict[int, Any]) -> Converter | None:  # noqa: C901, PLR0
         if physical in {BYTE_ARRAY, FIXED_LEN_BYTE_ARRAY}:
             return lambda b: Decimal(f"{int.from_bytes(b, 'big', signed=True)}E-{scale}")
         return lambda v: Decimal(f"{v}E-{scale}")
+    if physical not in {INT32, INT64} and (
+        _L_INT_ONLY & logical.keys() or converted in _INT_ONLY
+    ):
+        msg = "Parquet date, time, timestamp and integer types must be stored as INT32 or INT64."
+        raise NotImplementedError(msg)
     if _L_DATE in logical or converted == _DATE:
         return lambda d: dt.date.fromordinal(_EPOCH_ORDINAL + d)
     if _L_TIMESTAMP in logical:
@@ -495,7 +514,8 @@ def _decode_values(
     if encoding == PLAIN:
         return _decode_plain_values(page, pos, count, column)
     if encoding in {PLAIN_DICTIONARY, RLE_DICTIONARY}:
-        assert dictionary is not None  # noqa: S101
+        if dictionary is None:
+            _raise_corrupt()
         indices = _decode_rle_bitpacked(page, pos + 1, len(page), page[pos], count)
         return list(map(dictionary.__getitem__, indices))
     if encoding == RLE and column.physical == BOOLEAN:

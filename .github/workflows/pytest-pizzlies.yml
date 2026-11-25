@@ -37,9 +37,18 @@ jobs:
           enable-cache: "true"
           cache-suffix: pizzlies-${{ matrix.python-version }}
           cache-dependency-glob: "packages/pizzlies/pyproject.toml"
+      - name: Check out apache/parquet-testing, for pizzlies' Parquet reader tests
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: apache/parquet-testing
+          ref: 0e00127a431f83388d38eebb22cf644d06e86a15
+          path: parquet-testing
+          persist-credentials: false
       # Runs every test, known failures included: a new failure makes `--update` exit
       # non-zero, and a fixed one makes the regenerated list differ from the committed one.
       - name: Run Narwhals' test suite against pizzlies
+        env:
+          PARQUET_TESTING_DIR: ${{ github.workspace }}/parquet-testing
         run: python packages/pizzlies/run_tests.py --update
       - name: Check known_failures.txt is up to date
         run: git diff --exit-code packages/pizzlies/known_failures.txt
