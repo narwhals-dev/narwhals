@@ -260,20 +260,23 @@ class DictNamespace(
 
     def _check_dtypes(self, dfs: Sequence[DictFrame]) -> None:
         """Raise if a column's dtypes differ between `dfs`, as Polars does."""
-        dtypes: dict[str, DType] = {}
+        # Every distinct dtype seen per column: compatibility isn't transitive, e.g.
+        # `List(Unknown)` is compatible with both `List(Int64)` and `List(String)`.
+        dtypes: dict[str, list[DType]] = {}
         for df in dfs:
             for name, values in df.items():
                 dtype = infer_dtype(values, self._version)
-                if (seen := dtypes.setdefault(name, dtype)) is not dtype and not (
-                    dtypes_compatible(seen, dtype, self._version)
-                ):
-                    msg = (
-                        f"unable to vstack, column {name!r} has dtypes {seen} and "
-                        f"{dtype}: inputs should all have the same schema."
-                    )
-                    raise InvalidOperationError(msg)
-                if seen.base_type() is self._version.dtypes.Unknown:
-                    dtypes[name] = dtype
+                seen = dtypes.setdefault(name, [])
+                if dtype in seen:
+                    continue
+                for other in seen:
+                    if not dtypes_compatible(other, dtype, self._version):
+                        msg = (
+                            f"unable to vstack, column {name!r} has dtypes {other} and "
+                            f"{dtype}: inputs should all have the same schema."
+                        )
+                        raise InvalidOperationError(msg)
+                seen.append(dtype)
 
     def _concat_vertical(self, dfs: Sequence[DictFrame], /) -> DictFrame:
         columns_0 = list(dfs[0])

@@ -1260,7 +1260,14 @@ class DictDataFrame(
             return None
         if any(dtype == dtypes.String for dtype in found):
             return dtypes.String()
-        if all(dtype.is_numeric() or dtype == dtypes.Boolean for dtype in found):
+        decimals = [dtype for dtype in found if isinstance(dtype, dtypes.Decimal)]
+        if decimals and all(dtype.is_numeric() for dtype in found):
+            if any(dtype.is_float() for dtype in found):
+                return dtypes.Float64()
+            return dtypes.Decimal(38, max(dtype.scale for dtype in decimals))
+        if not decimals and all(
+            dtype.is_numeric() or dtype == dtypes.Boolean for dtype in found
+        ):
             return (
                 dtypes.Float64() if any(d.is_float() for d in found) else dtypes.Int64()
             )

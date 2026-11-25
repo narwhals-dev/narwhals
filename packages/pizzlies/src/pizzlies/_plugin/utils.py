@@ -343,8 +343,6 @@ def _bounded_int_caster(bits: int, *, signed: bool) -> Callable[[Any], int]:
 
 
 def _int_caster(dtype: DType) -> Callable[[Any], int]:
-    if type(dtype).__name__ == "Int64":
-        return _to_int  # Python ints may be wider, but no pizzlies operation makes them.
     bits = int(re.sub(r"\D", "", type(dtype).__name__))
     return _bounded_int_caster(bits, signed=dtype.is_signed_integer())
 
@@ -704,14 +702,32 @@ def has_nan(values: Iterable[Any]) -> bool:
     return any(map(math.isnan, filter(float.__instancecheck__, values)))
 
 
-def _nested_sort_key(value: Any) -> tuple[Any, ...]:
+def _field_order(value: Any) -> Any:
+    """The struct field names in `value`, nested, as dtype inference finds them.
+
+    A struct's fields are ordered as in the first non-null record (see
+    `infer_dtype`), so records whose keys are in another order compare by them.
+    """
+    if isinstance(value, dict):
+        return {name: _field_order(field) for name, field in value.items()}
+    if isinstance(value, list):
+        return [_field_order(first_non_null(value))]
+    return None
+
+
+def _nested_sort_key(value: Any, order: Any) -> tuple[Any, ...]:
     """Sort key for lists and structs, which may hold nulls: nulls first, NaN last."""
     if value is None:
         return (0,)
     if isinstance(value, list):
-        return (1, tuple(map(_nested_sort_key, value)))
+        inner = order[0] if isinstance(order, list) else None
+        return (1, tuple(_nested_sort_key(item, inner) for item in value))
     if isinstance(value, dict):
-        return (1, tuple(map(_nested_sort_key, value.values())))
+        fields = order if isinstance(order, dict) else dict.fromkeys(value)
+        return (
+            1,
+            tuple(_nested_sort_key(value.get(name), sub) for name, sub in fields.items()),
+        )
     return (2,) if _is_nan(value) else (1, value)
 
 
@@ -721,8 +737,8 @@ def nan_last_key(values: Sequence[Any]) -> Callable[[Any], Any] | None:
     `nan_last` if they hold a NaN, one for lists and structs, else no key at all (a
     faster, plain sort).
     """
-    if isinstance(first_non_null(values), (list, dict)):
-        return _nested_sort_key
+    if isinstance(first := first_non_null(values), (list, dict)):
+        return partial(_nested_sort_key, order=_field_order(first))
     return nan_last if has_nan(values) else None
 
 
@@ -733,7 +749,9 @@ def _hashable(value: Any) -> Any:
     if isinstance(value, list):
         return tuple(map(_hashable, value))
     if isinstance(value, dict):
-        return tuple((key, _hashable(item)) for key, item in value.items())
+        # Sorted by name: structs with the same fields in another order are equal.
+        items = sorted(value.items(), key=itemgetter(0))
+        return tuple((key, _hashable(item)) for key, item in items)
     return NAN if _is_nan(value) else value
 
 

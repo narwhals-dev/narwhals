@@ -6,6 +6,7 @@ Each case was a bug, found by fuzzing against Polars or by porting Polars' own t
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pizzlies as pz
@@ -139,6 +140,22 @@ def _check(
                 reason="Polars < 2.1 raises on filling booleans with a float",
             ),
         ),
+        (
+            {"a": ["9223372036854775808"]},
+            lambda df: df.select(nw.col("a").cast(nw.Int64)),
+        ),
+        ({"a": [2**63]}, lambda df: df.select(nw.col("a").cast(nw.Int64))),
+        ({"a": [Decimal("1.5")], "b": [2]}, lambda df: df.unpivot(["a", "b"])),
+        ({"a": [Decimal("1.5")], "b": [2.5]}, lambda df: df.unpivot(["a", "b"])),
+        ({"a": [Decimal("1.5")], "b": [True]}, lambda df: df.unpivot(["a", "b"])),
+        (
+            {"a": [Decimal("1.5")], "b": [Decimal("1.25")]},
+            lambda df: df.unpivot(["a", "b"]),
+        ),
+        (
+            {"s": [{"a": 1, "b": 9}, {"b": 0, "a": 2}], "i": [0, 1]},
+            lambda df: df.sort("s").select("i"),
+        ),
     ],
 )
 def test_matches_polars(data: dict[str, list[Any]], query: Callable[[Any], Any]) -> None:
@@ -163,6 +180,14 @@ STRUCTS = {
         (STRUCTS, lambda df: df.unique("s", keep="any").select("s")),
         (STRUCTS, lambda df: df.group_by("s").agg(nw.col("v").sum())),
         (
+            {"s": [{"a": 1, "b": 2}, {"b": 2, "a": 1}], "v": [1, 2]},
+            lambda df: df.group_by("s").agg(nw.col("v").sum()),
+        ),
+        (
+            {"s": [{"a": 1, "b": 2}, {"b": 2, "a": 1}]},
+            lambda df: df.unique("s", keep="any"),
+        ),
+        (
             {"k": [[]], "v": [1]},
             lambda df: df.join(df.with_columns(w=nw.col("v") + 1), on="k"),
         ),
@@ -172,6 +197,22 @@ def test_nested_keys_match_polars(
     data: dict[str, list[Any]], query: Callable[[Any], Any]
 ) -> None:
     _check(data, query, unordered=True)
+
+
+@pytest.mark.parametrize("columns", [[[[]], [[1]], [["x"]]], [[[1]], [["x"]], [[]]]])
+def test_concat_nested_dtypes_match_polars(columns: list[list[Any]]) -> None:
+    def outcome(frames: list[Any]) -> Any:
+        try:
+            return nw.concat(frames).to_dict(as_series=False)
+        except Exception as exc:  # noqa: BLE001
+            return type(exc).__name__
+
+    expected = outcome([nw.from_native(pl.DataFrame({"a": a})) for a in columns])
+    result = outcome([pz.from_dict({"a": a}) for a in columns])
+    if isinstance(expected, str):
+        assert isinstance(result, str), result
+    else:
+        assert result == expected
 
 
 @pytest.mark.parametrize("strategy", ["backward", "forward", "nearest"])
