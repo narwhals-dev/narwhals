@@ -465,7 +465,7 @@ class DictDataFrame(
         if error := self._check_columns_exist(by):
             raise error
         if len(by) == 1:
-            column = self.native[by[0]]
+            column = nan_last_column(self.native[by[0]])
             smallest = reverse if isinstance(reverse, bool) else reverse[0]
             picker = heapq.nsmallest if smallest else heapq.nlargest
             indices = (i for i in range(len(self)) if column[i] is not None)
@@ -533,6 +533,7 @@ class DictDataFrame(
             order = self._sorted_indices(order_by, descending=False, nulls_last=False)
             for rank, original in enumerate(order):
                 index_column[original] = rank
+        check_column_names_are_unique([name, *self.columns])
         return self._with_native({name: index_column, **self.native})
 
     # Conversions

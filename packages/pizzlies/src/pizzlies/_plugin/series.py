@@ -235,8 +235,11 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     ) -> Self:
         # Polars-style: `&`/`|` are Kleene (three-valued) logic on booleans and
         # null-propagating bitwise ops on integers. Both are commutative, so the
-        # reflected (`__rand__`/`__ror__`) forms reuse this directly.
-        if isinstance(self.dtype, self._version.dtypes.Boolean):
+        # reflected (`__rand__`/`__ror__`) forms reuse this directly. An all-null
+        # receiver infers as `Unknown`; Kleene logic gives null for integer operands
+        # there too, so it's right whichever dtype `other` has.
+        dtypes = self._version.dtypes
+        if isinstance(self.dtype, (dtypes.Boolean, dtypes.Unknown)):
             return self._with_binary(kleene, other, propagate_null=False)
         return self._with_binary(bitwise, other)
 
