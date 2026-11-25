@@ -229,9 +229,12 @@ def test_hist_bin_and_bin_count() -> None:
         s.hist(bins=[1, 3], bin_count=4)
 
 
+@pytest.mark.parametrize("values", [[], [None, None]])
 @param_include_breakpoint
 @param_library
-def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
+def test_hist_no_data(
+    library: str, values: list[None], *, include_breakpoint: bool
+) -> None:
     if library == "pandas":
         pytest.importorskip("pandas")
         import pandas as pd
@@ -244,13 +247,14 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
         pa = pytest.importorskip("pyarrow")
         pytest.importorskip("numpy")
         constructor_eager = pa.table
-    s = nw.from_native(constructor_eager({"values": []})).select(
+    s = nw.from_native(constructor_eager({"values": values})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
     for bin_count in [1, 10]:
         result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
         assert len(result) == bin_count
         assert result["count"].sum() == 0
+        assert result["count"].dtype.is_integer()
 
         if include_breakpoint:
             bps = result["breakpoint"].to_list()
@@ -261,6 +265,7 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
     assert len(result) == 2
     assert result["count"].sum() == 0
+    assert result["count"].dtype.is_integer()
 
 
 @param_library

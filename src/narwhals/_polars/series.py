@@ -648,7 +648,10 @@ class PolarsSeries:
         lower = cast("float", self.native.min())
         upper = cast("float", self.native.max())
 
-        if lower == upper:
+        if lower is None and upper is None:
+            # all values are null: same [0, 1] range as polars>=1.15
+            lower, upper = 0.0, 1.0
+        elif lower == upper:
             lower -= 0.5
             upper += 0.5
 
