@@ -1084,7 +1084,9 @@ class DictDataFrame(
         native: Any
         match backend:
             case None:
-                return self
+                from pizzlies._plugin.lazy import DictLazyFrame, FramePlan
+
+                return DictLazyFrame(FramePlan(self.native), version=self._version)
             case Implementation.POLARS:
                 native = self.to_polars().lazy()
             case Implementation.DUCKDB:

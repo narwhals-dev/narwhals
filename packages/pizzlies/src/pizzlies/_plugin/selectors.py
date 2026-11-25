@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 
 class DictSelectorNamespace(CompliantSelectorNamespace["DictDataFrame", "DictSeries"]):
     def _iter_schema(self, df: DictDataFrame, /) -> Iterator[tuple[str, DType]]:
-        if df._parent_schema is None:
+        # Lazy frames share this namespace, and have no `_parent_schema`.
+        if getattr(df, "_parent_schema", None) is None:
             yield from df.schema.items()
         else:
             for series, dtype in self._iter_columns_dtypes(df):
@@ -27,7 +28,7 @@ class DictSelectorNamespace(CompliantSelectorNamespace["DictDataFrame", "DictSer
     def _iter_columns_dtypes(
         self, df: DictDataFrame, /
     ) -> Iterator[tuple[DictSeries, DType]]:
-        if (parent_schema := df._parent_schema) is None:
+        if (parent_schema := getattr(df, "_parent_schema", None)) is None:
             for series in self._iter_columns(df):
                 yield series, series.dtype
             return

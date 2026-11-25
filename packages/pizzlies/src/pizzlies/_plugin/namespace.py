@@ -14,6 +14,7 @@ from pizzlies._plugin._vendored import (
 )
 from pizzlies._plugin.dataframe import DictDataFrame
 from pizzlies._plugin.expr import DictExpr
+from pizzlies._plugin.lazy import DictLazyFrame, FramePlan, ScanParquetPlan, lazy_concat
 from pizzlies._plugin.selectors import DictSelectorNamespace
 from pizzlies._plugin.series import DictSeries
 from pizzlies._plugin.utils import (
@@ -25,10 +26,13 @@ from pizzlies._plugin.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
+
+    from typing_extensions import TypeIs
 
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        ConcatMethod,
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
@@ -62,7 +66,6 @@ class DictNamespace(
     def selectors(self) -> DictSelectorNamespace:
         return DictSelectorNamespace.from_namespace(self)
 
-    # NOTE: `scan_csv` falls back to `read_csv` via `EagerNamespace`.
     def read_csv(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DictDataFrame:
@@ -89,7 +92,6 @@ class DictNamespace(
             native = csv_to_native(csv.reader(StringIO(text, newline=""), **kwds))
         return self._dataframe.from_native(native, context=self)
 
-    # NOTE: `scan_parquet` falls back to `read_parquet` via `EagerNamespace`.
     def read_parquet(self, source: NormalizedSource, **kwds: Any) -> DictDataFrame:
         """Read with `pizzlies`' own pure-Python reader, see `pizzlies._plugin.parquet`.
 
@@ -103,6 +105,52 @@ class DictNamespace(
             raise TypeError(msg)
         native = cast("DictFrame", read_parquet(source, columns))  # type: ignore[arg-type]
         return self._dataframe.from_native(native, context=self)
+
+    def scan_csv(  # type: ignore[override]
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DictLazyFrame:
+        native = self.read_csv(source, separator=separator, **kwds).native
+        return DictLazyFrame(FramePlan(native), version=self._version)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DictLazyFrame:  # type: ignore[override]
+        """A path's footer is read now, and only the columns a query uses on `collect`.
+
+        A file-like source is read into memory now. Like `read_parquet`, the only
+        supported keyword argument is `columns`.
+        """
+        from pizzlies._plugin.parquet import read_parquet_columns
+
+        columns = kwds.pop("columns", None)
+        if kwds:
+            msg = f"Unsupported keyword arguments for `scan_parquet`: {sorted(kwds)}."
+            raise TypeError(msg)
+        # File-like sources may only be readable once, so keep their bytes.
+        data: str | bytes = source if isinstance(source, str) else source.read()
+        if not isinstance(source, str) and isinstance(data, str):
+            msg = "Expected a path or a binary file-like object, got a text one."
+            raise TypeError(msg)
+        available = read_parquet_columns(data)
+        if columns is not None:
+            check_column_names_are_unique(columns)
+        if columns is not None and (missing := set(columns).difference(available)):
+            msg = f"Columns not found in the Parquet file: {sorted(missing)}."
+            raise ValueError(msg)
+        plan = ScanParquetPlan(data, available if columns is None else columns)
+        return DictLazyFrame(plan, version=self._version)
+
+    def from_native(self, data: Any, /) -> Any:
+        if DictLazyFrame._is_native(data):
+            return DictLazyFrame.from_native(data, context=self)
+        return super().from_native(data)
+
+    def is_native(self, obj: Any, /) -> TypeIs[Any]:
+        return DictLazyFrame._is_native(obj) or super().is_native(obj)
+
+    def concat(self, items: Iterable[Any], *, how: ConcatMethod) -> Any:
+        frames = list(items)
+        if any(isinstance(frame, DictLazyFrame) for frame in frames):
+            return lazy_concat(frames, how=how)
+        return super().concat(frames, how=how)
 
     def len(self) -> DictExpr:
         return self._expr(

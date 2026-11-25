@@ -93,6 +93,7 @@ if TYPE_CHECKING:
 
     from narwhals.typing import FileSource, IntoDType, IntoSchema, _2DArray
     from narwhals.utils import Version
+    from pizzlies._plugin.lazy import LazyPlan
     from pizzlies._plugin.namespace import DictNamespace
     from pizzlies._plugin.typing import DictFrame
 
@@ -170,8 +171,10 @@ def __narwhals_namespace__(version: Version) -> DictNamespace:  # noqa: N807
     return DictNamespace(version=version)
 
 
-def is_native(native_object: object) -> TypeIs[DictFrame]:
-    return is_native_frame(native_object)
+def is_native(native_object: object) -> TypeIs[DictFrame | LazyPlan]:
+    from pizzlies._plugin.lazy import LazyPlan
+
+    return is_native_frame(native_object) or isinstance(native_object, LazyPlan)
 
 
 __all__ = [

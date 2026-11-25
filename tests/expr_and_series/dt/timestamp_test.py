@@ -16,6 +16,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
+    maybe_collect,
     time_unit_compat,
 )
 
@@ -200,9 +201,9 @@ def test_timestamp_invalid_date(
     df_num = nw.from_native(constructor(data_num))
     msg = "Input should be either of Date or Datetime type"
     with pytest.raises(TypeError, match=msg):
-        df_str.select(nw.col("a").dt.timestamp())
+        maybe_collect(df_str.select(nw.col("a").dt.timestamp()))
     with pytest.raises(TypeError, match=msg):
-        df_num.select(nw.col("a").dt.timestamp())
+        maybe_collect(df_num.select(nw.col("a").dt.timestamp()))
 
 
 def test_timestamp_invalid_unit_expr(constructor: Constructor) -> None:

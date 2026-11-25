@@ -6,9 +6,13 @@ from typing import TYPE_CHECKING, Any
 from narwhals.compliant import EagerExpr
 from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
-from pizzlies._plugin._vendored import evaluate_output_names_and_aliases
+from pizzlies._plugin._vendored import (
+    Interval,
+    evaluate_output_names_and_aliases,
+    isinstance_or_issubclass,
+)
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import canonical_nans
+from pizzlies._plugin.utils import _enum_categories, canonical_nans
 from pizzlies._plugin.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
 if TYPE_CHECKING:
@@ -16,6 +20,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals.typing import IntoDType
     from narwhals.utils import Version
     from pizzlies._plugin._vendored import AliasNames, EvalNames, EvalSeries
     from pizzlies._plugin.dataframe import DictDataFrame
@@ -53,6 +58,29 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         )
         if returns_scalar:
             result._agg_source = (self, method_name, kwargs)
+        return result
+
+    # Arguments which don't depend on the data are checked when the expression is
+    # built, rather than evaluated, so that lazy frames raise straight away too.
+    def cast(self, dtype: IntoDType) -> Self:
+        if isinstance_or_issubclass(dtype, self._version.dtypes.Enum):
+            _enum_categories(dtype, self._version)
+        return super().cast(dtype)
+
+    def _reuse_series_namespace(
+        self, series_namespace: Any, method_name: str, **kwargs: Any
+    ) -> Self:
+        if series_namespace == "dt" and method_name == "truncate":
+            Interval.parse(kwargs["every"])
+        elif series_namespace == "dt" and method_name == "offset_by":
+            Interval.parse_no_constraints(kwargs["by"])
+        return super()._reuse_series_namespace(series_namespace, method_name, **kwargs)
+
+    # Narwhals broadcasts scalar-like expressions in `select`/`with_columns`, and keeps
+    # no metadata on the result. Lazy frames read the columns an expression uses from it.
+    def broadcast(self) -> Self:
+        result = super().broadcast()
+        result._opt_metadata = self._opt_metadata
         return result
 
     # Renaming keeps the values, so it keeps `_agg_source` too.

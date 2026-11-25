@@ -1,7 +1,8 @@
 # pizzlies
 
-A pure-Python, zero-dependency, eager dataframe library whose native frame is a plain
-`dict[str, list]`, with the [Narwhals](https://github.com/narwhals-dev/narwhals) API.
+A pure-Python dataframe library, whose only dependency is
+[Narwhals](https://github.com/narwhals-dev/narwhals), with Narwhals' API. Its eager frames
+are plain `dict[str, list]`s, and it has lazy frames with projection pushdown.
 
 ```console
 pip install pizzlies
@@ -20,9 +21,38 @@ df.to_native()  # {'a': [1, 2, 3], 'b': [4.0, None, 6.0]}
 ```
 
 `pz.from_dict`, `pz.from_dicts`, `pz.from_numpy`, `pz.from_arrow`, `pz.new_series`,
-`pz.read_csv` and `pz.scan_csv` create `pizzlies`-backed objects. Everything else (`pz.col`,
-`pz.when`, `pz.concat`, `pz.selectors`, the dtypes, ...) is Narwhals' own, so see the
+`pz.read_csv`, `pz.scan_csv`, `pz.read_parquet` and `pz.scan_parquet` create
+`pizzlies`-backed objects. Everything else (`pz.col`, `pz.when`, `pz.concat`,
+`pz.selectors`, the dtypes, ...) is Narwhals' own, so see the
 [Narwhals docs](https://narwhals-dev.github.io/narwhals/) for the full API.
+
+## Lazy frames
+
+`df.lazy()`, `pz.scan_parquet` and `pz.scan_csv` return lazy frames, which record
+operations in a query plan instead of running them (`scan_csv` does parse the whole file
+straight away). `collect()` first works out which columns the query reads (projection
+pushdown), so that `scan_parquet` only decodes those, and then runs the plan eagerly:
+
+```python
+lf = pz.scan_parquet("lineitem.parquet")  # reads only the footer
+result = lf.filter(pz.col("l_quantity") > 45).select(pz.col("l_extendedprice").sum())
+print(result.to_native().explain())  # the plan, as a tree
+result.collect()  # reads `l_quantity` and `l_extendedprice` only
+```
+
+There are no other optimisations, and `collect()` runs the plan every time. Errors are
+raised on `collect()`, as in Polars: errors which only depend on column names (e.g. a
+missing or duplicate column) before anything is read, and others while the plan runs.
+Some Narwhals methods check column names straight away, e.g. `cast`, so name errors
+can also come from those. So, unlike in eager mode, a query with both kinds of error
+raises the name error. Dtypes are inferred from values, so `collect_schema()` runs
+the plan (once per frame), and so do dtype selectors, to resolve which columns they
+select; `columns` doesn't run anything otherwise. `explain()` shows a subplan used more
+than once only once, and refers to it by number after that.
+
+Inputs keep every column whenever it's unclear which ones an expression reads (for
+selectors, `all()`, `nth` and `exclude`), and also for `unique()` and `drop_nulls()`
+without a subset, diagonal and horizontal `concat`, and `unpivot` without `on`.
 
 ## As a Narwhals plugin
 
@@ -39,10 +69,10 @@ df.select(nw.col("a").sum()).to_native()  # {'a': [6]}
 
 Note that, once installed, `pizzlies` claims every plain `dict` passed to `nw.from_native`.
 
-## Size and import time
+## Size, import time and performance
 
 `pizzlies` is small and quick to import, but it's pure Python, so it's much slower than
-pandas or Polars on anything but small data.
+Polars on anything but small data.
 
 | | Installed size | Import time |
 | --- | ---: | ---: |
@@ -54,9 +84,24 @@ pandas or Polars on anything but small data.
 The `pizzlies` wheel is 74 KB. Import times are the median of 40 fresh interpreters, from
 wheel installs; almost all of `pizzlies`' is importing Narwhals (34 ms on its own).
 
-Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1, Polars
-2.1 and PyArrow 26. Results depend on your hardware, so measure your own workload.
-`benchmark.py` reproduces the import times, see its docstring.
+On the 22 [TPC-H](https://github.com/narwhals-dev/narwhals/tree/main/tpch) queries at
+scale factor 0.1 (`lineitem` has 600,000 rows), run through Narwhals end to end, including
+reading the Parquet files (`scan_parquet`, query, `collect` for lazy frames; `read_parquet`
+and query for eager ones):
+
+| | Total | Slowdown vs Polars lazy (geometric mean over queries) |
+| --- | ---: | ---: |
+| `polars` lazy | 0.76 s | 1x |
+| `polars` eager | 2.95 s | 3.7x |
+| `pizzlies` lazy | 10.6 s | 11.9x |
+| `pizzlies` eager | 27.5 s | 31.2x |
+
+Most of the gap between `pizzlies`' lazy and eager frames is reading: lazy frames only
+decode the columns a query uses.
+
+Measured on Linux x86-64 (AMD Ryzen AI 9 465), with Python 3.13 for import times and 3.14
+for TPC-H, and pandas 3.1, Polars 2.1 and PyArrow 26. Results depend on your hardware and data, so measure your own workload.
+`benchmark.py` reproduces the import times and TPC-H numbers, see its docstring.
 
 ## Limitations
 
@@ -85,6 +130,11 @@ exceptions, where `pizzlies` follows Python instead, are listed below.
   `"NaN"`), and `-5.0 % math.inf` is `inf` (Polars: NaN).
 - **No columns, no rows:** a frame is a dict of lists, so one with no columns has no
   rows either, e.g. `df.drop(*df.columns).with_columns(a=pz.lit(1))` is empty.
+- **Data isn't copied,** as with Narwhals and any backend: `nw.from_native(data)` wraps
+  your dict as it is, so later changes to it show up in the frame, and results share the
+  lists of columns they leave unchanged with their inputs. `.lazy()` copies which
+  columns there are, but not their lists. Don't modify the lists of a frame (or of the
+  dict it was built from) in place.
 - **Time zones:** like Python, and unlike Polars, `pizzlies` ignores `fold` when comparing
   time-zone aware datetimes, so the two occurrences of an ambiguous wall time (e.g. 01:30
   when clocks go back) are equal in group-bys, joins and `unique`.
