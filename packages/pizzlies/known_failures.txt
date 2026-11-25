@@ -1,5 +1,3 @@
-packages/pizzlies/tests/polars_parity_test.py::test_matches_polars[data18-<lambda>]
-packages/pizzlies/tests/polars_parity_test.py::test_matches_polars[data19-<lambda>]
 tests/dependencies/is_into_dataframe_test.py::test_is_into_dataframe[dict]
 tests/dependencies/is_into_dataframe_test.py::test_is_into_dataframe_other
 tests/dependencies/is_into_lazyframe_test.py::test_is_into_lazyframe[dict]

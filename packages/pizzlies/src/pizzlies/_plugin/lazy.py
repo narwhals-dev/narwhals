@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import CompliantGroupBy, CompliantLazyFrame
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, ShapeError
 from narwhals.utils import Implementation
 from pizzlies._plugin._vendored import (
     check_column_names_are_unique,
@@ -28,7 +28,7 @@ from pizzlies._plugin.dataframe import DictDataFrame
 from pizzlies._plugin.parquet import read_parquet
 from pizzlies._plugin.repr import fit_lines
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import exprs_input_columns
+from pizzlies._plugin.utils import asof_excluded_right, exprs_input_columns
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
@@ -98,7 +98,9 @@ class FramePlan(LazyPlan):
     __slots__ = ("native",)
 
     def __init__(self, native: DictFrame) -> None:
-        self.native = native
+        # A shallow copy, so that adding or replacing columns in `native` later doesn't
+        # change the plan. The column lists themselves are shared, not copied.
+        self.native = dict(native)
         self.schema = None
 
     def _describe(self) -> str:
@@ -284,7 +286,9 @@ def _join_output(
     if name == "join_asof":
         _check_exist([kwargs["left_on"], *(kwargs["by_left"] or ())], left)
         _check_exist([kwargs["right_on"], *(kwargs["by_right"] or ())], right)
-        exclude = {kwargs["right_on"], *(kwargs["by_right"] or ())}
+        exclude = asof_excluded_right(
+            kwargs["left_on"], kwargs["right_on"], kwargs["by_right"]
+        )
     else:
         _check_exist(kwargs["left_on"] or (), left)
         _check_exist(kwargs["right_on"] or (), right)
@@ -308,7 +312,7 @@ def _concat_names(all_names: list[list[str]], how: ConcatMethod) -> list[str]:
                     f"   - dataframe 0: {all_names[0]}\n"
                     f"   - dataframe {i}: {names}\n"
                 )
-                raise TypeError(msg)
+                raise ShapeError(msg)
         return all_names[0]
     return list(dict.fromkeys(column for names in all_names for column in names))
 
@@ -328,7 +332,8 @@ def _op_output_names(plan: OpPlan, version: Version) -> list[str]:  # noqa: C901
         return list(args)
     if name == "with_columns":
         _check_reads(args, names)
-        return list(dict.fromkeys([*names, *_aliases(args, frame)]))
+        check_column_names_are_unique(new := _aliases(args, frame))
+        return list(dict.fromkeys([*names, *new]))
     if name == "filter":
         _check_reads(args, names)
         return names
@@ -441,7 +446,9 @@ def _requirements(plan: OpPlan, needed: Columns, version: Version) -> list[Colum
         else:
             left_on = [kwargs["left_on"], *(kwargs["by_left"] or ())]
             right_on = [kwargs["right_on"], *(kwargs["by_right"] or ())]
-            exclude = set(right_on)
+            exclude = asof_excluded_right(
+                kwargs["left_on"], kwargs["right_on"], kwargs["by_right"]
+            )
         output = _join_names(
             input_names, right_names, exclude_right=exclude, suffix=kwargs["suffix"]
         )
@@ -623,9 +630,6 @@ class DictLazyFrame(
             yield DictSeries(values, name=name, version=self._version)
 
     sink_parquet: Any = not_implemented()
-    # `stable.v1` only.
-    tail: Any = not_implemented()
-    gather_every: Any = not_implemented()
 
     # Operations, recorded in the plan
     def select(self, *exprs: DictExpr) -> Self:

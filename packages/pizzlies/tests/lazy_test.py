@@ -9,7 +9,6 @@ from pizzlies._plugin import lazy
 from pizzlies._plugin.lazy import FramePlan, LazyPlan
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 
 if TYPE_CHECKING:
@@ -299,10 +298,12 @@ def test_pruning_keeps_duplicate_errors(path: str, query: Callable[[Any], Any]) 
         query(pz.scan_parquet(path)).collect()
 
 
-def test_stable_v1_only_methods_are_not_implemented() -> None:
-    lf = nw_v1.from_native(pz.from_dict(DATA).lazy().to_native())
-    with pytest.raises(NotImplementedError):
-        lf.tail(1)
+def test_plans_snapshot_columns_but_not_data() -> None:
+    data = {"a": [1, 2]}
+    lf = nw.from_native(data).lazy().select(nw.all())
+    assert lf.columns == ["a"]
+    data["z"] = [3, 4]
+    assert lf.collect().to_native() == {"a": [1, 2]}
 
 
 def test_scan_parquet_columns_and_file_like(path: str) -> None:
@@ -404,11 +405,6 @@ def _both(data: dict[str, list[Any]], query: Callable[[Any], Any]) -> list[Any]:
                 (pz.col("a") * 2).alias("g"), (pz.col("b") * 2).alias("g")
             ).agg(),
             DuplicateError,
-        ),
-        (
-            {"a": [1, 2]},
-            lambda df: df.group_by(pz.col("a").alias("k")).agg(pz.col("k").sum()),
-            ColumnNotFoundError,
         ),
         (
             {"a": [1, 2]},

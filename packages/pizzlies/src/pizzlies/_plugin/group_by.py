@@ -232,7 +232,13 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     ) -> None:
         self._df = df
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
-        self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
+        if drop_null_keys:
+            dropped = frame.drop_nulls(self._keys)
+            # Dropping rows may leave a column all-null, and its inferred dtype unknown:
+            # selectors in `agg` should still see the input's dtypes.
+            dropped._parent_schema = frame._schema_for_sub_frames()
+            frame = dropped
+        self._compliant_frame = frame
 
     def _parse_keys(
         self, frame: DictDataFrame, keys: Sequence[DictExpr] | Sequence[str]
@@ -392,6 +398,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         without_keys = frame.simple_select(
             *(name for name in frame.columns if name not in self._keys)
         )
+        without_keys._parent_schema = frame._schema_for_sub_frames()
         names = list(self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
