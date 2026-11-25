@@ -293,7 +293,10 @@ def test_hist_polars_dtypes(
     result = nw.from_native(native, series_only=True).hist(
         **kwargs, include_breakpoint=include_breakpoint
     )
-    assert result["count"].dtype == nw.UInt32
+    expected_count_dtype = nw.from_native(
+        pl.Series([], dtype=pl.get_index_type()), series_only=True
+    ).dtype
+    assert result["count"].dtype == expected_count_dtype
     if include_breakpoint:
         assert result["breakpoint"].dtype == nw.Float64
 

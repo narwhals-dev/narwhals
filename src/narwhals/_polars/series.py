@@ -700,7 +700,7 @@ class PolarsSeries:
                 r = pl.int_range(0, len(df))
                 df = df.filter((r > 0) & (r < len(df) - 1))
             # polars<1.27 makes the lowest bin a left/right closed interval
-            if BACKEND_VERSION < (1, 27):
+            if BACKEND_VERSION < (1, 27) and bins:
                 df = (
                     df.slice(0, 1)
                     .with_columns(pl.col("count") + ((pl.lit(series) == bins[0]).sum()))
