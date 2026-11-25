@@ -36,7 +36,6 @@ __all__ = [
     "csv_to_native",
     "dtypes_compatible",
     "first_non_null",
-    "float_if_mixed",
     "infer_dtype",
     "is_native_column",
     "is_native_frame",
@@ -65,23 +64,6 @@ MICROSECONDS_PER_UNIT: Mapping[str, int] = {"s": 1_000_000, "ms": 1_000, "us": 1
 def is_native_column(obj: Any) -> bool:
     """A native column is any non-string sequence, `None` marks a null."""
     return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray))
-
-
-def float_if_mixed(values: list[Any], *inputs: Sequence[Any] | None) -> list[Any]:
-    """`values` as floats, if any of `inputs` holds a float and they're all numbers.
-
-    Polars gives e.g. `fill_null(1.5)` on an integer column a float dtype, whichever
-    values end up picked: pizzlies, which infers dtypes from values, converts them.
-    """
-    if not any(
-        any(map(float.__instancecheck__, values_in))
-        for values_in in inputs
-        if values_in is not None
-    ):
-        return values
-    if not all(value is None or isinstance(value, (int, float)) for value in values):
-        return values
-    return [None if value is None else float(value) for value in values]
 
 
 def dtypes_compatible(left: DType, right: DType, version: Version) -> bool:
@@ -357,8 +339,6 @@ def _to_bool(value: Any) -> bool:
 def to_str(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, float) and math.isnan(value):
-        return "NaN"
     if isinstance(value, (list, tuple, dict)):
         msg = f"Casting {type(value).__name__!r} values to String is not supported."
         raise InvalidOperationError(msg)
@@ -643,8 +623,7 @@ _NO_OP_TYPE: Mapping[Callable[[Any], Any], type] = {
     float: float,
     _to_bool: bool,
 }
-# Not `float`: `str(nan)` is "nan", where Polars gives "NaN".
-_PLAIN_STR_TYPES = frozenset({int, str})
+_PLAIN_STR_TYPES = frozenset({int, float, str})
 
 
 def cast_values(values: Sequence[Any], dtype: IntoDType, version: Version) -> list[Any]:

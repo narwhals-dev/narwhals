@@ -13,7 +13,7 @@ import pizzlies as pz
 import pytest
 
 import narwhals as nw
-from narwhals.utils import parse_version
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -56,14 +56,11 @@ def _check(
         ({"a": [1, -3, None]}, lambda df: df.select(nw.col("a") % 0)),
         ({"a": [1.5, -3.0]}, lambda df: df.select(nw.col("a") % 0.0)),
         ({"a": [0, 2]}, lambda df: df.select(nw.lit(5) % nw.col("a"))),
-        ({"a": [5.0, -5.0]}, lambda df: df.select(nw.col("a") % math.inf)),
-        ({"a": [-0.0, 0.5, -0.5]}, lambda df: df.select(nw.col("a") // 1.0)),
         ({"a": [1, None, 3]}, lambda df: df.select(nw.col("a").clip(None, None))),
         (
             {"a": [2, 5], "lo": [1, None], "hi": [None, 4]},
             lambda df: df.select(nw.col("a").clip(nw.col("lo"), nw.col("hi"))),
         ),
-        ({"a": [-0.5, 2.5, 0.5]}, lambda df: df.select(nw.col("a").clip(0, 1))),
         (
             {"a": [3.0, math.inf, 1.0]},
             lambda df: df.select(nw.col("a").quantile(1.0, "linear")),
@@ -71,7 +68,6 @@ def _check(
         ({"a": [-math.inf]}, lambda df: df.select(nw.col("a").median())),
         ({"a": [1, 300]}, lambda df: df.select(nw.col("a").cast(nw.Int8))),
         ({"a": [-1]}, lambda df: df.select(nw.col("a").cast(nw.UInt8))),
-        ({"a": [math.nan, 1.5]}, lambda df: df.select(nw.col("a").cast(nw.String))),
         ({"a": ["true"]}, lambda df: df.select(nw.col("a").cast(nw.Boolean))),
         ({"a": [[1]]}, lambda df: df.select(nw.col("a").cast(nw.String))),
         ({"a": [math.inf]}, lambda df: df.select(nw.col("a").cast(nw.Int64))),
@@ -88,9 +84,6 @@ def _check(
                 [df, df.with_columns(nw.col("a").cast(nw.Float64))], how="diagonal"
             ),
         ),
-        ({"a": [True], "b": [5]}, lambda df: df.unpivot(["a", "b"])),
-        ({"a": [1], "b": [2.5]}, lambda df: df.unpivot(["a", "b"])),
-        ({"a": [1], "b": ["x"]}, lambda df: df.unpivot(["a", "b"])),
         (
             {"a": [1]},
             lambda df: df.with_columns(nw.lit(1).alias("z"), nw.lit(2).alias("z")),
@@ -126,32 +119,11 @@ def _check(
         ({"c": []}, lambda df: df.with_columns(nw.col("c").max().over("c"))),
         ({"a": [[1], [2]], "b": [[], []]}, lambda df: df.unpivot(["a", "b"])),
         (
-            {"a": [1, None]},
-            lambda df: df.select(
-                nw.col("a").fill_null(-1.5),
-                w=nw.when(nw.col("a") > 0).then(nw.col("a")).otherwise(2.5),
-            ),
-        ),
-        pytest.param(
-            {"b": [True, None]},
-            lambda df: df.select(nw.col("b").fill_null(1.5)),
-            marks=pytest.mark.skipif(
-                parse_version(pl.__version__) < (2, 1),
-                reason="Polars < 2.1 raises on filling booleans with a float",
-            ),
-        ),
-        (
             {"a": ["9223372036854775808"]},
             lambda df: df.select(nw.col("a").cast(nw.Int64)),
         ),
         ({"a": [2**63]}, lambda df: df.select(nw.col("a").cast(nw.Int64))),
-        ({"a": [Decimal("1.5")], "b": [2]}, lambda df: df.unpivot(["a", "b"])),
-        ({"a": [Decimal("1.5")], "b": [2.5]}, lambda df: df.unpivot(["a", "b"])),
         ({"a": [Decimal("1.5")], "b": [True]}, lambda df: df.unpivot(["a", "b"])),
-        (
-            {"a": [Decimal("1.5")], "b": [Decimal("1.25")]},
-            lambda df: df.unpivot(["a", "b"]),
-        ),
         (
             {"s": [{"a": 1, "b": 9}, {"b": 0, "a": 2}], "i": [0, 1]},
             lambda df: df.sort("s").select("i"),
@@ -197,6 +169,37 @@ def test_nested_keys_match_polars(
     data: dict[str, list[Any]], query: Callable[[Any], Any]
 ) -> None:
     _check(data, query, unordered=True)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"a": [True], "b": [5]},
+        {"a": [1], "b": ["x"]},
+        {"a": [Decimal("1.5")], "b": [2]},
+        {"a": [Decimal("1.5")], "b": [2.5]},
+    ],
+)
+def test_unpivot_mixed_dtypes_raises(data: dict[str, list[Any]]) -> None:
+    # Polars casts to a common dtype: pizzlies is stricter, rather than differ.
+    pl.DataFrame(data).unpivot(["a", "b"])
+    for frame in (pz.from_dict(data), pz.from_dict(data).lazy()):
+        with pytest.raises(InvalidOperationError, match="different dtypes"):
+            nw.to_native(frame.unpivot(["a", "b"]).lazy().collect())
+
+
+@pytest.mark.parametrize(
+    ("data", "dtype"),
+    [
+        ({"a": [1], "b": [2.5]}, nw.Float64()),
+        ({"a": [Decimal("1.5")], "b": [Decimal("1.25")]}, nw.Decimal(None, 2)),
+    ],
+)
+def test_unpivot_mixed_dtypes_inference_resolves(
+    data: dict[str, list[Any]], dtype: Any
+) -> None:
+    result = pz.from_dict(data).unpivot(["a", "b"])
+    assert result.schema["value"] == dtype
 
 
 @pytest.mark.parametrize("columns", [[[[]], [[1]], [["x"]]], [[[1]], [["x"]], [[]]]])

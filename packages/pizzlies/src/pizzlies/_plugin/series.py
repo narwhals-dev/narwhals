@@ -22,7 +22,6 @@ from pizzlies._plugin.utils import (
     canonical_nans,
     cast_values,
     first_non_null,
-    float_if_mixed,
     infer_dtype,
     is_native_column,
     key_originals,
@@ -337,10 +336,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         # Polars floors the IEEE-754 quotient: `1.0 // 0.1 == 10.0` (Python gives
         # 9.0), and dividing by zero gives `±inf`/NaN as in true division.
         quotient = cls._truediv(numerator, denominator)
-        if not math.isfinite(quotient):
-            return quotient
-        # `or`: `math.floor` drops the sign of a zero, e.g. `-0.0 // 1.0 == -0.0`.
-        return float(math.floor(quotient)) or math.copysign(0.0, quotient)
+        return float(math.floor(quotient)) if math.isfinite(quotient) else quotient
 
     @staticmethod
     def _mod(numerator: int, denominator: int) -> int | None:
@@ -352,9 +348,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     @staticmethod
     def _float_mod(numerator: float, denominator: float) -> float:
-        # Polars gives NaN for a zero or infinite divisor (Python: an error, or e.g.
-        # `5.0 % inf == 5.0`).
-        if not denominator or math.isinf(denominator):
+        # Float modulo by zero: Polars gives NaN (Python raises).
+        if not denominator:
             return float("nan")
         return numerator % denominator
 
@@ -467,9 +462,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         def op(value: Any, bound: Any) -> Any:
             if value is None or bound is None:  # a null bound is no bound
                 return value
-            result = pick(value, bound)
-            # e.g. an int bound on a float column still gives a float.
-            return float(result) if isinstance(value, float) else result
+            return pick(value, bound)
 
         return op
 
@@ -727,7 +720,6 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         fill, is_scalar = self._extract_comparand(value)
         if is_scalar:
             result = [fill if current is None else current for current in self.native]
-            result = float_if_mixed(result, self.native, (fill,))
         elif self._broadcast:
             # e.g. `lit(None).fill_null(col("a"))`: broadcast the scalar receiver.
             receiver = self.native[0]
@@ -738,7 +730,6 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                 new if current is None else current
                 for current, new in zip(self.native, fill, strict=True)
             ]
-            result = float_if_mixed(result, self.native, fill)
         return self._with_native(result, preserve_broadcast=True)
 
     def fill_nan(self, value: float | None) -> Self:

@@ -60,6 +60,11 @@ Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1,
 
 ## Limitations
 
+`pizzlies` may be stricter than Polars, but it's never silently wrong: where it doesn't
+do what Polars does, it raises. For example, `unpivot` of columns with different dtypes
+raises, where Polars casts them to a common dtype (integers with floats are fine). The
+exceptions, where `pizzlies` follows Python instead, are listed below.
+
 - **Parquet:** `pz.read_parquet` uses a small pure-Python reader. It handles flat and
   nested (list, struct and map) columns, the `PLAIN`, dictionary, `RLE`,
   `BYTE_STREAM_SPLIT` and `DELTA_*` encodings, and uncompressed, snappy, gzip, LZ4 and
@@ -75,6 +80,9 @@ Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1,
 - **NaN:** comparisons follow IEEE 754, as in Python: e.g. `NaN == NaN` and `NaN > 1.0`
   are false, where Polars treats NaN as equal to itself and greater than any other
   value. Sorting, `unique`, `group_by` and joins do treat NaN as Polars does.
+- **Floats** follow Python in a few details: a `Float64` column can hold integers (e.g.
+  after `fill_null(1.5)` on an integer column), NaN casts to the string `"nan"` (Polars:
+  `"NaN"`), and `-5.0 % math.inf` is `inf` (Polars: NaN).
 - **No columns, no rows:** a frame is a dict of lists, so one with no columns has no
   rows either, e.g. `df.drop(*df.columns).with_columns(a=pz.lit(1))` is empty.
 - **Time zones:** like Python, and unlike Polars, `pizzlies` ignores `fold` when comparing

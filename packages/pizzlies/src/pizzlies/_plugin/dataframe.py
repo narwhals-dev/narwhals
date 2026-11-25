@@ -24,7 +24,6 @@ from pizzlies._plugin.series import DictSeries
 from pizzlies._plugin.utils import (
     asof_excluded_right,
     canonical_nans,
-    cast_values,
     dtypes_compatible,
     gatherer,
     infer_dtype,
@@ -1242,36 +1241,29 @@ class DictDataFrame(
         }
         result[variable_name] = list(chain.from_iterable(repeat(name, n) for name in on))
         values = [native[name] for name in on]
-        if (supertype := self._unpivot_supertype(values)) is not None:
-            values = [cast_values(column, supertype, self._version) for column in values]
+        self._check_unpivot_dtypes(values)
         result[value_name] = list(chain.from_iterable(values))
         return self._with_native(result)
 
-    def _unpivot_supertype(self, columns: Sequence[Sequence[Any]]) -> DType | None:
-        """The dtype to cast `unpivot`'s value columns to, if they differ (as Polars)."""
+    def _check_unpivot_dtypes(self, columns: Sequence[Sequence[Any]]) -> None:
+        """Raise if `unpivot`'s value columns' dtypes differ.
+
+        Polars casts them to a common dtype. pizzlies only allows the mixes which dtype
+        inference resolves: integers with floats, and decimals of different scales.
+        """
         dtypes = self._version.dtypes
         found = {infer_dtype(column, self._version) for column in columns}
         found = {dtype for dtype in found if dtype.base_type() is not dtypes.Unknown}
-        if not found or all(
-            dtypes_compatible(dtype, other, self._version)
-            for dtype in found
-            for other in found
+        if (
+            all(dtypes_compatible(a, b, self._version) for a in found for b in found)
+            or all(isinstance(dtype, (dtypes.Int64, dtypes.Float64)) for dtype in found)
+            or all(isinstance(dtype, dtypes.Decimal) for dtype in found)
         ):
-            return None
-        if any(dtype == dtypes.String for dtype in found):
-            return dtypes.String()
-        decimals = [dtype for dtype in found if isinstance(dtype, dtypes.Decimal)]
-        if decimals and all(dtype.is_numeric() for dtype in found):
-            if any(dtype.is_float() for dtype in found):
-                return dtypes.Float64()
-            return dtypes.Decimal(38, max(dtype.scale for dtype in decimals))
-        if not decimals and all(
-            dtype.is_numeric() or dtype == dtypes.Boolean for dtype in found
-        ):
-            return (
-                dtypes.Float64() if any(d.is_float() for d in found) else dtypes.Int64()
-            )
-        msg = f"`unpivot` columns have no common dtype: {sorted(map(str, found))}."
+            return
+        msg = (
+            f"`unpivot` columns have different dtypes: {sorted(map(str, found))}. "
+            "Cast them to a common dtype first."
+        )
         raise InvalidOperationError(msg)
 
     def explode(

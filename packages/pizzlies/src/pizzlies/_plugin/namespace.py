@@ -19,7 +19,6 @@ from pizzlies._plugin.series import DictSeries
 from pizzlies._plugin.utils import (
     csv_to_native,
     dtypes_compatible,
-    float_if_mixed,
     has_nan,
     infer_dtype,
     skip_nan,
@@ -241,8 +240,7 @@ class DictNamespace(
     ) -> NativeSeries:
         if otherwise is None:
             return [t if w else None for w, t in zip(when, then, strict=True)]
-        result = [t if w else o for w, t, o in zip(when, then, otherwise, strict=True)]
-        return float_if_mixed(result, then, otherwise)
+        return [t if w else o for w, t, o in zip(when, then, otherwise, strict=True)]
 
     # Concatenation of native frames
     def _concat_horizontal(self, dfs: Sequence[DictFrame | Any], /) -> DictFrame:
