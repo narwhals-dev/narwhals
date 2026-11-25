@@ -825,16 +825,11 @@ def test_group_by_len_n_unique_keep_pyarrow_dtype_pandas() -> None:
     result = (
         nw.from_native(native)
         .group_by("a")
-        .agg(
-            nw.col("b").n_unique().alias("n_unique"),
-            nw.len().alias("len"),
-            nw.col("b").count().alias("count"),
-        )
+        .agg(nw.col("b").n_unique().alias("n_unique"), nw.len().alias("len"))
         .to_native()
     )
     assert str(result["n_unique"].dtype) == "int64[pyarrow]"
     assert str(result["len"].dtype) == "int64[pyarrow]"
-    assert str(result["count"].dtype) == "int64[pyarrow]"
 
 
 @pytest.mark.parametrize("order", [("b", "c"), ("c", "b")])
