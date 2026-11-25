@@ -614,12 +614,13 @@ def test_nested_written_by_polars() -> None:
 
 
 def test_legacy_lists() -> None:
-    # An unannotated repeated field, and a two-level `LIST` whose repeated group is the
-    # element (a struct), and a three-level one: see the parquet-format spec's
+    # An unannotated repeated field, two-level `LIST`s whose repeated node is the
+    # element (a primitive, a group named `array`, and a group whose only field is
+    # repeated), and a three-level one: see the parquet-format spec's
     # backward-compatibility rules for lists.
     schema = _Schema(
         [
-            {4: b"root", 5: 4},
+            {4: b"root", 5: 5},
             {1: INT32, 3: REPEATED, 4: b"unannotated"},
             {3: OPTIONAL, 4: b"two_level", 5: 1, 6: 3},
             {1: INT32, 3: REPEATED, 4: b"element"},
@@ -629,6 +630,9 @@ def test_legacy_lists() -> None:
             {3: OPTIONAL, 4: b"three_level", 5: 1, 6: 3},
             {3: REPEATED, 4: b"list", 5: 1},
             {1: INT32, 3: OPTIONAL, 4: b"element"},
+            {3: OPTIONAL, 4: b"repeated_child", 5: 1, 6: 3},
+            {3: REPEATED, 4: b"entries", 5: 1},
+            {1: INT32, 3: REPEATED, 4: b"values"},
         ]
     )
     shapes = dict(schema.fields)
@@ -638,6 +642,7 @@ def test_legacy_lists() -> None:
         ("two_level.element", 2, 1),
         ("array_struct.array.x", 2, 1),
         ("three_level.list.element", 3, 1),
+        ("repeated_child.entries.values", 3, 2),
     ]
     # Rows `[1, 2]`, `[]` and `[3]` of the unannotated list.
     leaf = _LeafData([1, 1, 0, 1], [0, 1, 0, 0], [1, 2, 3], 1)
@@ -646,6 +651,12 @@ def test_legacy_lists() -> None:
         _column_values(shapes["unannotated"], {0: leaf}, 4)
     leaf = _LeafData([2, 0, 1], [0, 0, 0], [5], 2)
     assert _column_values(shapes["array_struct"], {2: leaf}, 3) == [[{"x": 5}], None, []]
+    # A row `[{"values": [1, 2]}, {"values": []}]`, then a null row.
+    leaf = _LeafData([3, 3, 2, 0], [0, 2, 1, 0], [1, 2], 3)
+    assert _column_values(shapes["repeated_child"], {4: leaf}, 2) == [
+        [{"values": [1, 2]}, {"values": []}],
+        None,
+    ]
 
 
 @pytest.mark.parametrize(
@@ -772,6 +783,8 @@ _ONE_FIVE = b"\x80\x01\x04\x01\x0a"
     [
         (_ONE_ZERO, DELTA_BINARY_PACKED, INT32, 2),  # one value instead of two
         (b"\x80\x01\x03\x01\x00", DELTA_BINARY_PACKED, INT32, 1),  # 128 / 3 miniblocks
+        (b"\x80\x01\x20\x01\x00", DELTA_BINARY_PACKED, INT32, 1),  # 4 per miniblock
+        (b"\x80\x01\x04\x01\x01", DELTA_LENGTH_BYTE_ARRAY, BYTE_ARRAY, 1),  # length -1
         (_TWO_ZEROS[:-1], DELTA_BINARY_PACKED, INT32, 2),  # a bit width missing
         (
             _TWO_ZEROS[:-4] + b"\x21" + b"\x00" * 3,
@@ -855,3 +868,56 @@ def test_corrupt_chunk_count() -> None:
 def test_float16_of_wrong_width() -> None:
     with pytest.raises(ValueError, match="may be corrupt"):
         _Column({1: FIXED_LEN_BYTE_ARRAY, 2: 3, 4: b"a", 10: {15: {}}})
+
+
+def test_oversized_delta_count() -> None:
+    # 2**40 values in blocks of width-0 miniblocks would take no space at all: the
+    # count must be checked against the page's before anything is expanded.
+    total, varint = 2**40, bytearray()
+    while total >= 0x80:
+        varint.append(total & 0x7F | 0x80)
+        total >>= 7
+    varint.append(total)
+    data = b"\x80\x01\x04" + bytes(varint) + b"\x00"
+    column = _Column({1: INT64, 4: b"a"})
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decode_values(data, 0, DELTA_BINARY_PACKED, 1, column=column, dictionary=None)
+
+
+def test_level_above_maximum() -> None:
+    # An RLE run of one definition level 2, for a column whose maximum is 1: a run's
+    # value is a whole byte, unlike bit-packed ones.
+    levels = b"\x02\x02"
+    column = _Column({1: INT64, 3: OPTIONAL, 4: b"a"})
+    header = {1: 1, 2: 0, 4: PLAIN, 5: len(levels), 6: 0, 7: False}
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _read_data_page_v2(
+            levels + b"\x00" * 8, header, SNAPPY, 10, column=column, dictionary=None
+        )
+
+
+def test_variant_group() -> None:
+    elements = [
+        {4: b"root", 5: 1},
+        {3: OPTIONAL, 4: b"v", 5: 2, 10: {16: {}}},
+        {1: BYTE_ARRAY, 4: b"metadata"},
+        {1: BYTE_ARRAY, 4: b"value"},
+    ]
+    with pytest.raises(NotImplementedError, match="VARIANT"):
+        _Schema(elements)
+
+
+def test_struct_leaves_disagree_on_nulls() -> None:
+    schema = _Schema(
+        [
+            {4: b"root", 5: 1},
+            {3: OPTIONAL, 4: b"s", 5: 2},
+            {1: INT32, 3: OPTIONAL, 4: b"a"},
+            {1: INT32, 3: OPTIONAL, 4: b"b"},
+        ]
+    )
+    ((_, shape),) = schema.fields
+    null = _LeafData([0], None, [], 2)
+    assert _column_values(shape, {0: null, 1: null}, 1) == [None]
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _column_values(shape, {0: null, 1: _LeafData([2], None, [5], 2)}, 1)

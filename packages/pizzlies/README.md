@@ -63,10 +63,10 @@ Measured with Python 3.13 on Linux x86-64 (AMD Ryzen AI 9 465), with pandas 3.1,
 `pz.read_parquet` uses a small pure-Python reader. It handles flat and nested (list, struct
 and map) columns, the `PLAIN`, dictionary, `RLE`, `BYTE_STREAM_SPLIT` and `DELTA_*`
 encodings, and uncompressed, snappy, gzip, LZ4 and zstd compression. Zstd, Polars' default,
-needs Python 3.14+ or `pip install pizzlies[zstd]`. Other files (e.g. brotli-compressed ones)
+needs Python 3.14+ or `pip install 'pizzlies[zstd]'`. Other files (e.g. brotli-compressed ones)
 raise `NotImplementedError`: read them with pyarrow and convert them,
-`pz.from_arrow(pq.read_table(path))`. Corrupt files raise `ValueError`, and page checksums
-are verified when the writer stored them. `Map` dtypes aren't supported, so maps are read
+`pz.from_arrow(pq.read_table(path))`. Corrupt data raises `ValueError`, and page checksums
+are verified when the writer stored them, though only for the columns read. `Map` dtypes aren't supported, so maps are read
 as lists of `{"key": ..., "value": ...}` structs, as Polars does. Dtypes are inferred from
 the Python values, so e.g. integers are always `Int64`. Like Python, and unlike Polars,
 `pizzlies` ignores `fold` when comparing time-zone aware datetimes, so the two occurrences

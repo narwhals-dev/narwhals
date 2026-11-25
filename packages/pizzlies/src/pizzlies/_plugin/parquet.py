@@ -314,7 +314,7 @@ def _zstd() -> Any:
         except ImportError:
             msg = (
                 "Reading zstd-compressed Parquet needs Python 3.14+, or the "
-                "`backports.zstd` package (`pip install pizzlies[zstd]`)."
+                "`backports.zstd` package (`pip install 'pizzlies[zstd]'`)."
             )
             raise NotImplementedError(msg) from None
     return zstd
@@ -436,8 +436,10 @@ def _decode_rle_bitpacked(
     return out
 
 
-def _decode_delta_binary_packed(buf: bytes, pos: int, bits: int) -> tuple[list[int], int]:
-    """Decode `bits`-bit integers, and return them with the position after them."""
+def _decode_delta_binary_packed(
+    buf: bytes, pos: int, bits: int, count: int
+) -> tuple[list[int], int]:
+    """Decode `count` `bits`-bit integers, and return them with the position after them."""
     r = _Reader(buf, pos)
     block_size, n_miniblocks, total, first = (
         r.varint(),
@@ -445,7 +447,13 @@ def _decode_delta_binary_packed(buf: bytes, pos: int, bits: int) -> tuple[list[i
         r.varint(),
         r.zigzag(),
     )
-    if not n_miniblocks or block_size % n_miniblocks or block_size // n_miniblocks % 8:
+    # Checking the count first bounds the work: width-0 miniblocks take no space.
+    if (
+        total != count
+        or not n_miniblocks
+        or block_size % n_miniblocks
+        or block_size // n_miniblocks % 8
+    ):
         _raise_corrupt()
     per_miniblock = block_size // n_miniblocks
     deltas: list[int] = []
@@ -474,8 +482,8 @@ def _decode_delta_binary_packed(buf: bytes, pos: int, bits: int) -> tuple[list[i
 def _decode_delta_length_byte_arrays(
     buf: bytes, pos: int, count: int
 ) -> tuple[list[bytes], int]:
-    lengths, pos = _decode_delta_binary_packed(buf, pos, 32)
-    if len(lengths) != count or any(length < 0 for length in lengths):
+    lengths, pos = _decode_delta_binary_packed(buf, pos, 32, count)
+    if any(length < 0 for length in lengths):
         _raise_corrupt()
     ends = list(accumulate(lengths, initial=pos))
     _check_available(buf, ends[-1])
@@ -483,10 +491,8 @@ def _decode_delta_length_byte_arrays(
 
 
 def _decode_delta_byte_arrays(buf: bytes, pos: int, count: int) -> list[bytes]:
-    prefixes, pos = _decode_delta_binary_packed(buf, pos, 32)
+    prefixes, pos = _decode_delta_binary_packed(buf, pos, 32, count)
     suffixes, _ = _decode_delta_length_byte_arrays(buf, pos, count)
-    if len(prefixes) != count:
-        _raise_corrupt()
     out = []
     previous = b""
     for prefix, suffix in zip(prefixes, suffixes, strict=True):
@@ -822,6 +828,9 @@ class _Schema:
             )
             return _LeafShape(len(self.leaves) - 1)
         logical: dict[int, Any] = element.get(10) or {}
+        if unsupported := [_L_UNSUPPORTED[k] for k in logical if k in _L_UNSUPPORTED]:
+            msg = f"Parquet logical type {unsupported[0]} is not supported."
+            raise NotImplementedError(msg)
         converted = element.get(6)
         repeated = len(children) == 1 and children[0][0].get(3) == REPEATED
         if _L_LIST in logical or converted == _LIST:
@@ -835,6 +844,7 @@ class _Schema:
             if (
                 5 not in child
                 or len(grandchildren) != 1
+                or grandchildren[0][0].get(3) == REPEATED
                 or name in {"array", f"{path[-1]}_tuple"}
             ):
                 # Legacy two-level list: the repeated node is the element itself.
@@ -949,6 +959,21 @@ def _split_lists(
     return elements, lengths
 
 
+def _struct_presence(
+    leaves: list[int], present: int, ranges: Ranges, data: dict[int, _LeafData]
+) -> list[bool]:
+    """Whether each of an optional struct's rows isn't null."""
+    is_present: list[bool] | None = None
+    for index in leaves:
+        defs = _levels(data[index].defs)
+        leaf_present = [defs[start] >= present for start, _ in ranges[index]]
+        if is_present is None:
+            is_present = leaf_present
+        elif leaf_present != is_present:  # it's null in all its leaves, or in none
+            _raise_corrupt()
+    return is_present or []
+
+
 def _assemble(shape: Shape, ranges: Ranges, data: dict[int, _LeafData]) -> list[Any]:
     """Build one value per range, from the levels and values of `shape`'s leaves."""
     if isinstance(shape, _LeafShape):
@@ -963,12 +988,11 @@ def _assemble(shape: Shape, ranges: Ranges, data: dict[int, _LeafData]) -> list[
         rows: list[Any] = [
             dict(zip(names, row, strict=True)) for row in zip(*columns, strict=True)
         ]
-        if (present := shape.present) is not None:
-            first = shape.leaves[0]
-            defs = _levels(data[first].defs)
+        if shape.present is not None:
+            is_present = _struct_presence(shape.leaves, shape.present, ranges, data)
             rows = [
-                row if defs[start] >= present else None
-                for row, (start, _) in zip(rows, ranges[first], strict=True)
+                row if row_present else None
+                for row, row_present in zip(rows, is_present, strict=True)
             ]
         return rows
     element_ranges: Ranges = {}
@@ -997,7 +1021,7 @@ def _column_values(shape: Shape, data: dict[int, _LeafData], n_rows: int) -> lis
     return _assemble(shape, ranges, data)
 
 
-def _decode_values(  # noqa: C901
+def _decode_values(
     page: bytes,
     pos: int,
     encoding: int,
@@ -1025,7 +1049,7 @@ def _decode_values(  # noqa: C901
         data = _byte_stream_split(page, pos, count, width)
         return _convert(_decode_plain(data, 0, physical, count, width), column)
     if encoding == DELTA_BINARY_PACKED and physical in _BITS:
-        values, _ = _decode_delta_binary_packed(page, pos, _BITS[physical])
+        values, _ = _decode_delta_binary_packed(page, pos, _BITS[physical], count)
     elif encoding == DELTA_LENGTH_BYTE_ARRAY and physical == BYTE_ARRAY:
         values, _ = _decode_delta_length_byte_arrays(page, pos, count)
     elif encoding == DELTA_BYTE_ARRAY and physical in {BYTE_ARRAY, FIXED_LEN_BYTE_ARRAY}:
@@ -1034,8 +1058,6 @@ def _decode_values(  # noqa: C901
         name = _ENCODING_NAMES.get(encoding, encoding)
         msg = f"Parquet encoding {name} is not supported for column {column.name!r}."
         raise NotImplementedError(msg)
-    if len(values) != count:
-        _raise_corrupt()
     return _convert(values, column)
 
 
@@ -1064,7 +1086,17 @@ def _read_levels_v1(
     length = int.from_bytes(page[pos : pos + 4], "little")
     end = pos + 4 + length
     _check_available(page, end)
-    return _decode_rle_bitpacked(page, pos + 4, end, max_level.bit_length(), count), end
+    return _read_levels(page, pos + 4, end, max_level, count), end
+
+
+def _read_levels(
+    buf: bytes, start: int, end: int, max_level: int, count: int
+) -> list[int]:
+    levels = _decode_rle_bitpacked(buf, start, end, max_level.bit_length(), count)
+    # An RLE run's value is a whole byte, so may exceed what `bit_length` bits hold.
+    if max(levels, default=0) > max_level:
+        _raise_corrupt()
+    return levels
 
 
 def _read_data_page_v1(
@@ -1097,14 +1129,12 @@ def _read_data_page_v2(
     if def_length < 0 or rep_length < 0 or levels_end > min(len(raw), size):
         _raise_corrupt()
     reps = (
-        _decode_rle_bitpacked(raw, 0, rep_length, column.max_rep.bit_length(), count)
+        _read_levels(raw, 0, rep_length, column.max_rep, count)
         if column.max_rep
         else None
     )
     defs = (
-        _decode_rle_bitpacked(
-            raw, rep_length, levels_end, column.max_def.bit_length(), count
-        )
+        _read_levels(raw, rep_length, levels_end, column.max_def, count)
         if column.max_def
         else None
     )
