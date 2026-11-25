@@ -15,13 +15,16 @@ from pizzlies._plugin.parquet import (
     BOOLEAN,
     BYTE_ARRAY,
     FIXED_LEN_BYTE_ARRAY,
+    GZIP,
     INT64,
     OPTIONAL,
     PLAIN,
+    RLE_DICTIONARY,
     SNAPPY,
     _Column,
     _decode_plain,
     _decode_rle_bitpacked,
+    _decompress,
     _read_data_page_v2,
     read_parquet,
 )
@@ -318,12 +321,34 @@ def test_zstd_without_backport(monkeypatch: pytest.MonkeyPatch) -> None:
         read_parquet(buf)
 
 
-def test_all_null_v2_page_with_empty_body() -> None:
+@pytest.mark.parametrize("encoding", [PLAIN, RLE_DICTIONARY])
+def test_all_null_v2_page_with_empty_body(encoding: int) -> None:
     # parquet-java can write all-null V2 pages with no (compressed) value bytes at all.
     column = _Column({1: INT64, 3: OPTIONAL, 4: b"a"})
     levels = b"\x06\x00"  # an RLE run of three 0s: three nulls
-    header = {1: 3, 2: 3, 4: PLAIN, 5: len(levels), 6: 0}
+    header = {1: 3, 2: 3, 4: encoding, 5: len(levels), 6: 0}
     assert _read_data_page_v2(levels, header, SNAPPY, column, None) == [None] * 3
+
+
+def test_gzip_multiple_members() -> None:
+    import gzip
+    import zlib
+
+    first, second = gzip.compress(b"abc"), gzip.compress(b"def")
+    assert _decompress(GZIP, first + second) == b"abcdef"
+    assert _decompress(GZIP, zlib.compress(b"abc")) == b"abc"
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decompress(GZIP, first + second[:-4])
+    with pytest.raises(ValueError, match="may be corrupt"):
+        _decompress(GZIP, first + b"garbage")
+
+
+def test_duplicate_column_names() -> None:
+    from narwhals.exceptions import DuplicateError
+
+    buf = _write(pa.table([[1, 2], [10, 20]], names=["a", "a"]))
+    with pytest.raises(DuplicateError, match="'a' 2 times"):
+        read_parquet(buf)
 
 
 def test_path_reads_only_selected_column_chunks(tmp_path: Path) -> None:

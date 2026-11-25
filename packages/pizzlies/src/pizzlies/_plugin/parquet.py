@@ -28,6 +28,8 @@ from functools import cache
 from itertools import chain
 from typing import TYPE_CHECKING, Any, NoReturn
 
+from pizzlies._plugin._vendored import check_column_names_are_unique
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
     from typing import BinaryIO
@@ -189,13 +191,29 @@ def _snappy_decompress(data: bytes) -> bytes:
     return bytes(out)
 
 
+def _gzip_decompress(data: bytes) -> bytes:
+    # A page may hold several concatenated gzip members, and a single `zlib.decompress`
+    # call would silently stop after the first one.
+    out = []
+    while data:
+        decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 32)
+        try:
+            out.append(decompressor.decompress(data))
+        except zlib.error:
+            _raise_corrupt()
+        if not decompressor.eof:
+            _raise_corrupt()
+        data = decompressor.unused_data
+    return b"".join(out)
+
+
 def _decompress(codec: int, data: bytes) -> bytes:
     if codec == UNCOMPRESSED:
         return data
     if codec == SNAPPY:
         return _snappy_decompress(data)
     if codec == GZIP:
-        return zlib.decompress(data, wbits=zlib.MAX_WBITS | 32)
+        return _gzip_decompress(data)
     if codec == ZSTD:
         if sys.version_info >= (3, 14):
             from compression import zstd
@@ -472,6 +490,8 @@ def _decode_values(
     column: _Column,
     dictionary: list[Any] | None,
 ) -> list[Any]:
+    if count == 0:  # e.g. an all-null page, which may have no value bytes at all
+        return []
     if encoding == PLAIN:
         return _decode_plain_values(page, pos, count, column)
     if encoding in {PLAIN_DICTIONARY, RLE_DICTIONARY}:
@@ -632,6 +652,7 @@ def _read_parquet(
 ) -> dict[str, list[Any]]:
     all_columns = _columns(metadata[2])
     names = [column.name for column in all_columns]
+    check_column_names_are_unique(names)
     if columns is not None and (missing := set(columns).difference(names)):
         msg = f"Columns not found in the Parquet file: {sorted(missing)}."
         raise ValueError(msg)
