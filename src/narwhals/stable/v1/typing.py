@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, Union
 
 from narwhals._native import IntoSeries, NativeDuckDB
+from narwhals._typing import EagerAllowed, IntoBackend
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -138,8 +139,10 @@ IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 __all__ = [
     "DataFrameT",
+    "EagerAllowed",
     "Frame",
     "FrameT",
+    "IntoBackend",
     "IntoDataFrame",
     "IntoDataFrameT",
     "IntoExpr",
