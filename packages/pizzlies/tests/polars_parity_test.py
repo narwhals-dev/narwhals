@@ -12,6 +12,7 @@ import pizzlies as pz
 import pytest
 
 import narwhals as nw
+from narwhals.utils import parse_version
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -124,11 +125,18 @@ def _check(
         ({"c": []}, lambda df: df.with_columns(nw.col("c").max().over("c"))),
         ({"a": [[1], [2]], "b": [[], []]}, lambda df: df.unpivot(["a", "b"])),
         (
-            {"a": [1, 2], "b": [True, None]},
+            {"a": [1, None]},
             lambda df: df.select(
                 nw.col("a").fill_null(-1.5),
-                nw.col("b").fill_null(1.5),
                 w=nw.when(nw.col("a") > 0).then(nw.col("a")).otherwise(2.5),
+            ),
+        ),
+        pytest.param(
+            {"b": [True, None]},
+            lambda df: df.select(nw.col("b").fill_null(1.5)),
+            marks=pytest.mark.skipif(
+                parse_version(pl.__version__) < (2, 1),
+                reason="Polars < 2.1 raises on filling booleans with a float",
             ),
         ),
     ],
