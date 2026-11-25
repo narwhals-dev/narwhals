@@ -5,9 +5,16 @@ from datetime import datetime
 from importlib.util import find_spec
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 # Backends differ in their algorithm, so compare with the exact value within a tolerance.
 TOLERANCE = 2.0
@@ -74,8 +81,13 @@ def test_approx_quantile_out_of_bounds_raises(
 def test_approx_quantile_keeps_datetime(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "ibis")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "ibis", "modin_pyarrow")):
         reason = "no approximate quantile for datetimes"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("2"):
+        request.applymarker(pytest.mark.xfail(reason="exact quantile returns null"))
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        reason = "`percentile_approx` returns a time zone aware datetime"
         request.applymarker(pytest.mark.xfail(reason=reason))
     if "dask_lazy_p2" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="single partition only"))
@@ -143,6 +155,8 @@ def test_approx_quantile_over(
 ) -> None:
     if "dask" in str(constructor) and BUILTIN_DASK:
         request.applymarker(pytest.mark.xfail(reason="needs narwhals-dask"))
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip(reason="`over` requires DuckDB 1.3.0")
     df = nw.from_native(
         constructor({"i": [0, 1, 2], "g": [1, 1, 2], "a": [2.0, 2.0, 4.0]})
     ).lazy()
@@ -160,11 +174,11 @@ def test_approx_quantile_dask_multiple_partitions_raises(
 ) -> None:
     if "dask_lazy_p2" not in str(constructor):
         pytest.skip()
-    if BUILTIN_DASK:
-        pytest.skip(reason="needs narwhals-dask")
     df = nw.from_native(constructor(data)).lazy()
     msg = re.escape(
-        "`Expr.approx_quantile` is not supported for Dask backend with multiple partitions."
+        "'approx_quantile' is not implemented"
+        if BUILTIN_DASK
+        else "`Expr.approx_quantile` is not supported for Dask backend with multiple partitions."
     )
     with pytest.raises(NotImplementedError, match=msg):
         df.select(nw.col("a").approx_quantile(0.5)).collect()

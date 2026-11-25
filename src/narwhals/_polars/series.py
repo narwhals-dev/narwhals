@@ -416,8 +416,8 @@ class PolarsSeries:
             return self._with_native(pl.select(select)[self.name])
         return self._with_native(native_is_finite)
 
-    def approx_quantile(self, quantile: float) -> float:
-        return (  # type: ignore[return-value]
+    def approx_quantile(self, quantile: float) -> Any:
+        return (
             self.native.quantile(quantile, "linear")
             if BACKEND_VERSION < (2,)
             else self.native.approx_quantile(quantile)
