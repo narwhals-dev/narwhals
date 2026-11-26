@@ -406,6 +406,10 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             )
             names.extend(aliases)
             check_column_names_are_unique(names)
+            if not aliases:
+                # A selector matched only keys. There's nothing to aggregate, and
+                # evaluating it would still run it on the keys (e.g. cast them).
+                continue
             op_nodes = list(expr._metadata.op_nodes_reversed())
             order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1 and op_nodes[0].name == "len":

@@ -135,6 +135,10 @@ def _check(
             lambda df: df.group_by("k").agg(ncs.numeric().max()).sort("k"),
         ),
         (
+            {"k": [300]},
+            lambda df: df.group_by("k").agg(ncs.numeric().cast(nw.Int8).max()),
+        ),
+        (
             {"c": [1, None], "d": [None, 2], "e": [1, 1]},
             lambda df: df.group_by("c", drop_null_keys=True).agg(ncs.numeric().max()),
         ),
