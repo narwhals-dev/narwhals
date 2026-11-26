@@ -90,6 +90,9 @@ def test_read_and_scan_csv(tmp_path: Path) -> None:
     expected = {"a": [1, 2], "b": ["x", "y"]}
     assert_pizzlies_frame(pz.read_csv(str(path), separator=";"), expected)
     assert_pizzlies_frame(pz.scan_csv(str(path), separator=";").collect(), expected)
+    # Even "," would be ambiguous: Narwhals always passes `separator`.
+    with pytest.raises(TypeError, match="Use `separator`"):
+        pz.read_csv(str(path), delimiter=",")
 
 
 def test_write_csv_round_trips_line_breaks() -> None:
