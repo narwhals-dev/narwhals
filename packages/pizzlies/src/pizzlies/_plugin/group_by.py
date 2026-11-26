@@ -414,14 +414,11 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         return result
 
     def agg(self, *exprs: DictExpr) -> DictDataFrame:
-        # Against the input's columns (key aliases and temporary key columns aren't
-        # there to be read), one expression at a time, so that one whose columns are
-        # unknown (e.g. a selector) doesn't stop the others being checked.
-        for expr in exprs:
-            if (read := exprs_input_columns([expr])) is not None and (
-                error := self._df._check_columns_exist(list(read))
-            ):
-                raise error
+        # Against the input's columns: key aliases and temporary key columns aren't
+        # there to be read.
+        read = exprs_input_columns(exprs, definite=True) or ()
+        if error := self._df._check_columns_exist(list(read)):
+            raise error
         frame = self.compliant
         groups = _GroupedRows(frame, self._keys)
         # Keyed by output names: an aggregation may be aliased to a temporary key name.

@@ -993,13 +993,13 @@ def gatherer(indices: Sequence[int]) -> Callable[[Sequence[Any]], list[Any]]:
 # --- Columns read by expressions ----------------------------------------------------
 
 
-def _nodes_input_columns(nodes: Iterable[Any]) -> set[str] | None:
+def _nodes_input_columns(nodes: Iterable[Any], *, definite: bool) -> set[str] | None:
     """The columns read by an expression with these (Narwhals) `nodes`, if known."""
     columns: set[str] = set()
     for node in nodes:
         if node.name == "col":
             columns.update(node.kwargs["names"])
-        elif node.kind.name in {"ALL", "EXCLUDE", "NTH", "SELECTOR"}:
+        elif not definite and node.kind.name in {"ALL", "EXCLUDE", "NTH", "SELECTOR"}:
             # These depend on which columns the input has, and in which order.
             return None
         for key in ("partition_by", "order_by"):
@@ -1009,22 +1009,32 @@ def _nodes_input_columns(nodes: Iterable[Any]) -> set[str] | None:
                 if not node.str_as_lit:
                     columns.add(arg)
             elif (sub_nodes := getattr(arg, "_nodes", None)) is not None:
-                if (sub_columns := _nodes_input_columns(sub_nodes)) is None:
+                sub_columns = _nodes_input_columns(sub_nodes, definite=definite)
+                if sub_columns is None:
                     return None
                 columns |= sub_columns
     return columns
 
 
-def exprs_input_columns(exprs: Iterable[Any]) -> frozenset[str] | None:
-    """The columns read by `exprs` (expressions or names), or `None` if unknown."""
+def exprs_input_columns(
+    exprs: Iterable[Any], *, definite: bool = False
+) -> frozenset[str] | None:
+    """The columns read by `exprs` (expressions or names), or `None` if unknown.
+
+    With `definite`, just those read whatever columns the input has: selectors (and
+    `all()`, `exclude`, `nth`) are skipped, as are expressions without metadata.
+    """
     columns: set[str] = set()
     for expr in exprs:
         if isinstance(expr, str):
             columns.add(expr)
             continue
         if (metadata := getattr(expr, "_opt_metadata", None)) is None:
+            if definite:
+                continue
             return None  # e.g. built by Narwhals internally
-        if (expr_columns := _nodes_input_columns(metadata.iter_nodes_reversed())) is None:
+        nodes = metadata.iter_nodes_reversed()
+        if (expr_columns := _nodes_input_columns(nodes, definite=definite)) is None:
             return None
         columns |= expr_columns
     return frozenset(columns)

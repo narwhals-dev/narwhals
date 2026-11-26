@@ -163,9 +163,12 @@ def test_matches_polars(data: dict[str, list[Any]], query: Callable[[Any], Any])
         # Key aliases and temporary key columns aren't input columns.
         lambda df: df.group_by(nw.col("a").alias("k")).agg(nw.col("k").sum()),
         lambda df: df.group_by(nw.col("a").alias("k")).agg(nw.col("_k_tmp").sum()),
-        # Even next to a selector, whose input columns aren't known up front.
+        # Even next to, or in, a selector, whose input columns aren't known up front.
         lambda df: df.group_by(nw.col("a").alias("k")).agg(
             ncs.numeric().sum(), nw.col("_k_tmp").sum()
+        ),
+        lambda df: df.group_by(nw.col("a").alias("k")).agg(
+            (ncs.numeric() + nw.col("_k_tmp")).sum()
         ),
     ],
 )
