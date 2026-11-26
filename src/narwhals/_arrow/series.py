@@ -838,7 +838,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         idxs = pc.index_in(self.native, pa.array(old))
         # Tracks which values were found in the mapping (even if mapped to None)
         was_matched = pc.is_valid(idxs)
-        result = self._with_native(pc.take(pa.array(new), idxs))
+        new_native = pa.array(new)
+        if return_dtype is not None:
+            new_native = new_native.cast(
+                narwhals_to_native_dtype(return_dtype, self._version)
+            )
+        result = self._with_native(pc.take(new_native, idxs))
         if default is NO_DEFAULT:
             # Check that all non-null input values were matched
             # (result may have more nulls if mapping contains {value: None})
@@ -861,8 +866,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             # Only fill with default where the value wasn't matched (not where result is null due to mapping)
             # If was_matched, keep result.native; otherwise use default
             result = self._with_native(pc.if_else(was_matched, result_native, default))
-        if return_dtype is not None:
-            return result.cast(return_dtype)
+            if return_dtype is not None:
+                # A scalar `default` can promote the result (e.g. Int8 -> Int64).
+                return result.cast(return_dtype)
         return result
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:

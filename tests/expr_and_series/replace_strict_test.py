@@ -198,6 +198,45 @@ def test_replace_strict_with_default_return_dtype(
     assert_equal_data(result, {"a": [0, 1, -1]})
 
 
+def test_replace_strict_with_default_cast_new_values(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
+    if "polars" in str(constructor) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe")):
+        # The SQL `CASE` mixes the int mapping with the str default before casting.
+        request.applymarker(pytest.mark.xfail(reason="CASE branch types are not unified"))
+
+    df = nw.from_native(constructor({"a": [1, 2]}))
+    result = df.select(
+        nw.col("a").replace_strict({1: 10}, default="other", return_dtype=nw.String)
+    )
+    assert_equal_data(result, {"a": ["10", "other"]})
+
+
+def test_replace_strict_with_null_default_return_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    xfail_if_pyspark_connect(constructor, request)
+
+    if "polars" in str(constructor) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    if "dask" in str(constructor):
+        # Lazy, so it can't check for nulls before casting to NumPy-backed int8.
+        request.applymarker(pytest.mark.xfail(reason="can't cast NaN to int8"))
+
+    df = nw.from_native(constructor({"a": [1, None]}))
+    result = df.select(
+        nw.col("a").replace_strict({1: 0}, default=None, return_dtype=nw.Int8)
+    )
+    # Only values are checked: NumPy-backed pandas can't hold nulls in Int8 and returns Float64.
+    assert_equal_data(result, {"a": [0, None]})
+
+
 def test_replace_strict_with_default_mapping(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
