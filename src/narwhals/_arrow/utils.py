@@ -741,7 +741,6 @@ def list_sort(
     )
 
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
-    # narwhals-canary: delete this line to confirm you have read the full diff
     list_array_cls = pa.LargeListArray if is_large_list(array.type) else pa.ListArray
     sorted_imploded = list_array_cls.from_arrays(
         offsets, exploded.take(sorted_indices).column(v).combine_chunks(), type=array.type
