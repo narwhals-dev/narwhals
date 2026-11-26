@@ -16,6 +16,7 @@ from narwhals._polars.utils import (
     PolarsStringNamespace,
     PolarsStructNamespace,
     catch_polars_exception,
+    cumulative_extremum,
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
@@ -96,8 +97,6 @@ INHERITED_METHODS = frozenset(
         "clip",
         "cos",
         "count",
-        "cum_max",
-        "cum_min",
         "cum_prod",
         "cum_sum",
         "diff",
@@ -240,6 +239,23 @@ class PolarsSeries:
 
     def _with_native(self, series: pl.Series) -> Self:
         return self.__class__(series, version=self._version)
+
+    def _cumulative_extremum(
+        self, method: Literal["cum_max", "cum_min"], *, reverse: bool
+    ) -> Self:
+        series = self.native
+        if BACKEND_VERSION < (1, 31) and series.dtype.is_float():
+            expr = cumulative_extremum(pl.col(series.name), method, reverse=reverse)
+            result = series.to_frame().select(expr).to_series()
+        else:
+            result = getattr(series, method)(reverse=reverse)
+        return self._with_native(result)
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._cumulative_extremum("cum_max", reverse=reverse)
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._cumulative_extremum("cum_min", reverse=reverse)
 
     @overload
     def _from_native_object(self, series: pl.Series) -> Self: ...
@@ -762,8 +778,6 @@ class PolarsSeries:
     ceil: Method[Self]
     count: Method[int]
     cos: Method[Self]
-    cum_max: Method[Self]
-    cum_min: Method[Self]
     cum_prod: Method[Self]
     cum_sum: Method[Self]
     diff: Method[Self]

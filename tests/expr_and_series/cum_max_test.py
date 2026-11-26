@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-
 import pytest
 from packaging.version import Version as PkgVersion
 
@@ -220,7 +218,6 @@ def test_cum_max_series(
 @pytest.mark.parametrize("reverse", [True, False])
 @pytest.mark.parametrize("dtype", [nw.Float32, nw.Float64])
 def test_cum_max_non_positive_floats(
-    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     values: list[float | None],
     expected_cum_max: list[float | None],
@@ -232,15 +229,6 @@ def test_cum_max_non_positive_floats(
     if uses_pyarrow_backend(constructor_eager) and PYARROW_VERSION < PkgVersion("26"):
         # pandas and Modin call the PyArrow kernel directly: https://github.com/apache/arrow/issues/51194
         pytest.skip(reason="affected by PyArrow bug fixed upstream in 26.0")
-    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.31"):
-        # Polars<1.31 seeds the cumulative kernel with the lowest finite value, so a
-        # leading (in accumulation order) `-inf` is replaced by it.
-        ordered = values[::-1] if reverse else values
-        if math.isinf(next(v for v in ordered if v is not None)):
-            request.applymarker(
-                pytest.mark.xfail(reason="fixed upstream in Polars 1.31", strict=True)
-            )
-
     df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
     casted = nw.col("a").cast(dtype)
     result = df.select(casted.cum_max(reverse=reverse))
