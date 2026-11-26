@@ -308,35 +308,6 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         return ()
 
     @staticmethod
-    def _input_frame(
-        expr: DictExpr,
-        frame: DictDataFrame,
-        op_nodes: Sequence[Any],
-        output_names: Sequence[str],
-    ) -> DictDataFrame:
-        """The columns to evaluate `expr` on.
-
-        Narwhals excludes the keys from a multi-output expression (e.g. a selector), but
-        evaluating it on `frame` would still run it on them (e.g. cast them), unlike in
-        Polars. So unless another part of it may read them, it's evaluated on just its
-        outputs (and the columns it orders or partitions by).
-        """
-        if not expr._metadata.expansion_kind.is_multi_unnamed() or any(
-            node.exprs for node in op_nodes
-        ):
-            return frame
-        named = (
-            name
-            for node in op_nodes
-            for key in ("partition_by", "order_by")
-            for name in node.kwargs.get(key) or ()
-        )
-        inputs = frame.simple_select(*dict.fromkeys((*output_names, *named)))
-        # So that a selector selects the same columns on it as on `frame`.
-        inputs._parent_schema = frame._schema_for_sub_frames()
-        return inputs
-
-    @staticmethod
     def _agg_elementwise(
         expr: DictExpr,
         frame: DictDataFrame,
@@ -427,6 +398,12 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             for position, key_name in enumerate(self._output_key_names)
         }
         exclude = (*self._keys, *self._output_key_names)
+        # Like pandas' `apply(..., include_groups=False)`: a non-elementary aggregation
+        # can't see the keys, so e.g. a selector in it isn't evaluated on them.
+        without_keys = frame.simple_select(
+            *(name for name in frame.columns if name not in self._keys)
+        )
+        without_keys._parent_schema = frame._schema_for_sub_frames()
         names = list(self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
@@ -435,7 +412,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             names.extend(aliases)
             check_column_names_are_unique(names)
             op_nodes = list(expr._metadata.op_nodes_reversed())
-            inputs = self._input_frame(expr, frame, op_nodes, output_names)
+            inputs = frame if expr._is_elementary() else without_keys
             order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1 and op_nodes[0].name == "len":
                 # `agg(nw.len())`: no input column, just count rows per group. Other
