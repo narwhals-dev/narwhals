@@ -594,6 +594,14 @@ def test_group_by_selector(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_agg_selector_matching_only_keys(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": ["x", "y", "z"]}))
+    result = df.group_by("a").agg(nw.selectors.numeric().max()).sort("a")
+    assert_equal_data(result, {"a": [1, 2]})
+    result = df.group_by("a").agg(nw.selectors.numeric().max(), nw.len()).sort("a")
+    assert_equal_data(result, {"a": [1, 2], "len": [2, 1]})
+
+
 def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
