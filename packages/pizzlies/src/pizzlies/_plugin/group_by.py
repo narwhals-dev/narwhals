@@ -308,6 +308,35 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         return ()
 
     @staticmethod
+    def _input_frame(
+        expr: DictExpr,
+        frame: DictDataFrame,
+        op_nodes: Sequence[Any],
+        output_names: Sequence[str],
+    ) -> DictDataFrame:
+        """The columns to evaluate `expr` on.
+
+        Narwhals excludes the keys from a multi-output expression (e.g. a selector), but
+        evaluating it on `frame` would still run it on them (e.g. cast them), unlike in
+        Polars. So unless another part of it may read them, it's evaluated on just its
+        outputs (and the columns it orders or partitions by).
+        """
+        if not expr._metadata.expansion_kind.is_multi_unnamed() or any(
+            node.exprs for node in op_nodes
+        ):
+            return frame
+        named = (
+            name
+            for node in op_nodes
+            for key in ("partition_by", "order_by")
+            for name in node.kwargs.get(key) or ()
+        )
+        inputs = frame.simple_select(*dict.fromkeys((*output_names, *named)))
+        # So that a selector selects the same columns on it as on `frame`.
+        inputs._parent_schema = frame._schema_for_sub_frames()
+        return inputs
+
+    @staticmethod
     def _agg_elementwise(
         expr: DictExpr,
         frame: DictDataFrame,
@@ -385,12 +414,14 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         return result
 
     def agg(self, *exprs: DictExpr) -> DictDataFrame:
-        # Against the input's columns: key aliases and temporary key columns aren't
-        # there to be read.
-        if (read := exprs_input_columns(exprs)) is not None and (
-            error := self._df._check_columns_exist(list(read))
-        ):
-            raise error
+        # Against the input's columns (key aliases and temporary key columns aren't
+        # there to be read), one expression at a time, so that one whose columns are
+        # unknown (e.g. a selector) doesn't stop the others being checked.
+        for expr in exprs:
+            if (read := exprs_input_columns([expr])) is not None and (
+                error := self._df._check_columns_exist(list(read))
+            ):
+                raise error
         frame = self.compliant
         groups = _GroupedRows(frame, self._keys)
         # Keyed by output names: an aggregation may be aliased to a temporary key name.
@@ -406,11 +437,8 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             )
             names.extend(aliases)
             check_column_names_are_unique(names)
-            if not aliases:
-                # A selector matched only keys. There's nothing to aggregate, and
-                # evaluating it would still run it on the keys (e.g. cast them).
-                continue
             op_nodes = list(expr._metadata.op_nodes_reversed())
+            inputs = self._input_frame(expr, frame, op_nodes, output_names)
             order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1 and op_nodes[0].name == "len":
                 # `agg(nw.len())`: no input column, just count rows per group. Other
@@ -426,7 +454,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                 result.update(
                     self._agg_elementwise(
                         expr,
-                        frame,
+                        inputs,
                         groups=groups,
                         order_by=order_by,
                         output_names=output_names,
@@ -434,7 +462,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                     )
                 )
             else:
-                columns = tuple(expr._pruned(frame).columns)
+                columns = tuple(expr._pruned(inputs).columns)
                 result.update(
                     self._agg_complex(expr, groups.frames(order_by, columns), aliases)
                 )

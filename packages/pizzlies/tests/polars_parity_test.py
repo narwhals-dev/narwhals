@@ -139,6 +139,14 @@ def _check(
             lambda df: df.group_by("k").agg(ncs.numeric().cast(nw.Int8).max()),
         ),
         (
+            {"k": [300], "v": [1]},
+            lambda df: df.group_by("k").agg(ncs.numeric().cast(nw.Int8).max()),
+        ),
+        (
+            {"k": [300, 300], "v": [1, 2]},
+            lambda df: df.group_by("k").agg(ncs.numeric().cast(nw.Int8).unique().max()),
+        ),
+        (
             {"c": [1, None], "d": [None, 2], "e": [1, 1]},
             lambda df: df.group_by("c", drop_null_keys=True).agg(ncs.numeric().max()),
         ),
@@ -155,6 +163,10 @@ def test_matches_polars(data: dict[str, list[Any]], query: Callable[[Any], Any])
         # Key aliases and temporary key columns aren't input columns.
         lambda df: df.group_by(nw.col("a").alias("k")).agg(nw.col("k").sum()),
         lambda df: df.group_by(nw.col("a").alias("k")).agg(nw.col("_k_tmp").sum()),
+        # Even next to a selector, whose input columns aren't known up front.
+        lambda df: df.group_by(nw.col("a").alias("k")).agg(
+            ncs.numeric().sum(), nw.col("_k_tmp").sum()
+        ),
     ],
 )
 def test_group_by_missing_column(query: Callable[[Any], Any]) -> None:
