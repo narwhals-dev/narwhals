@@ -239,6 +239,8 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     ) -> tuple[DictDataFrame, list[str], list[str]]:
         if is_sequence_of(keys, str):
             keys_str = list(keys)
+            if error := frame._check_columns_exist(keys_str):
+                raise error
             return frame, keys_str, keys_str.copy()
         return self._parse_expr_keys(frame, keys=keys)
 
@@ -385,6 +387,11 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             for position, key_name in enumerate(self._output_key_names)
         }
         exclude = (*self._keys, *self._output_key_names)
+        # Like pandas' `apply(..., include_groups=False)`: a non-elementary aggregation
+        # can't see the keys, so e.g. a selector in it isn't evaluated on them.
+        without_keys = frame.simple_select(
+            *(name for name in frame.columns if name not in self._keys)
+        )
         names = list(self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
@@ -393,6 +400,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             names.extend(aliases)
             check_column_names_are_unique(names)
             op_nodes = list(expr._metadata.op_nodes_reversed())
+            inputs = frame if expr._is_elementary() else without_keys
             order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1 and op_nodes[0].name == "len":
                 # `agg(nw.len())`: no input column, just count rows per group. Other
@@ -408,7 +416,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                 result.update(
                     self._agg_elementwise(
                         expr,
-                        frame,
+                        inputs,
                         groups=groups,
                         order_by=order_by,
                         output_names=output_names,
@@ -416,7 +424,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                     )
                 )
             else:
-                columns = tuple(expr._pruned(frame).columns)
+                columns = tuple(expr._pruned(inputs).columns)
                 result.update(
                     self._agg_complex(expr, groups.frames(order_by, columns), aliases)
                 )
