@@ -46,6 +46,8 @@ from pizzlies._plugin.parquet import (
     read_parquet,
 )
 
+from narwhals.exceptions import DuplicateError
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -226,6 +228,8 @@ def test_empty_and_columns(tmp_path: Path) -> None:
     assert read_parquet(str(path), columns=["c", "a"]) == {"c": [1.0, 2.0], "a": [1, 2]}
     with pytest.raises(ValueError, match="not found"):
         read_parquet(str(path), columns=["z"])
+    with pytest.raises(DuplicateError):
+        read_parquet(str(path), columns=["a", "a"])
 
 
 def test_public_api(tmp_path: Path) -> None:
@@ -320,6 +324,17 @@ def test_zstd_without_backport(monkeypatch: pytest.MonkeyPatch) -> None:
     if (backports := sys.modules.get("backports")) is not None:
         monkeypatch.delattr(backports, "zstd", raising=False)
     with pytest.raises(NotImplementedError, match=r"pizzlies\[zstd\]"):
+        read_parquet(buf)
+
+
+@pytest.mark.skipif(sys.version_info < (3, 14), reason="the stdlib has no zstd")
+def test_zstd_without_stdlib_support(monkeypatch: pytest.MonkeyPatch) -> None:
+    buf = _write(pa.table({"a": [1, 2]}), compression="zstd")
+    # As when Python was built without zstd.
+    monkeypatch.setitem(sys.modules, "compression.zstd", None)
+    if (compression := sys.modules.get("compression")) is not None:
+        monkeypatch.delattr(compression, "zstd", raising=False)
+    with pytest.raises(NotImplementedError, match="Python built with zstd"):
         read_parquet(buf)
 
 
@@ -718,8 +733,10 @@ def test_invalid_utf8() -> None:
         _decode_values(b"\xff", 0, PLAIN, 1, column=column, dictionary=None)
 
 
-def test_columns_deduplicated() -> None:
-    assert read_parquet(_write(pa.table({"a": [1]})), ["a", "a"]) == {"a": [1]}
+def test_duplicate_columns_raise() -> None:
+    # As in Polars.
+    with pytest.raises(DuplicateError):
+        read_parquet(_write(pa.table({"a": [1]})), ["a", "a"])
 
 
 @pytest.mark.parametrize("raw", [b"PAR1", b"PAR1" + b"\xff\xff\x00\x00PAR1"])

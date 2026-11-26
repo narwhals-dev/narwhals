@@ -66,17 +66,20 @@ class DictNamespace(
     def read_csv(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DictDataFrame:
-        """Read with the stdlib `csv` module, `kwds` are `csv.reader` format parameters."""
+        """Read with the stdlib `csv` module.
+
+        `kwds` are `csv.reader` format parameters, except `delimiter`: use `separator`.
+        """
         import csv
         from io import StringIO
         from pathlib import Path
 
-        if kwds.setdefault("delimiter", separator) != separator:
-            msg = (
-                "`separator` and `delimiter` do not match: "
-                f"`separator`={separator} and `delimiter`={kwds['delimiter']}."
-            )
+        # Narwhals always passes `separator` (default ","), so an explicit "," can't
+        # be told apart from the default, and a `delimiter` would be ambiguous.
+        if "delimiter" in kwds:
+            msg = "Use `separator` rather than `delimiter`."
             raise TypeError(msg)
+        kwds["delimiter"] = separator
         if isinstance(source, str):
             with Path(source).open(newline="", encoding="utf-8") as stream:
                 native = csv_to_native(csv.reader(stream, **kwds))
