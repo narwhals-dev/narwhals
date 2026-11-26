@@ -297,6 +297,7 @@ class DictDataFrame(
     def simple_select(self, *column_names: str) -> Self:
         if error := self._check_columns_exist(column_names):
             raise error
+        check_column_names_are_unique(column_names)
         return self._with_native(
             {name: self.native[name] for name in column_names},
             validate_column_names=False,

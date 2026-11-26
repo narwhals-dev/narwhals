@@ -13,7 +13,7 @@ from pizzlies._plugin._vendored import (
     is_sequence_of,
 )
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import canonical_nans, skip_nan
+from pizzlies._plugin.utils import canonical_nans, exprs_input_columns, skip_nan
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -232,13 +232,21 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     ) -> None:
         self._df = df
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
-        self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
+        if drop_null_keys:
+            dropped = frame.drop_nulls(self._keys)
+            # Dropping rows may leave a column all-null, and its inferred dtype unknown:
+            # selectors in `agg` should still see the input's dtypes.
+            dropped._parent_schema = frame._schema_for_sub_frames()
+            frame = dropped
+        self._compliant_frame = frame
 
     def _parse_keys(
         self, frame: DictDataFrame, keys: Sequence[DictExpr] | Sequence[str]
     ) -> tuple[DictDataFrame, list[str], list[str]]:
         if is_sequence_of(keys, str):
             keys_str = list(keys)
+            if error := frame._check_columns_exist(keys_str):
+                raise error
             return frame, keys_str, keys_str.copy()
         return self._parse_expr_keys(frame, keys=keys)
 
@@ -377,6 +385,12 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         return result
 
     def agg(self, *exprs: DictExpr) -> DictDataFrame:
+        # Against the input's columns: key aliases and temporary key columns aren't
+        # there to be read.
+        if (read := exprs_input_columns(exprs)) is not None and (
+            error := self._df._check_columns_exist(list(read))
+        ):
+            raise error
         frame = self.compliant
         groups = _GroupedRows(frame, self._keys)
         # Keyed by output names: an aggregation may be aliased to a temporary key name.

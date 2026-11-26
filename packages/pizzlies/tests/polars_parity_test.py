@@ -13,7 +13,8 @@ import pizzlies as pz
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
+import narwhals.selectors as ncs
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -128,10 +129,35 @@ def _check(
             {"s": [{"a": 1, "b": 9}, {"b": 0, "a": 2}], "i": [0, 1]},
             lambda df: df.sort("s").select("i"),
         ),
+        ({"a": [1]}, lambda df: df.select("a", "a")),
+        (
+            {"k": [1, 2], "c": [True, False]},
+            lambda df: df.group_by("k").agg(ncs.numeric().max()).sort("k"),
+        ),
+        (
+            {"c": [1, None], "d": [None, 2], "e": [1, 1]},
+            lambda df: df.group_by("c", drop_null_keys=True).agg(ncs.numeric().max()),
+        ),
     ],
 )
 def test_matches_polars(data: dict[str, list[Any]], query: Callable[[Any], Any]) -> None:
     _check(data, query)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        lambda df: df.group_by("zz").agg(nw.col("a").sum()),
+        # Key aliases and temporary key columns aren't input columns.
+        lambda df: df.group_by(nw.col("a").alias("k")).agg(nw.col("k").sum()),
+        lambda df: df.group_by(nw.col("a").alias("k")).agg(nw.col("_k_tmp").sum()),
+    ],
+)
+def test_group_by_missing_column(query: Callable[[Any], Any]) -> None:
+    with pytest.raises(pl.exceptions.ColumnNotFoundError):
+        query(nw.from_native(pl.DataFrame({"a": [1, 2]})))
+    with pytest.raises(ColumnNotFoundError):
+        query(pz.from_dict({"a": [1, 2]}))
 
 
 NESTED = {"x": [[1], [1], [2], None, [1, None]], "y": [1, 2, 3, 4, 5]}
