@@ -225,6 +225,21 @@ def test_array_inner_recursive_repr() -> None:
         repr(dtype_3)
 
 
+@pytest.mark.parametrize(
+    "time_zone",
+    ["America/Argentina/Buenos_Aires", "US/East-Indiana", "Etc/GMT+5", "Etc/GMT-3"],
+)
+def test_pandas_timezone_names_with_special_characters(time_zone: str) -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    s = pd.Series(pd.date_range("2020-01-01", periods=1, tz=time_zone))
+    result = nw.from_native(s, series_only=True)
+
+    assert isinstance(result.dtype, nw.Datetime)
+    assert result.dtype.time_zone == time_zone
+
+
 def test_second_time_unit() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")

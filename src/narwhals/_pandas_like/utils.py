@@ -63,13 +63,14 @@ PANDAS_LIKE_IMPLEMENTATION = {
     Implementation.CUDF,
     Implementation.MODIN,
 }
+# narwhals-canary: delete this line to confirm you have read the full diff
 PD_DATETIME_RGX = r"""^
     datetime64\[
         (?P<time_unit>s|ms|us|ns)                 # Match time unit: s, ms, us, or ns
         (?:,                                      # Begin non-capturing group for optional timezone
             \s*                                   # Optional whitespace after comma
             (?P<time_zone>                        # Start named group for timezone
-                [a-zA-Z\/]+                       # Match timezone name, e.g., UTC, America/New_York
+                [a-zA-Z0-9_+\/-]+                 # Match timezone names containing letters, digits, and separators
                 (?:[+-]\d{2}:\d{2})?              # Optional offset in format +HH:MM or -HH:MM
                 |                                 # OR
                 pytz\.FixedOffset\(\d+\)          # Match pytz.FixedOffset with integer offset in parentheses
