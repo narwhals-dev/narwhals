@@ -114,7 +114,8 @@ class _GroupedRows:
 
     def __init__(self, frame: DictDataFrame, keys: Sequence[str]) -> None:
         self._frame = frame
-        self._key_columns = [canonical_nans(frame.native[key]) for key in keys]
+        self._key_sources = [frame.native[key] for key in keys]
+        self._key_columns = [canonical_nans(column) for column in self._key_sources]
         # Keys are raw values for a single key, value tuples for several -- see
         # `_bucket_by_keys`. `row_keys` uses the matching representation so the
         # `order_by` re-bucketing below looks them up consistently.
@@ -143,6 +144,10 @@ class _GroupedRows:
 
     def key_column(self, position: int) -> list[Any]:
         """The distinct key values for key-column `position`, in group order."""
+        if (source := self._key_sources[position]) is not self._key_columns[position]:
+            # Hash keys differ from the values (e.g. lists became tuples): output the
+            # values of each group's first row.
+            return [source[rows[0]] for rows in self._indices[()]]
         if len(self._key_columns) == 1:
             return self.keys
         return [key[position] for key in self.keys]
@@ -420,8 +425,9 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
 
     def __iter__(self) -> Iterator[tuple[tuple[Any, ...], DictDataFrame]]:
         frame = self.compliant
-        single_key = len(self._keys) == 1
         selected = frame.simple_select(*self._df.columns)
-        for key, indices in self._group_indices(frame).items():
-            # Keys are always yielded as tuples, so wrap the single-key raw value.
-            yield ((key,) if single_key else key), selected._gather_positions(indices)
+        key_columns = [frame.native[key] for key in self._keys]
+        for indices in self._group_indices(frame).values():
+            # The first row's values, not the hash keys (e.g. tuples for lists).
+            key = tuple(column[indices[0]] for column in key_columns)
+            yield key, selected._gather_positions(indices)

@@ -4,6 +4,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from narwhals.compliant import EagerExpr
+from narwhals.exceptions import ColumnNotFoundError
 from narwhals.utils import Implementation
 from pizzlies._plugin._vendored import evaluate_output_names_and_aliases
 from pizzlies._plugin.series import DictSeries
@@ -91,16 +92,26 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
 
     @classmethod
     def from_column_indices(cls, *column_indices: int, context: Context) -> Self:
-        def func(df: DictDataFrame) -> list[DictSeries]:
+        def names(df: DictDataFrame) -> list[str]:
             columns = df.columns
+            try:
+                return [columns[i] for i in column_indices]
+            except IndexError:
+                msg = (
+                    f"Column indices {list(column_indices)} are out of range for a "
+                    f"frame with {len(columns)} columns."
+                )
+                raise ColumnNotFoundError(msg) from None
+
+        def func(df: DictDataFrame) -> list[DictSeries]:
             return [
-                DictSeries(df.native[columns[i]], name=columns[i], version=df._version)
-                for i in column_indices
+                DictSeries(df.native[name], name=name, version=df._version)
+                for name in names(df)
             ]
 
         return cls(
             func,
-            evaluate_output_names=cls._eval_names_indices(column_indices),
+            evaluate_output_names=names,
             alias_output_names=None,
             version=context._version,
         )
@@ -256,8 +267,9 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         """
         groups = self._partition_indices(df, partition_by, order_by)
         if not groups:
-            # Empty frame: evaluate once so output names and dtypes are right.
-            return self(df)
+            # Empty frame: evaluate once for the output names, but keep no rows (an
+            # aggregation gives one).
+            return [series._with_native(series.native[:0]) for series in self(df)]
 
         # Gather only the columns the expression reads into each sub-frame.
         source = self._pruned(df)
@@ -337,6 +349,22 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         )
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
+        result = self._over(partition_by, order_by)
+        window_columns = [*partition_by, *order_by]
+
+        def func(df: DictDataFrame) -> Sequence[DictSeries]:
+            if error := df._check_columns_exist(window_columns):
+                raise error
+            return result(df)
+
+        return result._from_callable(
+            func,
+            evaluate_output_names=result._evaluate_output_names,
+            alias_output_names=result._alias_output_names,
+            context=result,
+        )
+
+    def _over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         if not partition_by:
             return self._over_without_partition_by(order_by)
         # Branch on the *leaf node* kind (not the whole-expression `is_scalar_like`
@@ -396,8 +424,12 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
                 else df
             )
             tmp = grouping.group_by(partition_by, drop_null_keys=False).agg(self)
+            # Hash keys, as `original_keys` (`tmp` holds the original key values).
             tmp_keys = list(
-                zip(*(tmp.native[name] for name in partition_by), strict=True)
+                zip(
+                    *(canonical_nans(tmp.native[name]) for name in partition_by),
+                    strict=True,
+                )
             )
             lookups = {
                 alias: dict(zip(tmp_keys, tmp.native[alias], strict=True))

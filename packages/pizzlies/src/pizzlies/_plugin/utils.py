@@ -30,13 +30,16 @@ if TYPE_CHECKING:
     from pizzlies._plugin.typing import DictFrame, NativeSeries
 
 __all__ = [
+    "asof_excluded_right",
     "binary_op",
     "cast_values",
     "csv_to_native",
+    "dtypes_compatible",
     "first_non_null",
     "infer_dtype",
     "is_native_column",
     "is_native_frame",
+    "key_originals",
     "narwhals_to_native_dtype",
     "native_to_narwhals_dtype",
     "non_null",
@@ -61,6 +64,32 @@ MICROSECONDS_PER_UNIT: Mapping[str, int] = {"s": 1_000_000, "ms": 1_000, "us": 1
 def is_native_column(obj: Any) -> bool:
     """A native column is any non-string sequence, `None` marks a null."""
     return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray))
+
+
+def dtypes_compatible(left: DType, right: DType, version: Version) -> bool:
+    """Whether columns of these (inferred) dtypes may be combined, e.g. concatenated.
+
+    Inferred from values, an empty or all-null column's dtype is `Unknown`, which
+    is compatible with anything, as are e.g. `List(Unknown)` and `List(Int64)`.
+    """
+    dtypes = version.dtypes
+    if left == right or dtypes.Unknown in {left.base_type(), right.base_type()}:
+        return True
+    if isinstance(left, (dtypes.List, dtypes.Array)) and isinstance(right, type(left)):
+        return dtypes_compatible(left.inner, right.inner, version)  # type: ignore[arg-type]
+    if isinstance(left, dtypes.Struct) and isinstance(right, dtypes.Struct):
+        return [f.name for f in left.fields] == [f.name for f in right.fields] and all(
+            dtypes_compatible(a.dtype, b.dtype, version)  # type: ignore[arg-type]
+            for a, b in zip(left.fields, right.fields, strict=True)
+        )
+    return False
+
+
+def asof_excluded_right(
+    left_on: str, right_on: str, by_right: Sequence[str] | None
+) -> set[str]:
+    """The right columns `join_asof` leaves out, as Polars does."""
+    return {*(by_right or ()), *((right_on,) if right_on == left_on else ())}
 
 
 def is_native_frame(obj: Any) -> bool:
@@ -275,12 +304,44 @@ def _to_int(value: Any) -> int:
     if isinstance(value, (date, time, timedelta)):
         msg = "Casting temporal values to numeric dtypes is not supported for the dict backend."
         raise InvalidOperationError(msg)
-    return int(value)
+    try:
+        return int(value)
+    except (ValueError, OverflowError) as exc:  # e.g. NaN, inf, or "x"
+        msg = f"Conversion of {value!r} to an integer failed."
+        raise InvalidOperationError(msg) from exc
+
+
+def _bounded_int_caster(bits: int, *, signed: bool) -> Callable[[Any], int]:
+    low, high = (-(2 ** (bits - 1)), 2 ** (bits - 1)) if signed else (0, 2**bits)
+
+    def caster(value: Any) -> int:
+        if not low <= (result := _to_int(value)) < high:
+            name = f"{'Int' if signed else 'UInt'}{bits}"
+            msg = f"Conversion of {value!r} to {name} failed: it's out of range."
+            raise InvalidOperationError(msg)
+        return result
+
+    return caster
+
+
+def _int_caster(dtype: DType) -> Callable[[Any], int]:
+    bits = int(re.sub(r"\D", "", type(dtype).__name__))
+    return _bounded_int_caster(bits, signed=dtype.is_signed_integer())
+
+
+def _to_bool(value: Any) -> bool:
+    if isinstance(value, (str, bytes, list, tuple, dict)):
+        msg = f"Casting {type(value).__name__!r} values to Boolean is not supported."
+        raise InvalidOperationError(msg)
+    return bool(value)
 
 
 def to_str(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, (list, tuple, dict)):
+        msg = f"Casting {type(value).__name__!r} values to String is not supported."
+        raise InvalidOperationError(msg)
     if isinstance(value, bytes):
         return value.decode()
     if isinstance(value, datetime):
@@ -521,7 +582,7 @@ def _simple_casters(version: Version) -> Mapping[type[DType], Callable[[Any], An
     return {
         dtypes.String: to_str,
         dtypes.Categorical: to_str,
-        dtypes.Boolean: bool,
+        dtypes.Boolean: _to_bool,
         dtypes.Date: _to_date,
         dtypes.Time: _to_time,
         dtypes.Binary: _to_binary,
@@ -538,7 +599,7 @@ def _caster_for(dtype: IntoDType, version: Version) -> Callable[[Any], Any]:
     if caster := _simple_casters(version).get(dtype.base_type()):
         return caster
     if dtype.is_integer():
-        return _to_int
+        return _int_caster(dtype)
     if dtype.is_float():
         return float
     if isinstance(dtype, dtypes.Decimal):
@@ -560,7 +621,7 @@ _NO_OP_TYPE: Mapping[Callable[[Any], Any], type] = {
     to_str: str,
     _to_int: int,
     float: float,
-    bool: bool,
+    _to_bool: bool,
 }
 _PLAIN_STR_TYPES = frozenset({int, float, str})
 
@@ -620,23 +681,80 @@ def has_nan(values: Iterable[Any]) -> bool:
     return any(map(math.isnan, filter(float.__instancecheck__, values)))
 
 
-def nan_last_key(values: Iterable[Any]) -> Callable[[Any], Any] | None:
-    """`nan_last` if `values` hold a NaN, else no key at all (a faster, plain sort)."""
+def _field_order(value: Any) -> Any:
+    """The struct field names in `value`, nested, as dtype inference finds them.
+
+    A struct's fields are ordered as in the first non-null record (see
+    `infer_dtype`), so records whose keys are in another order compare by them.
+    """
+    if isinstance(value, dict):
+        return {name: _field_order(field) for name, field in value.items()}
+    if isinstance(value, list):
+        return [_field_order(first_non_null(value))]
+    return None
+
+
+def _nested_sort_key(value: Any, order: Any) -> tuple[Any, ...]:
+    """Sort key for lists and structs, which may hold nulls: nulls first, NaN last."""
+    if value is None:
+        return (0,)
+    if isinstance(value, list):
+        inner = order[0] if isinstance(order, list) else None
+        return (1, tuple(_nested_sort_key(item, inner) for item in value))
+    if isinstance(value, dict):
+        fields = order if isinstance(order, dict) else dict.fromkeys(value)
+        return (
+            1,
+            tuple(_nested_sort_key(value.get(name), sub) for name, sub in fields.items()),
+        )
+    return (2,) if _is_nan(value) else (1, value)
+
+
+def nan_last_key(values: Sequence[Any]) -> Callable[[Any], Any] | None:
+    """A sort key for non-null `values`, ordering them as Polars does.
+
+    `nan_last` if they hold a NaN, one for lists and structs, else no key at all (a
+    faster, plain sort).
+    """
+    if isinstance(first := first_non_null(values), (list, dict)):
+        return partial(_nested_sort_key, order=_field_order(first))
     return nan_last if has_nan(values) else None
 
 
 NAN = float("nan")
 
 
+def _hashable(value: Any) -> Any:
+    if isinstance(value, list):
+        return tuple(map(_hashable, value))
+    if isinstance(value, dict):
+        # Sorted by name: structs with the same fields in another order are equal.
+        items = sorted(value.items(), key=itemgetter(0))
+        return tuple((key, _hashable(item)) for key, item in items)
+    return NAN if _is_nan(value) else value
+
+
 def canonical_nans(values: Sequence[Any]) -> Sequence[Any]:
     """`values` with every NaN replaced by the same `NAN` object, for use as hash keys.
 
     NaN hashes by identity, and dicts and sets only find a NaN key by identity, so
-    separate NaN objects are distinct keys. Polars treats all NaNs as equal.
+    separate NaN objects are distinct keys. Polars treats all NaNs as equal. Lists
+    and structs, which can't be hashed, become tuples: callers which output keys
+    must map them back to the original values (see `key_originals`).
     """
+    if isinstance(first_non_null(values), (list, dict)):
+        return [None if value is None else _hashable(value) for value in values]
     if not has_nan(values):
         return values
     return [NAN if _is_nan(value) else value for value in values]
+
+
+def key_originals(values: Sequence[Any], keys: Sequence[Any]) -> dict[Any, Any]:
+    """Each of `canonical_nans(values)`' keys, mapped to its first original value."""
+    originals: dict[Any, Any] = {}
+    for key, value in zip(keys, values, strict=True):
+        originals.setdefault(key, value)
+    return originals
 
 
 def skip_nan(values: list[Any]) -> list[Any]:
@@ -647,10 +765,10 @@ def skip_nan(values: list[Any]) -> list[Any]:
 
 
 def nan_last_column(values: Sequence[Any]) -> Sequence[Any]:
-    """A column's sort keys: `values` mapped through `nan_last` if they hold a NaN."""
-    if nan_last_key(values) is None:
+    """A column's sort keys: `values` mapped through `nan_last_key`, if they need one."""
+    if (key := nan_last_key(values)) is None:
         return values
-    return [None if value is None else nan_last(value) for value in values]
+    return [None if value is None else key(value) for value in values]
 
 
 def first_non_null(values: Iterable[Any]) -> Any:
