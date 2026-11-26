@@ -58,6 +58,7 @@ tests/expr_and_series/reduction_return_type_test.py::test_numeric_reduction_keep
 tests/expr_and_series/reduction_return_type_test.py::test_string_reduction_keeps_dtype_when_all_null[dict]
 tests/expr_and_series/replace_strict_test.py::test_replace_strict_expr_basic[dict-old0-new0-return_dtype0]
 tests/expr_and_series/replace_strict_test.py::test_replace_strict_expr_basic[dict-old2-None-return_dtype2]
+tests/expr_and_series/replace_strict_test.py::test_replace_strict_with_default_return_dtype[dict]
 tests/expr_and_series/str/len_chars_test.py::test_str_len_chars_all_null[dict]
 tests/expr_and_series/str/to_datetime_test.py::test_to_datetime_all_null_offset_format[dict]
 tests/expr_and_series/struct_test.py::test_struct_with_schema[dict]

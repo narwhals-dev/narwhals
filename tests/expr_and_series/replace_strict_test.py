@@ -190,9 +190,9 @@ def test_replace_strict_with_default_return_dtype(
     if "polars" in str(constructor) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
-    df = nw.from_native(constructor({"a": ["x", "y", "z"]}))
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
     result = df.select(
-        nw.col("a").replace_strict({"x": 0, "y": 1}, default=-1, return_dtype=nw.Int8)
+        nw.col("a").replace_strict({1: 0, 2: 1}, default=-1, return_dtype=nw.Int8)
     )
     assert result.collect_schema() == {"a": nw.Int8()}
     assert_equal_data(result, {"a": [0, 1, -1]})
