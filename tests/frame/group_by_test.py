@@ -594,6 +594,26 @@ def test_group_by_selector(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("drop_null_keys", [True, False])
+def test_agg_selector_matching_only_keys(
+    constructor: Constructor, request: pytest.FixtureRequest, *, drop_null_keys: bool
+) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, None], "b": ["x", "y", "z"]}))
+    if type(df._compliant_frame).__module__.startswith("narwhals._dask"):
+        # Built-in Dask is frozen: this is fixed in the `narwhals-dask` plugin only.
+        request.applymarker(pytest.mark.xfail)
+    keys = [1] if drop_null_keys else [1, None]
+    group_by = (
+        df.group_by("a", drop_null_keys=True) if drop_null_keys else df.group_by("a")
+    )
+    result = group_by.agg(nw.selectors.numeric().max()).sort("a", nulls_last=True)
+    assert_equal_data(result, {"a": keys})
+    result = group_by.agg(nw.selectors.numeric().max(), nw.len()).sort(
+        "a", nulls_last=True
+    )
+    assert_equal_data(result, {"a": keys, "len": [2, 1][: len(keys)]})
+
+
 def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
