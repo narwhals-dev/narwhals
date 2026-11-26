@@ -13,7 +13,7 @@ from pizzlies._plugin._vendored import (
     is_sequence_of,
 )
 from pizzlies._plugin.series import DictSeries
-from pizzlies._plugin.utils import canonical_nans, exprs_input_columns, skip_nan
+from pizzlies._plugin.utils import canonical_nans, skip_nan
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -232,13 +232,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     ) -> None:
         self._df = df
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
-        if drop_null_keys:
-            dropped = frame.drop_nulls(self._keys)
-            # Dropping rows may leave a column all-null, and its inferred dtype unknown:
-            # selectors in `agg` should still see the input's dtypes.
-            dropped._parent_schema = frame._schema_for_sub_frames()
-            frame = dropped
-        self._compliant_frame = frame
+        self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
 
     def _parse_keys(
         self, frame: DictDataFrame, keys: Sequence[DictExpr] | Sequence[str]
@@ -385,11 +379,6 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         return result
 
     def agg(self, *exprs: DictExpr) -> DictDataFrame:
-        # Against the input's columns: key aliases and temporary key columns aren't
-        # there to be read.
-        read = exprs_input_columns(exprs, definite=True) or ()
-        if error := self._df._check_columns_exist(list(read)):
-            raise error
         frame = self.compliant
         groups = _GroupedRows(frame, self._keys)
         # Keyed by output names: an aggregation may be aliased to a temporary key name.
@@ -403,7 +392,6 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
         without_keys = frame.simple_select(
             *(name for name in frame.columns if name not in self._keys)
         )
-        without_keys._parent_schema = frame._schema_for_sub_frames()
         names = list(self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
