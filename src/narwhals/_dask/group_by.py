@@ -155,9 +155,6 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
                 (alias, (output_name, agg_fn))
                 for alias, output_name in zip(aliases, output_names, strict=True)
             )
-        if not simple_aggregations:
-            # e.g. a selector which only matched keys, which are excluded from it.
-            return self.agg()
         agged = cast("dx.DataFrame", self._grouped.agg(**simple_aggregations))
         return DaskLazyFrame(agged.reset_index(), version=self.compliant._version).rename(
             dict(zip(self._keys, self._output_key_names, strict=False))

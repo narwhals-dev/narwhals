@@ -116,6 +116,7 @@ class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr"]):
         *,
         drop_null_keys: bool,
     ) -> None:
+        self._drop_null_keys = drop_null_keys
         self._compliant_frame, self._keys, self._output_key_names = self._parse_keys(
             df, keys=keys
         )
@@ -127,10 +128,11 @@ class DaskLazyGroupBy(CompliantGroupBy["DaskLazyFrame", "DaskExpr"]):
 
         if not exprs:
             # No aggregation provided
-            return (
-                self.compliant.simple_select(*self._keys)
-                .unique(self._keys, keep="any", order_by=None)
-                .rename(dict(zip(self._keys, self._output_key_names, strict=False)))
+            keys = self.compliant.simple_select(*self._keys)
+            if self._drop_null_keys:
+                keys = keys.drop_nulls(self._keys)
+            return keys.unique(self._keys, keep="any", order_by=None).rename(
+                dict(zip(self._keys, self._output_key_names, strict=False))
             )
 
         self._ensure_all_simple(exprs)
