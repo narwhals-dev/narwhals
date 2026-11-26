@@ -826,6 +826,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             # For unmatched values, use default
             _, default_native = align_and_extract_native(self, default)
             native_result = native_result.where(was_matched, default_native)
+            if return_dtype is not None:
+                return self._with_native(native_result).cast(return_dtype)
 
         return self._with_native(native_result)
 
