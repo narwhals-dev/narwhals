@@ -181,6 +181,23 @@ def test_replace_strict_with_default_and_nulls(
     assert_equal_data(result, {"a": [10, 20, 99, 99]})
 
 
+def test_replace_strict_with_default_return_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4219
+    xfail_if_pyspark_connect(constructor, request)
+
+    if "polars" in str(constructor) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    df = nw.from_native(constructor({"a": ["x", "y", "z"]}))
+    result = df.select(
+        nw.col("a").replace_strict({"x": 0, "y": 1}, default=-1, return_dtype=nw.Int8)
+    )
+    assert result.collect_schema() == {"a": nw.Int8()}
+    assert_equal_data(result, {"a": [0, 1, -1]})
+
+
 def test_replace_strict_with_default_mapping(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
