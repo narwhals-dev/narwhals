@@ -40,15 +40,17 @@ print(result.to_native().explain())  # the plan, as a tree
 result.collect()  # reads `l_quantity` and `l_extendedprice` only
 ```
 
-There are no other optimisations, and `collect()` runs the plan every time. Errors are
-raised on `collect()`, as in Polars: errors which only depend on column names (e.g. a
-missing or duplicate column) before anything is read, and others while the plan runs.
-Some Narwhals methods check column names straight away, e.g. `cast`, so name errors
-can also come from those. So, unlike in eager mode, a query with both kinds of error
-raises the name error. Dtypes are inferred from values, so `collect_schema()` runs
-the plan (once per frame), and so do dtype selectors, to resolve which columns they
-select; `columns` doesn't run anything otherwise. `explain()` shows a subplan used more
-than once only once, and refers to it by number after that.
+There are no other optimisations, and `collect()` runs the plan every time. Errors in
+the query are raised on `collect()`, as in Polars: errors which only depend on column
+names (e.g. a missing or duplicate column) before anything is read, and others while the
+plan runs. Some are raised straight away though: `scan_parquet` reads the file's footer
+(and checks `columns` against it), `scan_csv` parses the whole file, and some Narwhals
+methods check column names, e.g. `cast`, so name errors can also come from those. So,
+unlike in eager mode, a query with both kinds of error raises the name error. Dtypes are
+inferred from values, so `collect_schema()` runs the plan (once per frame), and so do
+dtype selectors, to resolve which columns they select; `columns` doesn't run anything
+otherwise. `explain()` shows a subplan used more than once only once, and refers to it by
+number after that.
 
 Inputs keep every column whenever it's unclear which ones an expression reads (for
 selectors, `all()`, `nth` and `exclude`), and also for `unique()` and `drop_nulls()`

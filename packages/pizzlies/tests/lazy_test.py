@@ -220,6 +220,18 @@ def test_errors_are_raised_on_collect(path: str, reads: list[tuple[str, ...]]) -
     assert reads == []  # raised before reading anything
 
 
+def test_scan_parquet_relative_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name, value in (("scanned", 1), ("other", 2)):
+        (tmp_path / name).mkdir()
+        pq.write_table(pa.table({"a": [value]}), tmp_path / name / "data.parquet")
+    monkeypatch.chdir(tmp_path / "scanned")
+    lf = pz.scan_parquet("data.parquet")
+    monkeypatch.chdir(tmp_path / "other")
+    assert lf.collect().to_native() == {"a": [1]}
+
+
 def test_user_errors_run_the_plan_once(
     path: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -232,7 +244,7 @@ def test_user_errors_run_the_plan_once(
 
     monkeypatch.setattr(lazy, "_execute", spy)
     lf = pz.scan_parquet(path).filter(pz.col("a").str.len_chars() > 0).select("a")
-    with pytest.raises(Exception):  # noqa: B017, PT011
+    with pytest.raises(TypeError, match="has no len"):
         lf.collect()
     assert len(calls) == 1
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 from itertools import chain, compress, repeat
 from typing import TYPE_CHECKING, Any, cast
 
@@ -124,8 +125,12 @@ class DictNamespace(
         if kwds:
             msg = f"Unsupported keyword arguments for `scan_parquet`: {sorted(kwds)}."
             raise TypeError(msg)
-        # File-like sources may only be readable once, so keep their bytes.
-        data: str | bytes = source if isinstance(source, str) else source.read()
+        # File-like sources may only be readable once, so keep their bytes. A path is
+        # made absolute so that `collect` reads the file whose footer was read here,
+        # even if the working directory changes in between.
+        data: str | bytes = (
+            os.path.abspath(source) if isinstance(source, str) else source.read()  # noqa: PTH100
+        )
         if not isinstance(source, str) and isinstance(data, str):
             msg = "Expected a path or a binary file-like object, got a text one."
             raise TypeError(msg)
