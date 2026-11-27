@@ -180,16 +180,19 @@ class DuckDBLazyFrame(
         selection = [
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
         ]
-        self._validate_select_columns(selection)
+        if error := self._check_select_columns(selection):
+            raise error
         try:
             return self._with_native(self.native.aggregate(selection))
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_exception(e, self) from None
 
     def select(self, *exprs: DuckDBExpr) -> Self:
-        columns = evaluate_exprs_and_aliases(self, *exprs)
-        self._validate_select_columns(columns)
-        selection = (val.alias(name) for name, val in columns)
+        selection = [
+            val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
+        ]
+        if error := self._check_select_columns(selection):
+            raise error
         try:
             return self._with_native(self.native.select(*selection))
         except Exception as e:  # noqa: BLE001

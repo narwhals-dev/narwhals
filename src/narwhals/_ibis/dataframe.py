@@ -161,12 +161,14 @@ class IbisLazyFrame(
             cast("ir.Scalar", val.name(name))
             for name, val in evaluate_exprs(self, *exprs)
         ]
-        self._validate_select_columns(selection)
+        if error := self._check_select_columns(selection):
+            raise error
         return self._with_native(self.native.aggregate(selection))
 
     def select(self, *exprs: IbisExpr) -> Self:
         selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
-        self._validate_select_columns(selection)
+        if error := self._check_select_columns(selection):
+            raise error
         return self._with_native(self.native.select(*selection))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:

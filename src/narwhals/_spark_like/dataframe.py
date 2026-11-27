@@ -254,21 +254,32 @@ class SparkLikeLazyFrame(
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(self, *exprs: SparkLikeExpr) -> Self:
-        return self._select(*exprs, aggregate=True)
+        new_columns = evaluate_exprs(self, *exprs)
 
-    def select(self, *exprs: SparkLikeExpr) -> Self:
-        return self._select(*exprs, aggregate=False)
-
-    def _select(self, *exprs: SparkLikeExpr, aggregate: bool) -> Self:
-        columns = [col.alias(name) for name, col in evaluate_exprs(self, *exprs)]
-        self._validate_select_columns(columns)
-        project = self.native.agg if aggregate and columns else self.native.select
+        new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
+        if not new_columns_list:
+            return self.select()
         if self._implementation.is_pyspark():
             try:
-                return self._with_native(project(*columns))
+                return self._with_native(self.native.agg(*new_columns_list))
             except Exception as e:  # noqa: BLE001
                 raise catch_pyspark_sql_exception(e, self) from None
-        return self._with_native(project(*columns))
+        return self._with_native(self.native.agg(*new_columns_list))
+
+    def select(self, *exprs: SparkLikeExpr) -> Self:
+        new_columns = evaluate_exprs(self, *exprs)
+        new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
+        # Unlike PySpark, SQLFrame's `select()` with no columns returns every column.
+        if self._implementation.is_sqlframe() and (
+            error := self._check_select_columns(new_columns_list)
+        ):
+            raise error
+        if self._implementation.is_pyspark():  # pragma: no cover
+            try:
+                return self._with_native(self.native.select(*new_columns_list))
+            except Exception as e:  # noqa: BLE001
+                raise catch_pyspark_sql_exception(e, self) from None
+        return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)

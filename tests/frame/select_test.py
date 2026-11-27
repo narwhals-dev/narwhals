@@ -62,7 +62,6 @@ def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -
         (ncs.string().str.len_chars(), False),
         (ncs.string().count(), True),
     ],
-    ids=["selector", "len_chars", "count"],
 )
 def test_select_matching_nothing_lazy(
     constructor: Constructor,
@@ -75,18 +74,10 @@ def test_select_matching_nothing_lazy(
     if is_aggregation and type(df._compliant_frame).__module__.startswith(
         "narwhals._dask"
     ):
-        request.applymarker(
-            pytest.mark.xfail(
-                reason="The frozen Dask backend concatenates an empty list",
-                raises=ValueError,
-            )
-        )
-    if df.implementation in {
-        nw.Implementation.DUCKDB,
-        nw.Implementation.IBIS,
-        nw.Implementation.SQLFRAME,
-    }:
-        with pytest.raises(InvalidOperationError, match="At least one column"):
+        # Built-in Dask is frozen: this is fixed in the `narwhals-dask` plugin only.
+        request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")):
+        with pytest.raises(InvalidOperationError, match="zero columns"):
             df.select(expr)
     else:
         assert df.select(expr).collect_schema().names() == []

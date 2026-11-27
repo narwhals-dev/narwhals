@@ -155,8 +155,10 @@ class DaskLazyFrame(
         return self._with_native(native)
 
     def aggregate(self, *exprs: DaskExpr) -> Self:
-        series = [val.rename(name) for name, val in evaluate_exprs(self, *exprs)]
-        df = dd.concat(series, axis=1) if series else self.native.iloc[:, :0]
+        new_series = evaluate_exprs(self, *exprs)
+        if not new_series:
+            return self.simple_select()
+        df = dd.concat([val.rename(name) for name, val in new_series], axis=1)
         return self._with_native(df)
 
     def select(self, *exprs: DaskExpr) -> Self:

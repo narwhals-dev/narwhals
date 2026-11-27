@@ -270,7 +270,7 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize(
-    ("expr", "expected"),
+    ("selector", "expected"),
     [
         (ncs.numeric() | ncs.boolean(), ["a", "c", "d"]),
         (ncs.boolean() | ncs.numeric(), ["a", "c", "d"]),
@@ -292,17 +292,18 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
         (ncs.all(), ["a", "b", "c", "d"]),
     ],
 )
-def test_set_ops(constructor: Constructor, expr: nw.Expr, expected: list[str]) -> None:
+def test_set_ops(
+    constructor: Constructor, selector: nw.selectors.Selector, expected: list[str]
+) -> None:
     df = nw.from_native(constructor(data))
-    if not expected and df.implementation in {
-        nw.Implementation.DUCKDB,
-        nw.Implementation.IBIS,
-        nw.Implementation.SQLFRAME,
-    }:
-        with pytest.raises(InvalidOperationError, match="At least one column"):
-            df.select(expr)
-    else:
-        assert df.select(expr).collect_schema().names() == expected
+    if not expected and any(
+        x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")
+    ):
+        with pytest.raises(InvalidOperationError, match="zero columns"):
+            df.select(selector)
+        return
+    result = df.select(selector).collect_schema().names()
+    assert result == expected
 
 
 def test_subtract_expr(constructor: Constructor) -> None:
