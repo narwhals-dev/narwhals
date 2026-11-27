@@ -56,12 +56,31 @@ def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -
 
 
 @pytest.mark.parametrize(
-    "expr",
-    [ncs.string(), ncs.string().str.len_chars(), ncs.string().count()],
+    ("expr", "is_aggregation"),
+    [
+        (ncs.string(), False),
+        (ncs.string().str.len_chars(), False),
+        (ncs.string().count(), True),
+    ],
     ids=["selector", "len_chars", "count"],
 )
-def test_select_matching_nothing_lazy(constructor: Constructor, expr: nw.Expr) -> None:
+def test_select_matching_nothing_lazy(
+    constructor: Constructor,
+    expr: nw.Expr,
+    request: pytest.FixtureRequest,
+    *,
+    is_aggregation: bool,
+) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
+    if is_aggregation and type(df._compliant_frame).__module__.startswith(
+        "narwhals._dask"
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="The frozen Dask backend concatenates an empty list",
+                raises=ValueError,
+            )
+        )
     if df.implementation in {
         nw.Implementation.DUCKDB,
         nw.Implementation.IBIS,
