@@ -62,8 +62,11 @@ def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -
 )
 def test_select_matching_nothing_lazy(constructor: Constructor, expr: nw.Expr) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
-    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")):
-        # These backends can't represent a table with zero columns.
+    if df.implementation in {
+        nw.Implementation.DUCKDB,
+        nw.Implementation.IBIS,
+        nw.Implementation.SQLFRAME,
+    }:
         with pytest.raises(InvalidOperationError, match="At least one column"):
             df.select(expr)
     else:

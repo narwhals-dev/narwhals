@@ -9,7 +9,11 @@ from narwhals._compliant.typing import (
     NativeLazyFrameT,
 )
 from narwhals._translate import ToNarwhalsT_co
-from narwhals._utils import check_columns_exist, generate_temporary_column_name
+from narwhals._utils import (
+    Implementation,
+    check_columns_exist,
+    generate_temporary_column_name,
+)
 from narwhals.exceptions import InvalidOperationError, MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -53,12 +57,17 @@ class SQLLazyFrame(
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
 
-    def _zero_column_select_error(self) -> InvalidOperationError:
-        msg = (
-            "At least one column must be selected: `LazyFrame.select` resolved to "
-            f"zero columns, which the {self._implementation} backend does not support."
-        )
-        return InvalidOperationError(msg)
+    def _validate_select_columns(self, columns: Sequence[object]) -> None:
+        if not columns and self._implementation in {
+            Implementation.DUCKDB,
+            Implementation.IBIS,
+            Implementation.SQLFRAME,  # An empty select returns every column.
+        }:
+            msg = (
+                "At least one column must be selected: `LazyFrame.select` resolved to "
+                f"zero columns, which the {self._implementation} backend does not support."
+            )
+            raise InvalidOperationError(msg)
 
     def _validate_explode_columns(self, columns: Sequence[str]) -> str:
         """Validate `explode` inputs and return the single column to explode.

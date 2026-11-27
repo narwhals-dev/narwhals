@@ -261,9 +261,7 @@ class SparkLikeLazyFrame(
 
     def _select(self, *exprs: SparkLikeExpr, aggregate: bool) -> Self:
         columns = [col.alias(name) for name, col in evaluate_exprs(self, *exprs)]
-        if not columns and self._implementation.is_sqlframe():
-            # PySpark handles zero-column selects; SQLFrame silently returns every column.
-            raise self._zero_column_select_error()
+        self._validate_select_columns(columns)
         project = self.native.agg if aggregate and columns else self.native.select
         if self._implementation.is_pyspark():
             try:
