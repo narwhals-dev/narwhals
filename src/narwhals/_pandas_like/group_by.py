@@ -20,7 +20,11 @@ if TYPE_CHECKING:
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
     from typing_extensions import Unpack
 
-    from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
+    from narwhals._compliant.typing import (
+        DepthTrackingExprAny,
+        NarwhalsAggregation,
+        ScalarKwargs,
+    )
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
 
@@ -124,6 +128,17 @@ class AggExpr:
             ns = group_by.compliant.__narwhals_namespace__()
             result = ns._concat_by_index(
                 [ns.from_native(result_single).alias(name).native for name in names]
+            )
+        elif self.leaf_name == "null_count":
+            result_single = grouped.size()
+            ns = group_by.compliant.__narwhals_namespace__()
+            result = ns._concat_by_index(
+                [
+                    ns.from_native(result_single - grouped[name].count())
+                    .alias(name)
+                    .native
+                    for name in names
+                ]
             )
         elif self.is_mode():
             compliant = group_by.compliant
@@ -249,6 +264,13 @@ class PandasLikeGroupBy(
 
     _group_by_kwargs: Mapping[str, bool]
     """Stores keyword arguments for `DataFrame.groupby` other than `by`."""
+
+    @classmethod
+    def _is_simple(cls, expr: DepthTrackingExprAny, /) -> bool:
+        # The remapping table is also used by windows, which do not support null_count.
+        return super()._is_simple(expr) or (
+            expr._is_elementary() and cls._leaf_name(expr) == "null_count"
+        )
 
     @property
     def exclude(self) -> tuple[str, ...]:

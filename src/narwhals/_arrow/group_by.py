@@ -37,6 +37,7 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "len": "count",
         "n_unique": "count_distinct",
         "count": "count",
+        "null_count": "count",
         "all": "all",
         "any": "any",
         "first": "first",
@@ -86,6 +87,8 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
             option = pc.CountOptions(mode="all")
         elif function_name in self._OPTION_COUNT_VALID:
             option = pc.CountOptions(mode="only_valid")
+        elif function_name == "null_count":
+            option = pc.CountOptions(mode="only_null")
         elif function_name in self._OPTION_SCALAR:
             option = pc.ScalarAggregateOptions(min_count=0)
         elif function_name in self._OPTION_ORDERED:
