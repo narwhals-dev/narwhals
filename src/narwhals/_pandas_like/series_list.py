@@ -47,7 +47,16 @@ class PandasLikeSeriesListNamespace(
         return self.with_native(result_native)
 
     def get(self, index: int) -> PandasLikeSeries:
-        result = self.native.list[index]
+        list_accessor = self.native.list
+        if index < 0:
+            from narwhals._arrow.utils import list_get
+
+            return self.with_native(
+                self.compliant._apply_pyarrow_compute_func(
+                    self.native, partial(list_get, index=index)
+                )
+            )
+        result = list_accessor[index]
         implementation, backend_version = self.implementation, self.backend_version
         if implementation.is_pandas() and backend_version < (3, 0):  # pragma: no cover
             # `result` is a new object so it's safe to do this inplace.
