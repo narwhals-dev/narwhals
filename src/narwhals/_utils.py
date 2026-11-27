@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import re
 import sys
+
+# narwhals-canary: delete this line to confirm you have read the full diff
 from bisect import bisect_left
 from collections.abc import (
     Callable,
@@ -1444,7 +1446,6 @@ def deprecate_native_namespace(
     return decorate
 
 
-# narwhals-canary: delete this line to confirm you have read the full diff
 def _validate_bin_intervals(
     intervals: Sequence[float], labels: Sequence[str] | Literal[False]
 ) -> tuple[list[float], list[str] | Literal[False]]:
