@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import (
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    is_dtype_numpy_nullable,
     iter_dtype_backends,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -403,7 +404,7 @@ class PandasLikeDataFrame(
                 # Extract the row values from the named rows
                 return [tuple(row.values()) for row in self.rows(named=True)]
 
-            return list(self.native.itertuples(index=False, name=None))
+            return list(self._row_tuples(self.native))
 
         return self.native.to_dict(orient="records")
 
@@ -413,17 +414,29 @@ class PandasLikeDataFrame(
 
     _iter_columns = iter_columns
 
+    @staticmethod
+    def _row_tuples(native: Any) -> Iterator[tuple[Any, ...]]:
+        # Not `itertuples` (NumPy scalars for nullable dtypes), and not `tolist` for
+        # those dtypes either: it also returns NumPy scalars on pandas<2.
+        columns = (
+            s.to_numpy(dtype=object).tolist()
+            if is_dtype_numpy_nullable(s.dtype)
+            else s.tolist()
+            for _, s in native.items()  # noqa: PERF102
+        )
+        return zip(*columns, strict=True)
+
     def iter_rows(
         self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        # The param ``buffer_size`` is only here for compatibility with the Polars API
-        # and has no effect on the output.
-        if not named:
-            yield from self.native.itertuples(index=False, name=None)
-        else:
-            col_names = self.native.columns
-            for row in self.native.itertuples(index=False):
-                yield dict(zip(col_names, row, strict=False))
+        native = self.native
+        col_names = self.columns
+        for offset in range(0, len(native), buffer_size):
+            rows = self._row_tuples(native.iloc[offset : offset + buffer_size])
+            if named:
+                yield from (dict(zip(col_names, row, strict=True)) for row in rows)
+            else:
+                yield from rows
 
     @property
     def schema(self) -> dict[str, DType]:
