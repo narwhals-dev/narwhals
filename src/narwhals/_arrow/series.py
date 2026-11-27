@@ -816,10 +816,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if not isinstance(descending, bool):
             msg = f"argument 'descending' should be boolean, found {type(descending)}"
             raise TypeError(msg)
+        # `min_count=0`: a series with less than two values has nothing to compare, and
+        # is sorted, but `pc.all` would return null.
         if descending:
-            result = pc.all(pc.greater_equal(self.native[:-1], self.native[1:]))
+            result = pc.all(
+                pc.greater_equal(self.native[:-1], self.native[1:]), min_count=0
+            )
         else:
-            result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]))
+            result = pc.all(pc.less_equal(self.native[:-1], self.native[1:]), min_count=0)
         return maybe_extract_py_scalar(result, return_py_scalar=True)
 
     def unique(self, *, maintain_order: bool = True) -> Self:

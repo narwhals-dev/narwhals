@@ -12,11 +12,18 @@ data_sorted = [7.0, 8.0, 9.0]
 
 @pytest.mark.parametrize(
     ("input_data", "descending", "expected"),
-    [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
+    [
+        (data, False, False),
+        (data_sorted, False, True),
+        (data_sorted, True, False),
+        # There is nothing to compare in a series of less than two values
+        ([1], False, True),
+        ([1], True, True),
+    ],
 )
 def test_is_sorted(
     constructor_eager: ConstructorEager,
-    input_data: str,
+    input_data: list[float],
     descending: bool,  # noqa: FBT001
     expected: bool,  # noqa: FBT001
 ) -> None:
