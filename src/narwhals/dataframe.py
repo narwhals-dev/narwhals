@@ -70,10 +70,10 @@ if TYPE_CHECKING:
     from typing import Concatenate, TypeAlias
 
     import pandas as pd
+    import polars as pl
     import pyarrow as pa
     from typing_extensions import ParamSpec, Self
 
-    import polars as pl
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._expression_parsing import ExprMetadata
