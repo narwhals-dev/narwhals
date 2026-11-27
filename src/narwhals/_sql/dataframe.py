@@ -65,7 +65,7 @@ class SQLLazyFrame(
             Implementation.IBIS,
             Implementation.SQLFRAME,  # An empty select would silently return every column.
         }:
-            msg = f"Selecting zero columns is not supported for {self._implementation} backend."
+            msg = f"Selecting zero columns is not supported by the {self._implementation} backend."
             return InvalidOperationError(msg)
         return None
 

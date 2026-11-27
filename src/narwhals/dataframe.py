@@ -70,10 +70,10 @@ if TYPE_CHECKING:
     from typing import Concatenate, TypeAlias
 
     import pandas as pd
-    import polars as pl
     import pyarrow as pa
     from typing_extensions import ParamSpec, Self
 
+    import polars as pl
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._expression_parsing import ExprMetadata
@@ -2806,9 +2806,9 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Warning:
             If the expressions resolve to zero columns, DuckDB, Ibis, and SQLFrame
-            raise `InvalidOperationError`. Polars, PySpark, and the `narwhals-dask`
-            plugin return a frame with no columns. The built-in Dask backend raises
-            `ValueError` when aggregating an empty selection, for example with `.count()`.
+            raise `InvalidOperationError`. Other backends return a frame with no
+            columns, except the built-in Dask backend, which raises `ValueError` when
+            aggregating an empty selection (for example with `.count()`).
 
         Examples:
             >>> import duckdb
