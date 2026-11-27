@@ -698,6 +698,9 @@ def test_duckdb_file_backed_keeps_no_view(
     [lambda lf: lf.join_asof(lf, on="a"), lambda lf: lf.unpivot(index="a")],
     ids=["join_asof", "unpivot"],
 )
+@pytest.mark.thread_unsafe(
+    reason="counts views on the process-global duckdb default connection"
+)
 def test_duckdb_default_connection_keeps_no_view(
     method: Callable[[nw.LazyFrame[Any]], nw.LazyFrame[Any]],
 ) -> None:
