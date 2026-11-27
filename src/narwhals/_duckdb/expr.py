@@ -322,21 +322,28 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             default_col = df._evaluate_single_output_expr(default)
 
-            results = [
+            native_dtype = None
+            if return_dtype:
+                tz = DeferredTimeZone(df.native)
+                native_dtype = narwhals_to_native_dtype(return_dtype, self._version, tz)
+
+            def into_return_dtype(value: Expression) -> Expression:
+                # Cast each branch before building the CASE expression. Casting the
+                # result instead first needs a common type for the replacement values
+                # and `default`, which may not exist (e.g. ints and a string).
+                return value if native_dtype is None else value.cast(native_dtype)
+
+            return [
                 when(
                     F("contains", old_, expr),
                     # From [map_extract docs](https://duckdb.org/docs/stable/sql/functions/map#map_extractmap-key)
                     #   "Return the value for a given key as a list, or NULL if the key is not contained in the map."
-                    F("list_extract", F("map_extract", mapping_expr, expr), lit(1)),
-                ).otherwise(default_col)
+                    into_return_dtype(
+                        F("list_extract", F("map_extract", mapping_expr, expr), lit(1))
+                    ),
+                ).otherwise(into_return_dtype(default_col))
                 for expr in self(df)
             ]
-
-            if return_dtype:
-                tz = DeferredTimeZone(df.native)
-                native_dtype = narwhals_to_native_dtype(return_dtype, self._version, tz)
-                return [res.cast(native_dtype) for res in results]
-            return results
 
         return self.__class__(
             func,

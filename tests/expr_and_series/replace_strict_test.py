@@ -217,6 +217,30 @@ def test_replace_strict_with_expressified_default(
     assert_equal_data(result, {"a": ["one", "two", "orca", "vaquita"]})
 
 
+@pytest.mark.parametrize("default", ["other", nw.col("b")])
+def test_replace_strict_return_dtype_with_default_of_other_type(
+    constructor: Constructor, request: pytest.FixtureRequest, default: Any
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4224
+    # Integer replacements with a string default only share a type once both
+    # are cast to `return_dtype`.
+    xfail_if_pyspark_connect(constructor, request)
+
+    if "polars" in str(constructor) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    data = {"a": [1, 2, 3], "b": ["x", "y", "z"]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("a").replace_strict(
+            {1: 10, 2: 20}, default=default, return_dtype=nw.String
+        )
+    )
+    expected = "other" if isinstance(default, str) else "z"
+    assert_equal_data(result, {"a": ["10", "20", expected]})
+    assert result.collect_schema() == {"a": nw.String()}
+
+
 def test_replace_strict_with_series_default(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
