@@ -783,13 +783,12 @@ class PandasLikeSeries(EagerSeries[Any]):
         return_dtype: IntoDType | None,
     ) -> PandasLikeSeries:
         namespace = self.__native_namespace__()
-        array_funcs = self._array_funcs
         native = self.native
-        impl = self._implementation
-
-        dtype_backend = get_dtype_backend(native.dtype, impl)
+        dtype_backend = get_dtype_backend(native.dtype, self._implementation)
         dtype = (
-            narwhals_to_native_dtype(return_dtype, dtype_backend, impl, self._version)
+            narwhals_to_native_dtype(
+                return_dtype, dtype_backend, self._implementation, self._version
+            )
             if return_dtype
             else None
         )
@@ -798,34 +797,50 @@ class PandasLikeSeries(EagerSeries[Any]):
         idxs = namespace.Index(old).get_indexer(native)
         was_matched = idxs >= 0
 
-        new_series = namespace.Series(new, dtype=dtype, name=self.name)
-        if return_dtype is None and dtype_backend is not None:
-            new_series = new_series.convert_dtypes(dtype_backend=dtype_backend)
+        if (
+            default is NO_DEFAULT
+            and (unmatched_mask := native.notna() & (~was_matched)).any()
+        ):
+            unmatched_values = (
+                self._with_native(native[unmatched_mask])
+                .unique(maintain_order=False)
+                .to_list()
+            )
+            msg = (
+                "replace_strict did not replace all non-null values.\n\n"
+                f"The following did not get replaced: {unmatched_values}"
+            )
+            raise InvalidOperationError(msg)
 
-        # Take values from new_series, using index or 0 (will be masked for unmatched)
-        native_result = new_series.iloc[array_funcs.where(was_matched, idxs, 0)]
-        native_result.index = native.index
+        fill_value: Any = (
+            None if default is NO_DEFAULT else align_and_extract_native(self, default)[1]
+        )
+        if was_matched.any():
+            first = int(idxs[was_matched][0])
+            used_new = [
+                val if used else new[first]
+                for val, used in zip(
+                    new,
+                    namespace.Index(range(len(new))).isin(idxs[was_matched]),
+                    strict=False,
+                )
+            ]
+            native_result = namespace.Series(used_new, dtype=dtype, name=self.name)
+            if return_dtype is None and dtype_backend is not None:
+                native_result = native_result.convert_dtypes(dtype_backend=dtype_backend)
 
-        if default is NO_DEFAULT:
-            # Check that all non-null input values were matched
-            unmatched_mask = native.notna() & (~was_matched)
-            if unmatched_mask.any():
-                unmatched_values = (
-                    self._with_native(native[unmatched_mask])
-                    .unique(maintain_order=False)
-                    .to_list()
-                )
-                msg = (
-                    "replace_strict did not replace all non-null values.\n\n"
-                    f"The following did not get replaced: {unmatched_values}"
-                )
-                raise InvalidOperationError(msg)
-            # For unmatched values (nulls in original), set to null
-            native_result = native_result.where(was_matched, None)
+            # Take values from matched series, using index or first matched position
+            native_result = native_result.iloc[
+                self._array_funcs.where(was_matched, idxs, first)
+            ]
+            native_result.index = native.index
+            native_result = native_result.where(was_matched, fill_value)
         else:
-            # For unmatched values, use default
-            _, default_native = align_and_extract_native(self, default)
-            native_result = native_result.where(was_matched, default_native)
+            native_result = namespace.Series(
+                fill_value, index=native.index, dtype=dtype, name=self.name
+            )
+            if return_dtype is None and dtype_backend is not None:
+                native_result = native_result.convert_dtypes(dtype_backend=dtype_backend)
 
         return self._with_native(native_result)
 

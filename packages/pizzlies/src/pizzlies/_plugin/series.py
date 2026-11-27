@@ -749,12 +749,17 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        # Casting the replacements (and default) up front keeps the pass over
-        # the data itself to a single `dict.get` per value.
-        if return_dtype is not None:
-            new = cast_values(new, return_dtype, self._version)
-        mapping = dict(zip(canonical_nans(old), new, strict=True))
+        # Casting the matched replacements (and default) up front keeps the pass
+        # over the data itself to a single `dict.get` per value.
         values = canonical_nans(self.native)
+        mapping = dict(zip(canonical_nans(old), new, strict=True))
+        if return_dtype is not None:
+            present = set(values)
+            mapping = {
+                k: cast_values([v], return_dtype, self._version)[0]
+                for k, v in mapping.items()
+                if k in present
+            }
         if default is NO_DEFAULT:
             unset = object()
             unmatched: dict[Any, None] = {}

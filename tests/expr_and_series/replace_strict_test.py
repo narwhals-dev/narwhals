@@ -257,3 +257,28 @@ def test_mapping_key_not_in_series(constructor_eager: ConstructorEager) -> None:
 
     result = df["a"].replace_strict({1: "one", 2: "two", 3: "three"})
     assert_equal_data({"a": result}, {"a": ["one", "two"]})
+
+
+@pytest.mark.parametrize(
+    ("data", "mapping", "expected"),
+    [
+        ({"a": [1]}, {1: 10, 2: 1000}, {"a": [10]}),
+        ({"a": [2]}, {1: 1000, 2: 10}, {"a": [10]}),
+        ({"a": [3]}, {1: 1000, 2: 2000}, {"a": [-1]}),
+    ],
+)
+def test_replace_strict_unused_mapping_value_out_of_range(
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[int]],
+    mapping: dict[int, int],
+    expected: dict[str, list[int]],
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4225
+    if "polars" in str(constructor_eager) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    df = nw.from_native(constructor_eager(data))
+    result = df.select(
+        nw.col("a").replace_strict(mapping, default=-1, return_dtype=nw.Int8)
+    )
+    assert_equal_data(result, expected)
