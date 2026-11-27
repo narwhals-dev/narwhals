@@ -266,3 +266,31 @@ def test_bin_intervals_polars_null_dtype() -> None:
     result = series.bin_intervals([wide], labels=["low", "high"])
     assert result.dtype == nw.Enum(["low", "high"])
     assert_equal_series(result, [None, None], "a")
+
+
+def test_bin_intervals_polars_native_expr(monkeypatch: pytest.MonkeyPatch) -> None:
+    pl = pytest.importorskip("polars")
+    monkeypatch.delattr(pl.Expr, "map_batches")
+    df = nw.from_native(pl.LazyFrame({"a": [None, 0.0, float("nan")], "b": [1, -1, 0]}))
+    labels = ["low", "high"]
+    result = df.select(
+        nw.col("a", "b").bin_intervals([0], labels=labels),
+        nw.col("b").alias("index").bin_intervals([0], labels=False, right_closed=True),
+    )
+    assert result.collect_schema() == {
+        "a": nw.Enum(labels),
+        "b": nw.Enum(labels),
+        "index": nw.UInt32,
+    }
+    assert_equal_data(
+        result,
+        {"a": [None, "high", "high"], "b": ["high", "low", "high"], "index": [1, 0, 0]},
+    )
+
+
+def test_bin_intervals_polars_scalar_expr() -> None:
+    pl = pytest.importorskip("polars")
+    df = nw.from_native(pl.LazyFrame({"g": [0, 1, 0], "a": [2, 0, 3]}))
+    bins = nw.col("a").min().bin_intervals([1], labels=False)
+    assert_equal_data(df.select("g", bins), {"g": [0, 1, 0], "a": [0, 0, 0]})
+    assert_equal_data(df.group_by("g").agg(bins).sort("g"), {"g": [0, 1], "a": [1, 0]})
