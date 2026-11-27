@@ -842,6 +842,8 @@ def test_group_by_agg_shared_across_threads(constructor_eager: ConstructorEager)
     # calls could aggregate over another call's (differently sorted) grouping.
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip("https://github.com/apache/arrow/issues/36709")
+    if "modin" in str(constructor_eager):
+        pytest.skip("Modin itself emits a spurious `axis` FutureWarning under threads")
     data = {"g": [1, 1, 2, 2], "i": [2, 1, 2, 1], "v": [10.0, 20.0, 30.0, 40.0]}
     grouped = nw.from_native(constructor_eager(data), eager_only=True).group_by("g")
 

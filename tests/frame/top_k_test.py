@@ -102,6 +102,8 @@ def test_top_k_categorical(constructor: Constructor) -> None:
 
 def test_top_k_duckdb_own_connection() -> None:
     pytest.importorskip("duckdb")
+    if DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
     import duckdb
 
     con = duckdb.connect()
