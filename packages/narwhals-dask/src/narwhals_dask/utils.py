@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     import dask.dataframe as dd
     import dask.dataframe.dask_expr as dx
+    import pandas as pd
 
     from narwhals import Schema
     from narwhals.dtypes import DType
@@ -47,6 +48,22 @@ def align_series_full_broadcast(
         s if isinstance(s, dx.Series) else df._native_frame.assign(_tmp=s)["_tmp"]
         for s in series
     ]  # pyright: ignore[reportReturnType]
+
+
+def align_series_by_index(df: DaskLazyFrame, **series: dx.Series) -> dx.DataFrame:
+    """Align expression results on the source index, including shuffled group transforms."""
+    frame = df.native[[]].assign(**series)
+    if dx.expr.are_co_aligned(df.native._expr, *(s._expr for s in series.values())):
+        return frame
+
+    def check_index(part: pd.DataFrame) -> pd.DataFrame:
+        # After shuffling by index, duplicate labels are in the same partition.
+        if part.index.has_duplicates:
+            msg = "Cannot align expressions with duplicate index labels across Dask partitions"
+            raise ValueError(msg)
+        return part
+
+    return frame.map_partitions(check_index, meta=frame._meta)
 
 
 def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:

@@ -110,14 +110,19 @@ def test_arrow_fractional_second_fields(
     arrow_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     pa = pytest.importorskip("pyarrow")
-    value = pa.scalar(123_456_789, type=pa.timestamp("ns"))
-    df = nw.from_native(arrow_constructor({"a": [value, None]}))
+    values = pa.array([123_456_789, 456_000, None], type=pa.timestamp("ns"))
+    df = nw.from_native(arrow_constructor({"a": list(values)}))
     if PANDAS_VERSION < PkgVersion("3"):
         xfail_if_builtin_dask(df, request)
     dt = nw.col("a").dt
     result = df.select(ms=dt.millisecond(), us=dt.microsecond(), ns=dt.nanosecond())
     assert_equal_data(
-        result, {"ms": [123, None], "us": [123456, None], "ns": [123456789, None]}
+        result,
+        {
+            "ms": [123, 0, None],
+            "us": [123456, 456, None],
+            "ns": [123456789, 456000, None],
+        },
     )
 
 

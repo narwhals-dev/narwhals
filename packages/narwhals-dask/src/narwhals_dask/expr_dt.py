@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -29,8 +29,18 @@ if TYPE_CHECKING:
 def _microsecond(expr: dx.Series) -> dx.Series:
     if is_dtype_pyarrow(expr.dtype) and parse_version(pd) < (3,):
         # pandas-dev/pandas#59154: Arrow's microsecond field omits the milliseconds.
-        local = expr.dt.tz_localize(None)
-        return (local - local.dt.floor("s")).dt.microseconds
+        def microsecond_partition(part: pd.Series) -> pd.Series:
+            import pyarrow.compute as pc
+
+            arr = cast("pd.arrays.ArrowExtensionArray", part.array).__arrow_array__()
+            values = pc.add(pc.multiply(pc.millisecond(arr), 1000), pc.microsecond(arr))
+            return pd.Series(
+                pd.arrays.ArrowExtensionArray(values), index=part.index, name=part.name
+            )
+
+        return expr.map_partitions(
+            microsecond_partition, meta=(expr.name, "int64[pyarrow]")
+        )
     return expr.dt.microsecond
 
 

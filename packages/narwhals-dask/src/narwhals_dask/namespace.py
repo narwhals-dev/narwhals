@@ -23,6 +23,7 @@ from narwhals_dask.dataframe import DaskLazyFrame
 from narwhals_dask.expr import DaskExpr
 from narwhals_dask.selectors import DaskSelectorNamespace
 from narwhals_dask.utils import (
+    align_series_by_index,
     align_series_full_broadcast,
     is_arrow_backed,
     narwhals_to_native_dtype,
@@ -217,14 +218,14 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
         raise NotImplementedError
 
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
-        def mean_partition(*columns: pd.Series) -> pd.Series:
-            return pd.concat(columns, axis=1).mean(axis=1)
-
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            first, *rest = align_series_full_broadcast(
+            series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
             )
-            return [first.map_partitions(mean_partition, *rest)]
+            columns = align_series_by_index(
+                df, **{str(i): s for i, s in enumerate(series)}
+            )
+            return [columns.mean(axis=1)]
 
         return self._expr(
             call=func,

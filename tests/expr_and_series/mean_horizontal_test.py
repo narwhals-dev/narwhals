@@ -46,13 +46,23 @@ def test_arrow_horizontal_mean_nulls(
     )
 
 
+def test_mean_horizontal_with_grouped_expression(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, 2, 3, 4], "g": ["x", "y"] * 2}))
+    xfail_if_builtin_dask(df, request)
+    result = df.select("a", mean=nw.mean_horizontal("a", nw.col("a").sum().over("g")))
+    assert_equal_data(result.sort("a"), {"a": [1, 2, 3, 4], "mean": [2.5, 4, 3.5, 5]})
+
+
 def test_dask_horizontal_mean_with_typed_literal() -> None:
     dd = pytest.importorskip("dask.dataframe")
     pytest.importorskip("pyarrow")
     import pandas as pd
 
     frame = pd.DataFrame(
-        {"a": pd.array([1, 2, 3], dtype="int64[pyarrow]")}, index=[9, 4, 8]
+        {"a": pd.array([1, 2, 3], dtype="int64[pyarrow]")},
+        index=pd.Index([9, 4, 9], name="idx"),
     )
     df = nw.from_native(dd.from_pandas(frame, npartitions=2, sort=False))
     result = (

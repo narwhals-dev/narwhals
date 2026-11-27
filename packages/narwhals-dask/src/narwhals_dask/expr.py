@@ -27,6 +27,7 @@ from narwhals_dask.expr_str import DaskExprStringNamespace
 from narwhals_dask.utils import (
     _schema_class,
     add_row_index,
+    align_series_by_index,
     align_series_full_broadcast,
     is_arrow_backed,
     narwhals_to_native_dtype,
@@ -799,7 +800,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         mapping = dict(zip(old, new, strict=False))
         old_ = list(old)
 
-        def replace(series: dx.Series, default_series: dx.Series) -> dx.Series:
+        def replace(
+            df: DaskLazyFrame, series: dx.Series, default_series: dx.Series
+        ) -> dx.Series:
             if is_dtype_pyarrow(series.dtype):
                 if return_dtype is not None:
                     dtype = _schema_class(self._version)({"": return_dtype}).to_pandas(
@@ -823,9 +826,14 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                     name=series.name,
                 )
 
-                def replace_partition(part: pd.Series, fallback: pd.Series) -> pd.Series:
+                def replace_partition(frame: pd.DataFrame) -> pd.Series:
+                    part, fallback = frame["value"], frame["fallback"]
                     # Reindex directly: pandas 2 can round nullable integers in Series.map.
                     result = lookup.reindex(part.array).set_axis(part.index)
+                    if dtype == "category":
+                        # Infer categories from both the replacements and the used defaults.
+                        values = result.astype(object).where(part.isin(old_), fallback)
+                        return values.astype(dtype)
                     if dtype != "null[pyarrow]":
                         unmatched = ~part.isin(old_)
                         result.loc[unmatched] = fallback.loc[unmatched].astype(
@@ -833,8 +841,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                         )
                     return result
 
-                return series.map_partitions(
-                    replace_partition, default_series, meta=(series.name, dtype)
+                aligned = align_series_by_index(df, value=series, fallback=default_series)
+                return aligned.map_partitions(
+                    replace_partition, meta=(series.name, dtype)
                 )
 
             result = series.replace(mapping).where(series.isin(old_), default_series)
@@ -848,7 +857,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             (default_series,) = align_series_full_broadcast(
                 df, df._evaluate_single_output_expr(default)
             )
-            return [replace(series, default_series) for series in self(df)]
+            return [replace(df, series, default_series) for series in self(df)]
 
         return self.__class__(
             func,
