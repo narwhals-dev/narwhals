@@ -417,7 +417,7 @@ class DuckDBLazyFrame(
             # `rel.query`'s view would outlive the frame on the default connection.
             with suppress(duckdb.InvalidInputException):
                 joined = duckdb.sql(query("_narwhals_asof_lhs"))
-        if joined is None:
+        if joined is None:  # pragma: no branch  # only False on duckdb<2
             # `rel.query` runs on the relation's own connection, at the cost of a view,
             # see `temporary_view_name`. Unavoidable until the relational API gains
             # ASOF LEFT JOIN support.
@@ -588,7 +588,7 @@ class DuckDBLazyFrame(
             # `rel.query`'s view would outlive the frame on the default connection.
             with suppress(duckdb.InvalidInputException):
                 unpivoted = duckdb.sql(query("_rel"))
-        if unpivoted is None:
+        if unpivoted is None:  # pragma: no branch  # only False on duckdb<2
             # `rel.query` runs on the relation's own connection, at the cost of a view,
             # see `temporary_view_name`.
             view = temporary_view_name(_rel)
