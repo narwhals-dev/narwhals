@@ -15,6 +15,7 @@ from narwhals_dask._vendored import (
     ExprNamespace,
     evaluate_output_names_and_aliases,
     get_dtype_backend,
+    is_dtype_pyarrow,
     length_changing_hint,
     make_group_by_kwargs,
     not_implemented,
@@ -24,8 +25,11 @@ from narwhals_dask.expr_dt import DaskExprDateTimeNamespace
 from narwhals_dask.expr_list import DaskExprListNamespace
 from narwhals_dask.expr_str import DaskExprStringNamespace
 from narwhals_dask.utils import (
+    _schema_class,
     add_row_index,
+    align_series_by_index,
     align_series_full_broadcast,
+    is_arrow_backed,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
@@ -55,6 +59,55 @@ if TYPE_CHECKING:
     from narwhals_dask.namespace import DaskNamespace
 
 
+def _broadcast_arrow_literal(
+    index: pd.Index, value: Any, dtype: pd.ArrowDtype
+) -> pd.Series:
+    if isinstance(value, float):
+        import pyarrow as pa
+
+        # A native Arrow scalar keeps a valid floating NaN distinct from null.
+        value = pa.scalar(value, type=dtype.pyarrow_dtype)
+    return pd.Series(value, index=index, dtype=dtype)
+
+
+def floordiv_null_on_zero(dividend: dx.Series, divisor: dx.Series) -> dx.Series:
+    if is_dtype_pyarrow(divisor.dtype):
+        return dividend // divisor.where(divisor != 0)
+    # An Arrow dividend can also have a NumPy-backed scalar divisor.
+    is_nonzero = divisor != 0
+    safe_divisor = divisor.where(is_nonzero, divisor.dtype.type(1))
+    return (dividend // safe_divisor).where(is_nonzero, None)
+
+
+def _arrow_replacement_dtype(
+    new: Sequence[Any], default: DaskExpr, fallback_dtype: Any
+) -> Any:
+    import pyarrow as pa
+
+    replacements = pd.Series(dtype=pd.ArrowDtype(pa.array(new).type))
+    if default._metadata.is_literal and pd.api.types.is_string_dtype(fallback_dtype):
+        # Dask gives an untyped None literal the same dtype as a string.
+        node = next(default._metadata.op_nodes_reversed())
+        if node.name == "lit" and node.kwargs["dtype"] is None:
+            fallback_dtype = pd.ArrowDtype(pa.scalar(node.kwargs["value"]).type)
+    if fallback_dtype == "null[pyarrow]":
+        return replacements.dtype
+    fallback = pd.Series(dtype=fallback_dtype)
+    if get_dtype_backend(fallback_dtype) == "numpy_nullable":
+        fallback = fallback.convert_dtypes(dtype_backend="pyarrow")
+    if replacements.dtype == "null[pyarrow]" and fallback.dtype.kind in "biuf":
+        return pd.ArrowDtype(pa.array(fallback).type)
+    dtype = pd.concat([replacements, fallback]).dtype
+    if not pd.api.types.is_object_dtype(dtype):
+        return dtype
+    if any(
+        pd.api.types.is_string_dtype(dt) for dt in (replacements.dtype, fallback_dtype)
+    ):
+        return pd.ArrowDtype(pa.string())
+    msg = "Cannot infer a common Arrow dtype. Set `return_dtype` explicitly."
+    raise InvalidOperationError(msg)
+
+
 def simple_aggregation(attr: str) -> Any:
     # Translate an aggregation which differs from Dask in name only.
     return lambda self, **kwargs: self._with_callable(
@@ -81,6 +134,7 @@ def trivial_binary_right(op: Callable[..., dx.Series]) -> Any:
 
 class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
     _implementation: Implementation = Implementation.DASK
+    _broadcast_literal: Self | None = None
 
     # Methods which are simple Narwhals->Dask translations.
     # Keep this simple, resist the temptation to do anything complex or clever.
@@ -106,8 +160,6 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
     all = simple_aggregation("all")
     any = simple_aggregation("any")
     count = simple_aggregation("count")
-    kurtosis = simple_aggregation("kurtosis")
-    max = simple_aggregation("max")
     mean = simple_aggregation("mean")
     min = simple_aggregation("min")
     skew = simple_aggregation("skew")
@@ -134,26 +186,38 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         self._alias_output_names = alias_output_names
         self._version = version
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        return self._call(df)
-
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals_dask.namespace import DaskNamespace
 
         return DaskNamespace(version=self._version)
 
     def broadcast(self) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            # result.loc[0][0] is a workaround for dask~<=2024.10.0/dask_expr~<=1.1.16
-            #   that raised a KeyError for result[0] during collection.
-            return [result.loc[0][0] for result in self(df)]
+        # dask<=2024.10.0 raised KeyError for result[0] during collection.
+        expr = self._with_callable(lambda result: result.loc[0][0])
+        if self._opt_metadata is not None and self._metadata.is_literal:
+            expr._broadcast_literal = self
+        return expr
 
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
+    def __call__(
+        self, df: DaskLazyFrame, *, index: dx.Index | None = None
+    ) -> Sequence[dx.Series]:
+        """Preserve the dtype of an Arrow literal when expanding it into a column."""
+        if self._broadcast_literal is None:
+            return self._call(df)
+        target_index = df.native.index if index is None else index
+
+        def broadcast_literal(result: dx.Series) -> dx.Series:
+            scalar = result.loc[0][0]
+            if is_dtype_pyarrow(result.dtype):
+                return target_index.map_partitions(
+                    _broadcast_arrow_literal,
+                    scalar,
+                    result.dtype,
+                    meta=result._meta.set_axis(target_index._meta),
+                )
+            return scalar
+
+        return [broadcast_literal(result) for result in self._broadcast_literal(df)]
 
     @classmethod
     def from_column_names(
@@ -199,12 +263,14 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         call: Callable[..., dx.Series],
         /,
         expression_args: dict[str, Self] | None = None,
+        *,
+        scalar_args: bool = False,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             native_results: list[dx.Series] = []
-            native_series_list = self._call(df)
+            native_series_list = self(df)
             other_native_series = {
-                key: df._evaluate_single_output_expr(value)
+                key: df._evaluate_single_output_expr(value, as_scalar=scalar_args)
                 for key, value in (expression_args or {}).items()
             }
             for native_series in native_series_list:
@@ -236,9 +302,46 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         )
 
     def _with_binary(
-        self, call: Callable[[dx.Series, Any], dx.Series], other: Any
+        self,
+        call: Callable[[dx.Series, Any], dx.Series],
+        other: Self,
+        *,
+        broadcast: bool = False,
     ) -> Self:
-        return self._with_callable(call, expression_args={"other": other})
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            # A grouped expression may have different partitions from the source frame.
+            # Expand a typed literal on the index of the row-valued operand.
+            right = (
+                df._evaluate_single_output_expr(other)
+                if other._broadcast_literal is None
+                else None
+            )
+            index = (
+                right.index
+                if self._broadcast_literal is not None and right is not None
+                else None
+            )
+            results = []
+            for left in self(df, index=index):
+                rhs = (
+                    right
+                    if right is not None
+                    else df._evaluate_single_output_expr(other, index=left.index)
+                )
+                operands = (
+                    align_series_full_broadcast(df, left, rhs)
+                    if broadcast
+                    else (left, rhs)
+                )
+                results.append(call(*operands))
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def _binary_op(self, op_name: str, other: Any) -> Self:
         return self._with_binary(lambda expr, other: getattr(expr, op_name)(other), other)
@@ -251,40 +354,35 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         ).alias("literal")
 
     def __floordiv__(self, other: Any) -> Self:
-        def _floordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series
-        ) -> dx.Series:
-            series, other = align_series_full_broadcast(df, series, other)
-            return (series.__floordiv__(other)).where(other != 0, None)
-
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_series = df._evaluate_single_output_expr(other)
-            return [_floordiv(df, series, other_series) for series in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
+        return self._with_binary(floordiv_null_on_zero, other, broadcast=True)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        def _rfloordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series
-        ) -> dx.Series:
-            series, other = align_series_full_broadcast(df, series, other)
-            return (other.__floordiv__(series)).where(series != 0, None)
-
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_native = df._evaluate_single_output_expr(other)
-            return [_rfloordiv(df, series, other_native) for series in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
+        return self._with_binary(
+            lambda left, right: floordiv_null_on_zero(right, left), other, broadcast=True
         ).alias("literal")
+
+    def max(self) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            if pd.api.types.is_string_dtype(expr.dtype):
+                # A frame reduction keeps the string dtype when a partition is all null.
+                return (
+                    expr.to_frame(name="value")
+                    .max()["value"]
+                    .to_series()
+                    .astype(expr.dtype)
+                )
+            return expr.max().to_series()
+
+        return self._with_callable(func)
+
+    def kurtosis(self) -> Self:
+        def func(expr: dx.Series) -> dx.Series:
+            if is_dtype_pyarrow(expr.dtype) and expr.dtype.kind in "biuf":
+                # pandas 2.x cannot infer kurtosis on Arrow dtypes. Dask propagates nulls.
+                expr = expr.dropna().astype(expr.dtype.pyarrow_dtype.to_pandas_dtype())
+            return expr.kurtosis().to_series()
+
+        return self._with_callable(func)
 
     def median(self) -> Self:
         from narwhals.exceptions import InvalidOperationError
@@ -307,7 +405,18 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             msg = "`cum_sum(reverse=True)` is not supported with Dask backend"
             raise NotImplementedError(msg)
 
-        return self._with_callable(lambda expr: expr.cumsum())
+        def func(expr: dx.Series) -> dx.Series:
+            dtype = expr.dtype
+            # Arrow accumulates in the input width and raises on overflow.
+            if (
+                is_dtype_pyarrow(dtype)
+                and dtype.kind in "iu"
+                and dtype.pyarrow_dtype.bit_width < 64
+            ):
+                expr = expr.astype("int64[pyarrow]")
+            return expr.cumsum()
+
+        return self._with_callable(func)
 
     def cum_count(self, *, reverse: bool) -> Self:
         if reverse:  # pragma: no cover
@@ -428,18 +537,21 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                 lower=lower_bound, upper=upper_bound
             ),
             expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
+            scalar_args=True,
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
         return self._with_callable(
             lambda expr, lower_bound: expr.clip(lower=lower_bound),
             expression_args={"lower_bound": lower_bound},
+            scalar_args=True,
         )
 
     def clip_upper(self, upper_bound: Self) -> Self:
         return self._with_callable(
             lambda expr, upper_bound: expr.clip(upper=upper_bound),
             expression_args={"upper_bound": upper_bound},
+            scalar_args=True,
         )
 
     def n_unique(self) -> Self:
@@ -541,7 +653,14 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         return self._with_callable(func)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_callable(lambda expr: expr.isin(other))
+        def func(expr: dx.Series) -> dx.Series:
+            result = expr.isin(other)
+            if getattr(expr.dtype, "na_value", None) is pd.NA:
+                dtype = "bool[pyarrow]" if is_arrow_backed(expr.dtype) else "boolean"
+                return result.astype(dtype).mask(expr.isna())
+            return result
+
+        return self._with_callable(func)
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isna().sum().to_series())
@@ -638,7 +757,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(expr: dx.Series) -> dx.Series:
-            native_dtype = narwhals_to_native_dtype(dtype, self._version)
+            native_dtype = narwhals_to_native_dtype(
+                dtype, self._version, use_pyarrow=is_arrow_backed(expr.dtype)
+            )
             return expr.astype(native_dtype)
 
         return self._with_callable(func)
@@ -696,21 +817,72 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             msg = "`replace_strict` requires an explicit value for `default` for dask backend."
             raise ValueError(msg)
 
+        scalar_only = self._metadata.is_scalar_like and default._metadata.is_scalar_like
         mapping = dict(zip(old, new, strict=False))
         old_ = list(old)
 
+        def replace(
+            df: DaskLazyFrame, series: dx.Series, default_series: dx.Series
+        ) -> dx.Series:
+            if is_dtype_pyarrow(series.dtype) or (
+                scalar_only and is_dtype_pyarrow(default_series.dtype)
+            ):
+                if return_dtype is not None:
+                    dtype = _schema_class(self._version)({"": return_dtype}).to_pandas(
+                        "pyarrow"
+                    )[""]
+                else:
+                    dtype = _arrow_replacement_dtype(new, default, default_series.dtype)
+                keys = pd.Index(
+                    [pd.NA if key is None else key for key in mapping], dtype=object
+                )
+                # pandas 2.0 needs StringDtype to cast numeric values to Arrow strings.
+                value_dtype = (
+                    pd.StringDtype(storage="pyarrow")
+                    if pd.api.types.is_string_dtype(dtype)
+                    else dtype
+                )
+                lookup: pd.Series = pd.Series(
+                    pd.array(list(mapping.values()), dtype=value_dtype),
+                    index=keys,
+                    dtype=dtype,
+                    name=series.name,
+                )
+
+                def replace_partition(frame: pd.DataFrame) -> pd.Series:
+                    part, fallback = frame["value"], frame["fallback"]
+                    # Reindex directly: pandas 2 can round nullable integers in Series.map.
+                    result = lookup.reindex(part.array).set_axis(part.index)
+                    if dtype == "category":
+                        # Infer categories from both the replacements and the used defaults.
+                        values = result.astype(object).where(part.isin(old_), fallback)
+                        return values.astype(dtype)
+                    if dtype != "null[pyarrow]":
+                        unmatched = ~part.isin(old_)
+                        result.loc[unmatched] = fallback.loc[unmatched].astype(
+                            value_dtype
+                        )
+                    return result
+
+                aligned = align_series_by_index(
+                    df, scalar_only=scalar_only, value=series, fallback=default_series
+                )
+                return aligned.map_partitions(
+                    replace_partition, meta=(series.name, dtype)
+                )
+
+            result = series.replace(mapping).where(series.isin(old_), default_series)
+            if return_dtype is not None:
+                result = result.astype(
+                    narwhals_to_native_dtype(return_dtype, self._version)
+                )
+            return result
+
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            default_series = df._evaluate_single_output_expr(default)
-            results = [
-                series.replace(mapping).where(series.isin(old_), default_series)
-                for series in self(df)
-            ]
-
-            if return_dtype:
-                native_dtype = narwhals_to_native_dtype(return_dtype, self._version)
-                return [res.astype(native_dtype) for res in results]
-
-            return results
+            (default_series,) = align_series_full_broadcast(
+                df, df._evaluate_single_output_expr(default)
+            )
+            return [replace(df, series, default_series) for series in self(df)]
 
         return self.__class__(
             func,

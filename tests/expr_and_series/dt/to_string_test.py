@@ -4,9 +4,19 @@ from datetime import datetime
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data, is_windows
+from tests.utils import (
+    DASK_PYARROW_DTYPES,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_windows,
+    uses_pyarrow_backend,
+    xfail_if_builtin_dask,
+)
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]
@@ -45,13 +55,28 @@ def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_frame.select(nw.col("a").dt.to_string(fmt).alias("b"))
-    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
+    if uses_pyarrow_backend(constructor) or any(
+        x in str(constructor) for x in ("pyarrow_table", "modin")
+    ):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = input_frame.select(
             nw.col("a").dt.to_string(fmt).str.replace(r"\.\d+$", "").alias("b")
         )
     assert_equal_data(result, {"b": expected_col})
+
+
+@pytest.mark.parametrize("fmt", ["%S.%f", "%S%.f"])
+@pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+def test_arrow_fractional_seconds(
+    arrow_constructor: Constructor, fmt: str, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(
+        arrow_constructor({"a": [datetime(2020, 1, 9, 12, 34, 56, 123456)]})
+    )
+    if PANDAS_VERSION < PkgVersion("3.2"):
+        xfail_if_builtin_dask(df, request)
+    assert_equal_data(df.select(nw.col("a").dt.to_string(fmt)), {"a": ["56.123456"]})
 
 
 def _clean_string(result: str) -> str:
@@ -113,14 +138,16 @@ def test_dt_to_string_iso_local_datetime_expr(
 ) -> None:
     if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    df = constructor({"a": [data]})
+    df = nw.from_native(constructor({"a": [data]}))
+    if PANDAS_VERSION < PkgVersion("3.2"):
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
-    result = nw.from_native(df).select(
+    result = df.select(
         b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f"))
     )
     assert_equal_data(result, {"b": [_clean_string(expected)]})
 
-    result = nw.from_native(df).select(
+    result = df.select(
         b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f"))
     )
     assert_equal_data(result, {"b": [_clean_string(expected)]})

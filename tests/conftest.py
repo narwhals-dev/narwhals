@@ -13,6 +13,7 @@ from packaging.version import Version as PkgVersion
 import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     ID_PANDAS_LIKE,
     PANDAS_VERSION,
     any_integer_like_floats,
@@ -199,15 +200,30 @@ def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no 
     import dask.dataframe as dd
     import pandas as pd
 
-    frame = pd.DataFrame(obj)
-    if PANDAS_VERSION >= PkgVersion("2.2") and find_spec("pyarrow"):
+    if DASK_PYARROW_DTYPES:
         import pyarrow as pa
 
-        for name, values in obj.items():
-            if any(isinstance(value, list) for value in values):
-                # Dask's `convert-string` would turn object lists into strings.
-                frame[name] = pd.arrays.ArrowExtensionArray(pa.array(values))
+        # Construct Arrow arrays before pandas can coerce nullable integers to floats.
+        frame = pd.DataFrame(
+            {
+                name: pd.arrays.ArrowExtensionArray(pa.array(values))
+                if len(values)
+                else values
+                for name, values in obj.items()
+            }
+        )
+    else:
+        frame = pd.DataFrame(obj)
     return cast("NativeDask", dd.from_pandas(frame, npartitions=npartitions))
+
+
+def dask_pyarrow_constructor(obj: Data) -> NativeDask:
+    dd = pytest.importorskip("dask.dataframe")
+    pa = pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    frame = pa.table(obj).to_pandas(types_mapper=pd.ArrowDtype)
+    return cast("NativeDask", dd.from_pandas(frame, npartitions=2))
 
 
 def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
@@ -218,11 +234,21 @@ def dask_lazy_p2_constructor(obj: Data) -> NativeDask:  # pragma: no cover
     return _dask_constructor(obj, npartitions=2)
 
 
+NON_NULLABLE_CONSTRUCTORS = (pandas_constructor, modin_constructor) + (
+    () if DASK_PYARROW_DTYPES else (dask_lazy_p1_constructor, dask_lazy_p2_constructor)
+)
+
+
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
     return pa.table(obj)
+
+
+@pytest.fixture(params=[pyarrow_table_constructor, dask_pyarrow_constructor])
+def arrow_constructor(request: pytest.FixtureRequest) -> Constructor:
+    return cast("Constructor", request.param)
 
 
 def pyspark_lazy_constructor() -> Callable[[Data], NativePySpark]:  # pragma: no cover

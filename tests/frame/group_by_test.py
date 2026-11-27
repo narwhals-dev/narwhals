@@ -20,6 +20,8 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_numpy_backed_dask,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -171,7 +173,9 @@ def test_group_by_depth_1_agg_bool_ops(
     values: dict[str, list[bool]],
     expected: dict[str, list[bool]],
 ) -> None:
-    if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
+    if (
+        is_numpy_backed_dask(constructor) and "dask-nullable" in request.node.callspec.id
+    ) or ("cudf" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 1, 2, 2, 3, 3], **values}
@@ -601,9 +605,7 @@ def test_agg_selector_matching_only_keys(
     constructor: Constructor, request: pytest.FixtureRequest, *, drop_null_keys: bool
 ) -> None:
     df = nw.from_native(constructor({"a": [1, 1, None], "b": ["x", "y", "z"]}))
-    if type(df._compliant_frame).__module__.startswith("narwhals._dask"):
-        # Built-in Dask is frozen: this is fixed in the `narwhals-dask` plugin only.
-        request.applymarker(pytest.mark.xfail)
+    xfail_if_builtin_dask(df, request)
     keys = [1] if drop_null_keys else [1, None]
     group_by = (
         df.group_by("a", drop_null_keys=True) if drop_null_keys else df.group_by("a")

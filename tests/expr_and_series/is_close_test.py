@@ -13,12 +13,7 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError, InvalidOperationError
-from tests.conftest import (
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-    pandas_constructor,
-)
+from tests.conftest import NON_NULLABLE_CONSTRUCTORS
 from tests.utils import (
     NOT_INSTALLED,
     PANDAS_VERSION,
@@ -31,12 +26,6 @@ from tests.utils import (
 if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
 
-NON_NULLABLE_CONSTRUCTORS = (
-    pandas_constructor,
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-)
 NULL_PLACEHOLDER, NAN_PLACEHOLDER = 9999.0, -1.0
 INF_POS, INF_NEG = float("inf"), float("-inf")
 
@@ -203,7 +192,9 @@ def test_is_close_expr_with_expr(
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else nans_equal for v in expected]
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
+    elif PANDAS_VERSION >= PkgVersion("3") and any(
+        x in str(constructor) for x in ("pandas", "dask")
+    ):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -244,7 +235,9 @@ def test_is_close_expr_with_scalar(
     )
     if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = [v if v is not None else False for v in expected]
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
+    elif PANDAS_VERSION >= PkgVersion("3") and any(
+        x in str(constructor) for x in ("pandas", "dask")
+    ):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)

@@ -6,12 +6,15 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from tests.conftest import dask_pyarrow_constructor
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     DUCKDB_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -74,6 +77,7 @@ def test_expr_floordiv_by_zero(
     constructor: Constructor, request: pytest.FixtureRequest, denominator: int | nw.Expr
 ) -> None:
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
@@ -148,6 +152,7 @@ def test_expr_rfloordiv_by_zero(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
     result = df.select(result=numerator // nw.col("denominator"))
     expected = {"result": expected_floordiv}
@@ -166,6 +171,7 @@ def test_floordiv_by_mixed_divisor(
 
     data = {"i": [0, 1, 2, 3], "a": [7, 8, 7, None], "b": [0, 2, None, 0]}
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(
         "i",
         floordiv=nw.col("a") // nw.col("b"),
@@ -189,6 +195,28 @@ def test_floordiv_by_mixed_divisor(
         assert all(
             native_result[name].dtype == input_dtype for name in expected if name != "i"
         )
+
+
+@pytest.mark.parametrize(
+    ("divisor", "expected", "reverse"),
+    [
+        ([0, 2, None], [None, 4, None], [None, 3, None]),
+        ([None] * 3, [None] * 3, [None] * 3),
+    ],
+    ids=["mixed", "null-typed"],
+)
+def test_floordiv_dask_arrow_divisor(
+    divisor: list[int | None],
+    expected: list[int | None],
+    reverse: list[int | None],
+    request: pytest.FixtureRequest,
+) -> None:
+    df = nw.from_native(dask_pyarrow_constructor({"a": [5, 8, 3], "b": divisor}))
+    if 0 in divisor:
+        xfail_if_builtin_dask(df, request)
+
+    result = df.select(forward=nw.col("a") // nw.col("b"), reverse=7 // nw.col("b"))
+    assert_equal_data(result, {"forward": expected, "reverse": reverse})
 
 
 def test_floordiv_by_null_scalar(constructor: Constructor) -> None:

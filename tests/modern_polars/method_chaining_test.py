@@ -6,7 +6,12 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    assert_equal_data,
+    is_numpy_backed_dask,
+)
 
 data = {
     "OriginCityName": [
@@ -32,7 +37,7 @@ expected = {
 
 
 def test_split_list_get(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask",)):
+    if is_numpy_backed_dask(constructor):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):

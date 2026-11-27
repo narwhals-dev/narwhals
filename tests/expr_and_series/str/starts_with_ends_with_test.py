@@ -149,6 +149,29 @@ def test_empty_pattern(constructor: Constructor, method: str) -> None:
     assert_equal_data(result, expected)
 
 
+def test_typed_string_literal_arguments(arrow_constructor: Constructor) -> None:
+    df = nw.from_native(arrow_constructor({"s": ["abb", "ba", "bb", None]}))
+    strings = nw.col("s").str
+    value = nw.lit("a", nw.String)
+    result = df.select(
+        starts=strings.starts_with(value),
+        ends=strings.ends_with(value),
+        contains=strings.contains(value),
+        replace=strings.replace("b", value),
+        replace_all=strings.replace_all("b", value),
+    )
+    assert_equal_data(
+        result,
+        {
+            "starts": [True, False, False, None],
+            "ends": [False, True, False, None],
+            "contains": [True, True, False, None],
+            "replace": ["aab", "aa", "ab", None],
+            "replace_all": ["aaa", "aa", "aa", None],
+        },
+    )
+
+
 def test_pandas_object_dtype_starts_with_null() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3850
     pytest.importorskip("pandas")

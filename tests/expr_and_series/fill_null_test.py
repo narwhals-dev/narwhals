@@ -9,12 +9,15 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     DASK_VERSION,
     DUCKDB_VERSION,
+    PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -38,6 +41,22 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_arrow_fill_null_with_typed_nan(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    pa = pytest.importorskip("pyarrow")
+    df = nw.from_native(
+        arrow_constructor({"a": [pa.scalar(1.5, type=pa.float32()), None]})
+    )
+    xfail_if_builtin_dask(df, request)
+    result = df.select(nw.col("a").fill_null(nw.lit(float("nan"), nw.Float32)))
+    assert result.collect_schema() == {"a": nw.Float32}
+    assert_equal_data(
+        result.select(null=nw.col("a").is_null(), nan=nw.col("a").is_nan()),
+        {"null": [False, False], "nan": [False, True]},
+    )
+
+
 def test_fill_null_scalar_receiver(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
@@ -49,6 +68,9 @@ def test_fill_null_scalar_receiver(
         request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [0.5, None, 2.0]}
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(
+        df, request, when=DASK_PYARROW_DTYPES and PANDAS_VERSION >= PkgVersion("3")
+    )
     result = df.select(nw.lit(None, nw.Float64).fill_null(nw.col("a")).alias("a"))
     assert_equal_data(result, data)
 
