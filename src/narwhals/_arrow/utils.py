@@ -741,8 +741,9 @@ def list_sort(
     )
 
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
-    sorted_imploded = pa.ListArray.from_arrays(
-        offsets, exploded.take(sorted_indices).column(v).combine_chunks()
+    list_array_cls = pa.LargeListArray if is_large_list(array.type) else pa.ListArray
+    sorted_imploded = list_array_cls.from_arrays(
+        offsets, exploded.take(sorted_indices).column(v).combine_chunks(), type=array.type
     )
     imploded_by_idx = pa.Table.from_arrays(
         [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]

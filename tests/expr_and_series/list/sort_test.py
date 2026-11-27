@@ -111,3 +111,21 @@ def test_sort_series_args(
         .list.sort(descending=descending, nulls_last=nulls_last)
     )
     assert_equal_data({"a": result}, {"a": expected})
+
+
+@pytest.mark.parametrize("offset_bits", [32, 64])
+def test_sort_preserves_arrow_list_type(offset_bits: int) -> None:
+    pa = pytest.importorskip("pyarrow")
+    field = pa.field("value", pa.int64(), metadata={b"unit": b"test"})
+    list_type = pa.large_list(field) if offset_bits == 64 else pa.list_(field)
+    source = pa.chunked_array([[[2, None, 1], []], [None, [5, 3, 4]]], type=list_type)
+    df = nw.from_native(pa.table({"a": source}), eager_only=True)
+
+    expr = nw.col("a").list.sort(descending=True, nulls_last=True)
+    expr_result = df.select(expr).to_native()["a"]
+    series_result = df["a"].list.sort(descending=True, nulls_last=True).to_native()
+
+    expected = [[2, 1, None], [], None, [5, 4, 3]]
+    for result in (expr_result, series_result):
+        assert result.to_pylist() == expected
+        assert result.type.equals(list_type, check_metadata=True)
