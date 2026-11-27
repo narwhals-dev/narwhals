@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+import threading
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
@@ -221,11 +222,36 @@ def native_to_narwhals_dtype(
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
+_TIME_ZONE_LOCK = threading.Lock()
+"""Serializes the only query Narwhals issues *implicitly* on a user's connection.
+
+A connection must not be used concurrently (see [multiple threads]), and a relation
+gives us no way to reach its own connection to open a per-thread `.cursor()`.
+This keeps `collect_schema()` safe on relations sharing a connection; explicit execution
+(`collect`, ...) still follows DuckDB's rules, see [docs/concepts/thread_safety.md].
+
+Note that it only serializes Narwhals against *itself*: a caller running its own query
+on the same connection from another thread still races us, and no lock we hold can
+prevent that.
+
+[multiple threads]: https://duckdb.org/docs/stable/guides/python/multiple_threads
+"""
+
+DEFAULT_CONNECTION_LOCK = threading.Lock()
+"""Serializes Narwhals' `duckdb.sql` calls on the default connection (duckdb<2.0 only).
+
+On duckdb<2.0, concurrent `duckdb.sql` calls that replacement-scan a relation from
+another connection deadlock; on duckdb>=2.0 they raise `ResourceInUseException`.
+"""
+
+
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
     # Not `rel.query`: on DuckDB>=2.0 its temporary catalog entry makes every relation
     # on the connection rebind. `count()` keeps one row when `rel` is empty.
     time_zone = F("current_setting", lit("TimeZone"))
-    return rel.limit(0).aggregate([time_zone, F("count")]).fetchall()[0][0]  # type: ignore[no-any-return]
+    with _TIME_ZONE_LOCK:
+        result = rel.limit(0).aggregate([time_zone, F("count")]).fetchall()
+    return result[0][0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
@@ -367,10 +393,10 @@ def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
     """Unique name for `rel.query`'s `virtual_table_name`.
 
     `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
-    `rel`'s own connection (see [relational api]). We only use it when `duckdb.sql(statement)`
-    fails: that runs on the global default connection, which cannot see relations from
-    other connections (see [using connections in parallel python programs]), but leaves
-    no view behind.
+    `rel`'s own connection (see [relational api]). On duckdb<2.0 we only use it when
+    `duckdb.sql(statement)` fails: that runs on the global default connection, which
+    cannot see relations from other connections (see
+    [using connections in parallel python programs]), but leaves no view behind.
 
     The name must be unique per call: views persist and the lazy result re-binds by
     name on execution, so a reused name shadows earlier views and corrupts their plans.
@@ -386,12 +412,14 @@ def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
       the cursor and released when that cursor is closed.
     * Older versions put it in the connection's current database. That is harmless in
       memory, but a file-backed database would keep it on disk after reopening, and a
-      read-only one rejects it (#3567), so we raise for both instead.
+      read-only one rejects it (#3567), so we raise for both instead. See
+      [thread safety] for the user-facing note.
 
     [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
     [using connections in parallel python programs]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
     [replacement scans]: https://duckdb.org/docs/current/clients/c/replacement_scans
     [#471]: https://github.com/duckdb/duckdb-python/pull/471
+    [thread safety]: https://narwhals-dev.github.io/narwhals/concepts/thread_safety/
     """
     if BACKEND_VERSION < (1, 5, 4):
         on_disk = "(select path is not null or readonly from duckdb_databases() where database_name = current_database())"
