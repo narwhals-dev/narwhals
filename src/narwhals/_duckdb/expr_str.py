@@ -81,6 +81,16 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
             msg = f"`str.replace` only supports `n` in {{-1, 0, 1}} for DuckDB, got {n}."
             raise NotImplementedError(msg)
 
+        return self._replace_impl(value, pattern, literal=literal, global_replace=False)
+
+    def replace_all(
+        self, value: DuckDBExpr, pattern: str, *, literal: bool
+    ) -> DuckDBExpr:
+        return self._replace_impl(value, pattern, literal=literal, global_replace=True)
+
+    def _replace_impl(
+        self, value: DuckDBExpr, pattern: str, *, literal: bool, global_replace: bool
+    ) -> DuckDBExpr:
         def func(expr: Expression, value: Expression) -> Expression:
             if literal:
                 # `regexp_replace` treats backslashes in the replacement as group references.
@@ -88,6 +98,13 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
             regex = lit(re.escape(pattern) if literal else pattern)
             # `\0` re-inserts the match, so a null value leaves the string unchanged (as
             # in Polars) without repeating `expr`, which grows exponentially when chained.
-            return F("regexp_replace", expr, regex, CoalesceOperator(value, lit(r"\0")))
+            options = [lit("g")] if global_replace else []
+            return F(
+                "regexp_replace",
+                expr,
+                regex,
+                CoalesceOperator(value, lit(r"\0")),
+                *options,
+            )
 
         return self.compliant._with_elementwise(func, expression_args={"value": value})

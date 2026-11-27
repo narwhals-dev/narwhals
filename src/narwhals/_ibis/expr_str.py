@@ -48,7 +48,10 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         self, pattern: IntoStringValue, value: IntoStringValue
     ) -> Callable[..., ir.StringValue]:
         def fn(expr: ir.StringColumn) -> ir.StringValue:
-            return expr.replace(pattern, value)  # pyright: ignore[reportArgumentType]
+            # Replacing `pattern` with itself is a no-op, so a null `value` leaves the
+            # string unchanged (as in Polars).
+            fallback = ibis.coalesce(value, pattern)
+            return expr.replace(pattern, fallback)  # pyright: ignore[reportArgumentType]
 
         return fn
 
