@@ -162,7 +162,7 @@ class IbisLazyFrame(
             for name, val in evaluate_exprs(self, *exprs)
         ]
         if not selection:
-            return self.select()
+            raise self._zero_column_select_error()
         return self._with_native(self.native.aggregate(selection))
 
     def select(self, *exprs: IbisExpr) -> Self:

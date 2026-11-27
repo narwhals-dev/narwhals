@@ -181,7 +181,7 @@ class DuckDBLazyFrame(
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
         ]
         if not selection:
-            return self.select()
+            raise self._zero_column_select_error()
         try:
             return self._with_native(self.native.aggregate(selection))
         except Exception as e:  # noqa: BLE001
