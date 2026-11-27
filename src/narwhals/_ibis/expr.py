@@ -228,6 +228,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
         return expr.name(name)
 
+    def __xor__(self, other: Self) -> Self:
+        # Ibis has a native `^` for both booleans and integers. The generic SQL
+        # fallback `(a | b) & ~(a & b)` is compiled without parentheses for integers.
+        return self._with_binary(lambda expr, other: expr.__xor__(other), other)
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
         return self._with_callable(invert)
