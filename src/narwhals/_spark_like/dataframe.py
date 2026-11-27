@@ -255,7 +255,8 @@ class SparkLikeLazyFrame(
 
     def aggregate(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
-
+        if not new_columns:
+            return self.select()
         new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
         if self._implementation.is_pyspark():
             try:

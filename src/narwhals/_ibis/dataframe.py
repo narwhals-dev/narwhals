@@ -161,6 +161,8 @@ class IbisLazyFrame(
             cast("ir.Scalar", val.name(name))
             for name, val in evaluate_exprs(self, *exprs)
         ]
+        if not selection:
+            return self.select()
         return self._with_native(self.native.aggregate(selection))
 
     def select(self, *exprs: IbisExpr) -> Self:

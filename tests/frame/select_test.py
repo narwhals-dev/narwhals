@@ -55,7 +55,11 @@ def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -
     assert df.select(ncs.string()).shape == (0, 0)
 
 
-@pytest.mark.parametrize("expr", [ncs.string(), ncs.string().str.len_chars()])
+@pytest.mark.parametrize(
+    "expr",
+    [ncs.string(), ncs.string().str.len_chars(), ncs.string().count()],
+    ids=["selector", "len_chars", "count"],
+)
 def test_select_matching_nothing_lazy(constructor: Constructor, expr: nw.Expr) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
     if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")):
