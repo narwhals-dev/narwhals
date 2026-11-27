@@ -161,16 +161,15 @@ class IbisLazyFrame(
             cast("ir.Scalar", val.name(name))
             for name, val in evaluate_exprs(self, *exprs)
         ]
+        if error := self._check_empty_selection_supported(selection):
+            raise error
         return self._with_native(self.native.aggregate(selection))
 
     def select(self, *exprs: IbisExpr) -> Self:
         selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
-        if not selection:
-            msg = "At least one expression must be provided to `select` with the Ibis backend."
-            raise ValueError(msg)
-
-        t = self.native.select(*selection)
-        return self._with_native(t)
+        if error := self._check_empty_selection_supported(selection):
+            raise error
+        return self._with_native(self.native.select(*selection))
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)

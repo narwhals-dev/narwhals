@@ -9,6 +9,7 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.selectors as ncs
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -292,18 +293,17 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
     ],
 )
 def test_set_ops(
-    constructor: Constructor,
-    selector: nw.selectors.Selector,
-    expected: list[str],
-    request: pytest.FixtureRequest,
+    constructor: Constructor, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
-    if (
-        any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis"))
-        and not expected
-    ):
-        # https://github.com/narwhals-dev/narwhals/issues/2469
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
+    if not expected and df.implementation in {
+        nw.Implementation.DUCKDB,
+        nw.Implementation.IBIS,
+        nw.Implementation.SQLFRAME,
+    }:
+        with pytest.raises(InvalidOperationError, match="zero columns"):
+            df.select(selector)
+        return
     result = df.select(selector).collect_schema().names()
     assert result == expected
 

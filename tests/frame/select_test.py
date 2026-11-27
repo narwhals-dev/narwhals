@@ -7,7 +7,12 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.selectors as ncs
-from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    InvalidIntoExprError,
+    InvalidOperationError,
+    NarwhalsError,
+)
 from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
@@ -48,6 +53,38 @@ def test_empty_select(constructor_eager: ConstructorEager) -> None:
 def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     assert df.select(ncs.string()).shape == (0, 0)
+
+
+@pytest.mark.parametrize(
+    ("expr", "is_aggregation"),
+    [
+        (ncs.string(), False),
+        (ncs.string().str.len_chars(), False),
+        (ncs.string().count(), True),
+    ],
+)
+def test_select_matching_nothing_lazy(
+    constructor: Constructor,
+    expr: nw.Expr,
+    request: pytest.FixtureRequest,
+    *,
+    is_aggregation: bool,
+) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
+    if is_aggregation and type(df._compliant_frame).__module__.startswith(
+        "narwhals._dask"
+    ):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="Fixed in the narwhals-dask plugin only, the built-in backend is frozen",
+                raises=ValueError,
+            )
+        )
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")):
+        with pytest.raises(InvalidOperationError, match="zero columns"):
+            df.select(expr)
+    else:
+        assert df.select(expr).collect_schema().names() == []
 
 
 def test_non_string_select() -> None:

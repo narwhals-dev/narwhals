@@ -254,25 +254,23 @@ class SparkLikeLazyFrame(
         return self._with_native(self.native.select(*column_names))
 
     def aggregate(self, *exprs: SparkLikeExpr) -> Self:
-        new_columns = evaluate_exprs(self, *exprs)
-
-        new_columns_list = [col.alias(col_name) for col_name, col in new_columns]
-        if self._implementation.is_pyspark():
-            try:
-                return self._with_native(self.native.agg(*new_columns_list))
-            except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None
-        return self._with_native(self.native.agg(*new_columns_list))
+        return self._select(*exprs, aggregate=True)
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
-        new_columns = evaluate_exprs(self, *exprs)
-        new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
-        if self._implementation.is_pyspark():  # pragma: no cover
+        return self._select(*exprs, aggregate=False)
+
+    def _select(self, *exprs: SparkLikeExpr, aggregate: bool) -> Self:
+        selection = [col.alias(name) for name, col in evaluate_exprs(self, *exprs)]
+        if error := self._check_empty_selection_supported(selection):
+            raise error
+        # PySpark's agg() raises with no arguments, so use select() to return zero columns.
+        project = self.native.agg if aggregate and selection else self.native.select
+        if self._implementation.is_pyspark():
             try:
-                return self._with_native(self.native.select(*new_columns_list))
+                return self._with_native(project(*selection))
             except Exception as e:  # noqa: BLE001
                 raise catch_pyspark_sql_exception(e, self) from None
-        return self._with_native(self.native.select(*new_columns_list))
+        return self._with_native(project(*selection))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)

@@ -181,15 +181,19 @@ class DuckDBLazyFrame(
         selection = [
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
         ]
+        if error := self._check_empty_selection_supported(selection):
+            raise error
         try:
             return self._with_native(self.native.aggregate(selection))
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_exception(e, self) from None
 
     def select(self, *exprs: DuckDBExpr) -> Self:
-        selection = (
+        selection = [
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
-        )
+        ]
+        if error := self._check_empty_selection_supported(selection):
+            raise error
         try:
             return self._with_native(self.native.select(*selection))
         except Exception as e:  # noqa: BLE001
