@@ -7,13 +7,9 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.conftest import (
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-    pandas_constructor,
-)
+from tests.conftest import NON_NULLABLE_CONSTRUCTORS
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
@@ -22,13 +18,6 @@ from tests.utils import (
 )
 
 data = {"a": [1, 4, 2, 5]}
-
-NON_NULLABLE_CONSTRUCTORS = [
-    pandas_constructor,
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-]
 
 
 def test_expr_is_in(constructor: Constructor) -> None:
@@ -73,14 +62,17 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_expr_is_in_with_null(constructor: Constructor) -> None:
+def test_expr_is_in_with_null(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}
     df = nw.from_native(constructor(data_with_null))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(nw.col("a").is_in([1, 2]))
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
         # Null values are coerced to NaN for non-nullable datatypes, and
         # `is_in` treats them like a regular (non-matching) value.
         expected = {"a": [True, True, False, False]}
@@ -90,14 +82,17 @@ def test_expr_is_in_with_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_filter_is_in_with_null(constructor: Constructor) -> None:
+def test_filter_is_in_with_null(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}
     df = nw.from_native(constructor(data_with_null))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.filter(~nw.col("a").is_in([1, 2]))
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = {"a": [None, 4]}
     else:
         expected = {"a": [4]}
@@ -105,16 +100,19 @@ def test_filter_is_in_with_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_expr_is_in_with_null_in_other(constructor: Constructor) -> None:
+def test_expr_is_in_with_null_in_other(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3851
     # A `None` in `other` shouldn't match anything (not even a null `a`), and
     # shouldn't turn non-null, non-matching values into "unknown" either.
     data_with_null = {"a": [1, 2, None, 4]}
     df = nw.from_native(constructor(data_with_null))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(nw.col("a").is_in([1, None]))
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = {"a": [True, False, False, False]}
     else:
         expected = {"a": [True, False, None, False]}
@@ -122,14 +120,17 @@ def test_expr_is_in_with_null_in_other(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
+def test_expr_is_in_with_only_null_in_other(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}
     df = nw.from_native(constructor(data_with_null))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(nw.col("a").is_in([None]))
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
         expected = {"a": [False, False, False, False]}
     else:
         expected = {"a": [False, False, None, False]}

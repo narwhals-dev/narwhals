@@ -8,6 +8,7 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     PANDAS_VERSION,
     Constructor,
     ConstructorEager,
@@ -58,6 +59,12 @@ def test_datetime_attributes(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
+    if attribute in {
+        "millisecond",
+        "microsecond",
+        "nanosecond",
+    } and PANDAS_VERSION < PkgVersion("3"):
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(getattr(nw.col("a").dt, attribute)())
     assert_equal_data(result, {"a": expected})
 

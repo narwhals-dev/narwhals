@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_numpy_backed_dask,
+)
 
 
 def test_coalesce_numeric(constructor: Constructor) -> None:
@@ -70,7 +75,7 @@ def test_coalesce_multi_output(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3277
-    if "dask" in str(constructor):
+    if is_numpy_backed_dask(constructor):
         # Dask infers the type to be `string` :shrug:
         # https://github.com/narwhals-dev/narwhals/issues/3279
         request.applymarker(pytest.mark.xfail)

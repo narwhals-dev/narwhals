@@ -7,7 +7,13 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, assert_equal_data, xfail_if_builtin_dask
+from tests.utils import (
+    DASK_PYARROW_DTYPES,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    assert_equal_data,
+    xfail_if_builtin_dask,
+)
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -45,6 +51,8 @@ def test_numeric_reduction_keeps_dtype_when_all_null(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     df = nw.from_native(constructor({"a": [1.0, 2.0]}))
+    if reduction == "kurtosis" and PANDAS_VERSION < PkgVersion("3"):
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     all_null = df.with_columns(a=nw.when(nw.col("a") < 0).then(nw.col("a")))
     expr = getattr(nw.col("a"), reduction)()
     assert all_null.select(expr).collect_schema() == df.select(expr).collect_schema()
@@ -58,6 +66,7 @@ def test_string_reduction_keeps_dtype_when_all_null(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     df = nw.from_native(constructor({"a": ["x", "y"]}))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     all_null = df.with_columns(a=nw.when(nw.col("a") == "zzz").then(nw.col("a")))
     assert all_null.select(nw.col("a").max()).collect_schema() == {"a": nw.String()}
 

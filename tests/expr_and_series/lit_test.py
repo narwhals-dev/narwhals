@@ -16,6 +16,7 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
+    is_numpy_backed_dask,
     xfail_if_builtin_dask,
 )
 
@@ -162,7 +163,7 @@ def test_lit_operation_in_with_columns(
 @pytest.mark.skipif(PANDAS_VERSION < PkgVersion("1.5"), reason="too old for pyarrow")
 def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     # https://github.com/dask/dask/issues/11637
-    if "dask" in str(constructor) or (
+    if is_numpy_backed_dask(constructor) or (
         # https://github.com/rapidsai/cudf/pull/18832
         "cudf" in str(constructor) and CUDF_VERSION >= PkgVersion("25.8")
     ):
@@ -170,6 +171,7 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
     if "pandas" in str(constructor):
         pytest.importorskip("pyarrow")
     df = nw.from_native(constructor({"a": [1]}))
+    xfail_if_builtin_dask(df, request)
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
     if df.implementation.is_cudf():
         # cudf has no date dtype

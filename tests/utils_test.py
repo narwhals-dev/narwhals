@@ -23,7 +23,9 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
+from tests.conftest import dask_lazy_p2_constructor
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     NOT_INSTALLED,
     any_integer_like_floats,
     assert_equal_data,
@@ -689,6 +691,16 @@ def test_deferred_iterable() -> None:
 )
 def test_any_integer_like_floats(values: list[Any], expected: bool) -> None:  # noqa: FBT001
     assert any_integer_like_floats(values) is expected
+
+
+@pytest.mark.skipif(not DASK_PYARROW_DTYPES, reason="requires pyarrow-backed Dask")
+def test_dask_constructor_preserves_nullable_integers() -> None:
+    pytest.importorskip("dask.dataframe")
+    value = 2**53 + 1
+    df = nw.from_native(dask_lazy_p2_constructor({"a": [value, None]}))
+    result = df.collect().to_pandas()["a"]
+    assert result.dtype == "int64[pyarrow]"
+    assert result.tolist() == [value, pd.NA]
 
 
 def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:

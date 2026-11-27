@@ -16,6 +16,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    uses_pyarrow_backend,
 )
 
 
@@ -39,9 +40,7 @@ def test_arithmetic_expr(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if attr == "__mod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
-    ):
+    if attr == "__mod__" and uses_pyarrow_backend(constructor):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 3.0]}
@@ -77,9 +76,7 @@ def test_right_arithmetic_expr(
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip()
-    if attr == "__rmod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
-    ):
+    if attr == "__rmod__" and uses_pyarrow_backend(constructor):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor(data))
@@ -98,9 +95,9 @@ def test_mod_negative_operands(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
+    if uses_pyarrow_backend(constructor):
         request.applymarker(
-            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+            pytest.mark.xfail(reason="pyarrow-backed pandas does not implement mod")
         )
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.col("a") % divisor)
@@ -120,9 +117,9 @@ def test_rmod_negative_operands(
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip(reason="dask<2024.10 does not implement rmod with negative operands")
-    if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
+    if uses_pyarrow_backend(constructor):
         request.applymarker(
-            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+            pytest.mark.xfail(reason="pyarrow-backed pandas does not implement mod")
         )
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.lit(dividend) % nw.col("a"))
@@ -209,7 +206,7 @@ def test_floordiv_floats(
 ) -> None:
     if (
         left // right != expected
-        and "pyarrow" not in str(constructor)
+        and not uses_pyarrow_backend(constructor)
         and any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask"))
     ):
         request.applymarker(
@@ -357,9 +354,7 @@ def test_arithmetic_expr_left_literal(
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         request.applymarker(pytest.mark.xfail)
-    if attr == "__mod__" and any(
-        x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
-    ):
+    if attr == "__mod__" and uses_pyarrow_backend(constructor):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 4.0]}

@@ -8,6 +8,7 @@ from packaging.version import Version as PkgVersion
 import narwhals as nw
 from tests.conftest import dask_pyarrow_constructor
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     DUCKDB_VERSION,
     POLARS_VERSION,
     Constructor,
@@ -76,6 +77,7 @@ def test_expr_floordiv_by_zero(
     constructor: Constructor, request: pytest.FixtureRequest, denominator: int | nw.Expr
 ) -> None:
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
     if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.7"):
         pytest.skip(reason="bug")
@@ -150,6 +152,7 @@ def test_expr_rfloordiv_by_zero(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
     result = df.select(result=numerator // nw.col("denominator"))
     expected = {"result": expected_floordiv}
@@ -168,6 +171,7 @@ def test_floordiv_by_mixed_divisor(
 
     data = {"i": [0, 1, 2, 3], "a": [7, 8, 7, None], "b": [0, 2, None, 0]}
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(
         "i",
         floordiv=nw.col("a") // nw.col("b"),

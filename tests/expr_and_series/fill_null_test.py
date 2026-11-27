@@ -9,8 +9,10 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     DASK_VERSION,
     DUCKDB_VERSION,
+    PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
@@ -66,6 +68,9 @@ def test_fill_null_scalar_receiver(
         request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [0.5, None, 2.0]}
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(
+        df, request, when=DASK_PYARROW_DTYPES and PANDAS_VERSION >= PkgVersion("3")
+    )
     result = df.select(nw.lit(None, nw.Float64).fill_null(nw.col("a")).alias("a"))
     assert_equal_data(result, data)
 

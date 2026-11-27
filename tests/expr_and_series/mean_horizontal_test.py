@@ -7,6 +7,7 @@ import narwhals as nw
 import narwhals.selectors as ncs
 from tests.conftest import dask_pyarrow_constructor
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
@@ -14,9 +15,11 @@ from tests.utils import (
 )
 
 
-def test_meanh(constructor: Constructor) -> None:
+def test_meanh(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     data = {"a": [1, 3, None, None], "b": [4, None, 6, None]}
     df = nw.from_native(constructor(data))
+    if PANDAS_VERSION < PkgVersion("3"):
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     mean = nw.mean_horizontal(nw.col("a"), nw.col("b"))
     # `assert_equal_data` treats NaN and None as equal, so check `is_null` explicitly
     result = df.select(horizontal_mean=mean, is_null=mean.is_null())

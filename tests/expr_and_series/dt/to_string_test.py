@@ -8,11 +8,13 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     PANDAS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    uses_pyarrow_backend,
     xfail_if_builtin_dask,
 )
 
@@ -53,7 +55,9 @@ def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_frame.select(nw.col("a").dt.to_string(fmt).alias("b"))
-    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
+    if uses_pyarrow_backend(constructor) or any(
+        x in str(constructor) for x in ("pyarrow_table", "modin")
+    ):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = input_frame.select(
@@ -134,14 +138,16 @@ def test_dt_to_string_iso_local_datetime_expr(
 ) -> None:
     if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    df = constructor({"a": [data]})
+    df = nw.from_native(constructor({"a": [data]}))
+    if PANDAS_VERSION < PkgVersion("3.2"):
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
-    result = nw.from_native(df).select(
+    result = df.select(
         b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f"))
     )
     assert_equal_data(result, {"b": [_clean_string(expected)]})
 
-    result = nw.from_native(df).select(
+    result = df.select(
         b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S%.f"))
     )
     assert_equal_data(result, {"b": [_clean_string(expected)]})

@@ -88,13 +88,12 @@ def test_concat_str_single_input(constructor: Constructor) -> None:
 def test_concat_str_nullable_boolean(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    # Plain pandas (and dask, and non-pyarrow modin) infer `object` dtype for
+    # Plain pandas (and NumPy-backed modin and dask) infer `object` dtype for
     # mixed bool/null columns, where bools are indistinguishable from `"True"`
     # strings. Pyarrow-backed frames keep a boolean dtype and render lowercase.
-    if (
-        "pandas_constructor" in str(constructor)
-        or "dask" in str(constructor)
-        or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
+    if "pandas_constructor" in str(constructor) or (
+        any(x in str(constructor) for x in ("modin", "dask"))
+        and not uses_pyarrow_backend(constructor)
     ):
         request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
     df = nw.from_native(constructor({"bo": [True, None], "b": ["x", "y"]}))

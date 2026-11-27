@@ -9,6 +9,7 @@ import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.conftest import dask_pyarrow_constructor
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
@@ -146,6 +147,7 @@ def test_replace_strict_expr_with_default(
         pytest.skip(reason=pl_skip_reason)
 
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(
         nw.col("a").replace_strict(
             [1, 2], ["one", "two"], default="other", return_dtype=return_dtype
@@ -344,6 +346,7 @@ def test_replace_strict_with_default_mapping(
         pytest.skip(reason=pl_skip_reason)
 
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(
         nw.col("a").replace_strict(
             {1: "one", 2: "two", 3: None}, default="other", return_dtype=nw.String()
@@ -362,6 +365,7 @@ def test_replace_strict_with_expressified_default(
 
     data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     result = df.select(
         nw.col("a").replace_strict(
             {1: "one", 2: "two"}, default=nw.col("b"), return_dtype=nw.String
@@ -395,6 +399,7 @@ def test_mapping_key_not_in_expr(
 
     data = {"a": [1, 2]}
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
 
     result = df.select(
         nw.col("a").replace_strict({1: "one", 2: "two", 3: "three"}, default="hundred")

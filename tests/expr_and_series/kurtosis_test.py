@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
+    PANDAS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -56,7 +59,10 @@ def test_kurtosis_expr(
         # Can not infer schema from empty dataset.
         pytest.skip()
 
-    result = nw.from_native(constructor({"a": data})).select(nw.col("a").kurtosis())
+    df = nw.from_native(constructor({"a": data}))
+    if data and PANDAS_VERSION < PkgVersion("3"):
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
+    result = df.select(nw.col("a").kurtosis())
     assert_equal_data(result, {"a": [expected]})
 
 

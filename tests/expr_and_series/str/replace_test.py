@@ -13,6 +13,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    uses_pyarrow_backend,
 )
 
 replace_data = [
@@ -214,7 +215,7 @@ def test_str_replace_edge_series_scalar(
 ) -> None:
     if (
         "literal_backslash" in request.node.callspec.id
-        and any(x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and uses_pyarrow_backend(constructor_eager)
         and PkgVersion("2.3.3") <= PANDAS_VERSION < PkgVersion("3")
     ):
         # pandas 2.3.3 rejects `\1` in a pyarrow-backed replacement, even when literal.
@@ -368,7 +369,7 @@ def test_str_replace_edge_expr_scalar(
         )
     if (
         "literal_backslash" in request.node.callspec.id
-        and any(x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow"))
+        and uses_pyarrow_backend(constructor)
         and PkgVersion("2.3.3") <= PANDAS_VERSION < PkgVersion("3")
     ):
         # pandas 2.3.3 rejects `\1` in a pyarrow-backed replacement, even when literal.

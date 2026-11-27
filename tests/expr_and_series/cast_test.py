@@ -16,6 +16,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_numpy_backed_dask,
     is_pyarrow_windows_no_tzdata,
     time_unit_compat,
     xfail_if_builtin_dask,
@@ -329,7 +330,7 @@ def test_cast_datetime_tz_aware(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
-        "dask" in str(constructor)
+        is_numpy_backed_dask(constructor)
         or "duckdb" in str(constructor)
         or "cudf" in str(constructor)  # https://github.com/rapidsai/cudf/issues/16973
         or "pyspark" in str(constructor)
@@ -350,6 +351,7 @@ def test_cast_datetime_tz_aware(
     }
     dtype = nw.Datetime(time_unit_compat("ms", request), time_zone="Europe/Rome")
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request)
     result = df.select(
         nw.col("date").cast(dtype).cast(nw.String()).str.slice(offset=0, length=19)
     )
@@ -359,7 +361,7 @@ def test_cast_datetime_tz_aware(
 def test_cast_datetime_utc(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor) or (
+    if is_numpy_backed_dask(constructor) or (
         # https://github.com/eakmanrq/sqlframe/issues/406
         "sqlframe" in str(constructor)
         and nw.Implementation.SQLFRAME._backend_version() < (4, 7)
@@ -379,6 +381,7 @@ def test_cast_datetime_utc(
     }
     dtype = nw.Datetime(time_unit_compat("us", request), time_zone="UTC")
     df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request)
     result = df.select(
         nw.col("date").cast(dtype).cast(nw.String()).str.slice(offset=0, length=19)
     )

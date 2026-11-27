@@ -6,42 +6,40 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.conftest import (
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-    pandas_constructor,
+from tests.conftest import NON_NULLABLE_CONSTRUCTORS
+from tests.utils import (
+    DASK_PYARROW_DTYPES,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    xfail_if_builtin_dask,
 )
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
-
-NON_NULLABLE_CONSTRUCTORS = [
-    pandas_constructor,
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-]
 
 
-def test_nan(constructor: Constructor) -> None:
+@pytest.mark.parametrize("column", ["int", "float", "float_na"])
+def test_nan(
+    constructor: Constructor, request: pytest.FixtureRequest, column: str
+) -> None:
     data_na = {"int": [-1, 1, None]}
     df = nw.from_native(constructor(data_na)).with_columns(
         float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
     )
-    result = df.select(
-        int=nw.col("int").is_nan(),
-        float=nw.col("float").is_nan(),
-        float_na=nw.col("float_na").is_nan(),
-    )
+    if column == "float":
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
+    result = df.select(nw.col(column).is_nan())
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor in NON_NULLABLE_CONSTRUCTORS:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],
             "float": [False, False, True],
             "float_na": [True, False, True],
         }
-    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
+    elif PANDAS_VERSION >= PkgVersion("3") and any(
+        x in str(constructor) for x in ("pandas", "dask")
+    ):
         # NaN values are coerced into NA for nullable datatypes by default
         expected = {
             "int": [False, False, None],
@@ -56,7 +54,7 @@ def test_nan(constructor: Constructor) -> None:
             "float_na": [True, False, None],
         }
 
-    assert_equal_data(result, expected)
+    assert_equal_data(result, {column: expected[column]})
 
 
 def test_nan_series(constructor_eager: ConstructorEager) -> None:
@@ -71,7 +69,7 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
         "float_na": df["float_na"].is_nan(),
     }
     expected: dict[str, list[Any]]
-    if any(constructor_eager is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],

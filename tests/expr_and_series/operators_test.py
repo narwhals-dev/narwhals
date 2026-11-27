@@ -5,11 +5,14 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    DASK_PYARROW_DTYPES,
     DASK_VERSION,
     PANDAS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    is_numpy_backed_dask,
+    xfail_if_builtin_dask,
 )
 
 
@@ -77,7 +80,7 @@ def test_logic_operators_expr_kleene(
     if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/19171
         request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
+    if is_numpy_backed_dask(constructor):
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, None], "b": [True, None, None, None]}
@@ -118,7 +121,7 @@ def test_logic_operators_kleene_all_null(
     expected: list[bool | None],
     expected_pandas: list[bool | None],
 ) -> None:
-    if "dask" in str(constructor):
+    if is_numpy_backed_dask(constructor):
         # Dask infers `[True, False, None]` as `object` dtype, and then `__or__` fails.
         request.applymarker(pytest.mark.xfail)
     if null == "literal" and any(
@@ -129,6 +132,8 @@ def test_logic_operators_kleene_all_null(
         request.applymarker(pytest.mark.xfail)
     data = {"i": [0, 1, 2], "b": [True, False, None]}
     df = nw.from_native(constructor(data))
+    if null == "literal":
+        xfail_if_builtin_dask(df, request, when=DASK_PYARROW_DTYPES)
     all_null = (
         nw.lit(None, nw.Boolean)
         if null == "literal"

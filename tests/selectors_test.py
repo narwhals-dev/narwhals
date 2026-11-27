@@ -16,7 +16,9 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
+    is_numpy_backed_dask,
     is_windows,
+    xfail_if_builtin_dask,
 )
 
 data = {
@@ -156,7 +158,7 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
     if (
         "pyspark" in str(constructor)
         or "duckdb" in str(constructor)
-        or "dask" in str(constructor)
+        or is_numpy_backed_dask(constructor)
         or "ibis" in str(constructor)
         # https://github.com/pola-rs/polars/issues/23767
         # TODO(FBruzzesi): Manage polars version
@@ -176,7 +178,9 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
     data = {"numeric": [3.14, 6.28], "ts": [ts1, ts2]}
     time_units: list[Literal["ns", "us", "ms", "s"]] = ["ms", "us", "ns"]
 
-    df = nw.from_native(constructor(data)).select(
+    df = nw.from_native(constructor(data))
+    xfail_if_builtin_dask(df, request)
+    df = df.select(
         nw.col("numeric"),
         *[
             nw.col("ts").cast(nw.Datetime(time_unit=tu)).alias(f"ts_{tu}")

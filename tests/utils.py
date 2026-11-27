@@ -55,6 +55,11 @@ PYARROW_VERSION = get_module_version("pyarrow")
 PYSPARK_VERSION = get_module_version("pyspark")
 CUDF_VERSION = get_module_version("cudf")
 
+DASK_PYARROW_DTYPES = (
+    PANDAS_VERSION >= PkgVersion("2.2") and PYARROW_VERSION != NOT_INSTALLED
+)
+"""Whether the `dask` constructor builds pyarrow-backed frames."""
+
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
 ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
@@ -284,17 +289,26 @@ def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
 
 
 def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
-    """Checks if the pandas-like constructor uses pyarrow backend."""
+    """Checks if the pandas-like or Dask constructor uses pyarrow-backed dtypes."""
     return constructor.__name__ in {
         "pandas_pyarrow_constructor",
         "modin_pyarrow_constructor",
-    }
+    } or (DASK_PYARROW_DTYPES and "dask" in str(constructor))
+
+
+def is_numpy_backed_dask(constructor: Constructor, /) -> bool:
+    """Checks if the Dask constructor falls back to NumPy dtypes (old pandas, no pyarrow)."""
+    return "dask" in str(constructor) and not DASK_PYARROW_DTYPES
 
 
 def xfail_if_builtin_dask(
-    frame: nw.DataFrame[Any] | nw.LazyFrame[Any], request: pytest.FixtureRequest, /
+    frame: nw.DataFrame[Any] | nw.LazyFrame[Any],
+    request: pytest.FixtureRequest,
+    /,
+    *,
+    when: bool = True,
 ) -> None:
-    if type(frame._compliant_frame).__module__.startswith("narwhals._dask"):
+    if when and type(frame._compliant_frame).__module__.startswith("narwhals._dask"):
         request.applymarker(
             pytest.mark.xfail(
                 reason="The built-in Dask backend is frozen; the fix is in narwhals-dask."
