@@ -8,6 +8,7 @@ from polars.selectors import is_selector
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
+    CUM_MAX_MIN_KEEPS_LEADING_INFINITY,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -15,6 +16,7 @@ from narwhals._polars.utils import (
     PolarsMapNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
+    cum_extreme_keeping_leading_infinity,
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
@@ -355,6 +357,22 @@ class PolarsExpr:
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
+    def cum_max(self, *, reverse: bool) -> Self:
+        if CUM_MAX_MIN_KEEPS_LEADING_INFINITY:
+            return self._with_native(self.native.cum_max(reverse=reverse))
+        native = cum_extreme_keeping_leading_infinity(  # pragma: no cover
+            self.native, "cum_max", reverse=reverse
+        )
+        return self._with_native(native)  # pragma: no cover
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        if CUM_MAX_MIN_KEEPS_LEADING_INFINITY:
+            return self._with_native(self.native.cum_min(reverse=reverse))
+        native = cum_extreme_keeping_leading_infinity(  # pragma: no cover
+            self.native, "cum_min", reverse=reverse
+        )
+        return self._with_native(native)  # pragma: no cover
+
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
         result = self.native.mode()
         return self._with_native(result.first() if keep == "any" else result)
@@ -401,8 +419,6 @@ class PolarsExpr:
     ceil: Method[Self]
     count: Method[Self]
     cos: Method[Self]
-    cum_max: Method[Self]
-    cum_min: Method[Self]
     cum_prod: Method[Self]
     cum_sum: Method[Self]
     diff: Method[Self]
