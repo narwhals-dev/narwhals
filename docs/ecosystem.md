@@ -60,6 +60,26 @@ and importing them with `DataFrame.from_arrow` and `Series.from_arrow`. See
 [Universal dataframe support with the Arrow PyCapsule Interface + Narwhals](https://labs.quansight.org/blog/narwhals-pycapsule)
 for how you can use them together.
 
+#### chDB
+
+[chDB](https://github.com/chdb-io/chdb) is an in-process SQL OLAP engine powered by ClickHouse.
+Query results in chDB's `"Arrow"` output format implement the PyCapsule Interface, so they can
+be passed straight to `DataFrame.from_arrow`:
+
+```python
+import chdb
+import narwhals as nw
+
+result = chdb.query(
+    "SELECT number AS n, toString(number) AS s FROM numbers(3) ORDER BY n", "Arrow"
+)
+df = nw.DataFrame.from_arrow(result, backend="pyarrow")
+```
+
+`chdb.query` runs the query and materialises the whole result. Any Narwhals operation on `df`
+then runs on the backend passed to `backend` and is not pushed down to chDB. As with any SQL
+engine, add an `ORDER BY` to the query if row order matters.
+
 ### Ibis
 
 Pitched as "The portable Dataframe library", Ibis provides a Pythonic frontend
