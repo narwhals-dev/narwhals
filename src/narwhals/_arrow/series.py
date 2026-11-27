@@ -1139,9 +1139,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         labels: Sequence[str] | Literal[False],
         right_closed: bool,
     ) -> Self:
-        """Return bin indices or gather the corresponding Arrow dictionary labels."""
+        """Use the bin indices directly as Arrow dictionary codes for labelled output."""
         bounds, offset, dtype = bin_interval_search_bounds(
-            self, intervals, right_closed=right_closed
+            self.dtype, self._version, intervals, right_closed=right_closed
         )
         values = self.native.cast(narwhals_to_native_dtype(dtype, self._version))
         edges = pa.array(bounds, type=values.type)
@@ -1149,10 +1149,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             values, edges, offset=offset, right_closed=right_closed
         )
         if labels is not False:
-            bins = pa.DictionaryArray.from_arrays(
-                pa.array(range(len(labels)), pa.uint32()), pa.array(labels, pa.string())
+            dictionary = pa.array(labels, pa.string())
+            result = chunked_array(
+                [
+                    pa.DictionaryArray.from_arrays(chunk, dictionary)
+                    for chunk in chunked_array(result).chunks
+                ],
+                pa.dictionary(pa.uint32(), dictionary.type),
             )
-            result = pc.take(bins, result)
         return self._with_native(result, preserve_broadcast=True)
 
     def hist_from_bins(

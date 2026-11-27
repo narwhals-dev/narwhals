@@ -1556,36 +1556,32 @@ def check_column_names_are_unique(columns: Collection[str]) -> None:
 
 
 # narwhals-canary: delete this line to confirm you have read the full diff
-def prepare_bin_intervals(
+def _validate_bin_intervals(
     intervals: Sequence[float], labels: Sequence[str] | Literal[False]
 ) -> tuple[list[float], list[str] | Literal[False]]:
-    """Validate the breakpoints and labels shared by `Expr` and `Series`.
-
-    Arguments:
-        intervals: Numeric breakpoints in increasing order.
-        labels: A sequence of bin labels or `False` for integer indices.
-
-    Returns:
-        A copy of the breakpoints and labels so a lazy expression keeps the values
-        supplied when it was built. The `False` sentinel is passed through.
-    """
+    """Validate and copy the bin definitions before building the expression."""
     from itertools import pairwise
     from math import isfinite
+    from numbers import Integral
 
     if not isinstance(intervals, Sequence) or isinstance(intervals, (str, bytes)):
         msg = "intervals must be a sequence of numeric breakpoints"
         raise TypeError(msg)
-    if not all(isfinite(value) for value in intervals):
+    # Rounding NumPy integers with math.ceil or math.floor can lose precision.
+    breaks: list[float] = [
+        int(value) if isinstance(value, Integral) else value for value in intervals
+    ]
+    if not all(isfinite(value) for value in breaks):
         msg = "intervals must not contain NaN or infinity"
         raise ComputeError(msg)
-    if len(set(intervals)) != len(intervals):
+    if len(set(breaks)) != len(breaks):
         msg = "intervals are not unique"
         raise DuplicateError(msg)
-    if any(lower > upper for lower, upper in pairwise(intervals)):
+    if any(left > right for left, right in pairwise(breaks)):
         msg = "intervals must increase monotonically"
         raise ComputeError(msg)
     if labels is False:
-        return list(intervals), False
+        return breaks, False
     if (
         not isinstance(labels, Sequence)
         or isinstance(labels, str)
@@ -1593,13 +1589,14 @@ def prepare_bin_intervals(
     ):
         msg = "labels must be a sequence of strings or False"
         raise TypeError(msg)
-    if len(labels) != len(intervals) + 1:
-        msg = f"expected {len(intervals) + 1} labels (len(intervals) + 1), got {len(labels)}"
+    n_bins = len(breaks) + 1
+    if len(labels) != n_bins:
+        msg = f"expected {n_bins} labels (len(intervals) + 1), got {len(labels)}"
         raise ShapeError(msg)
     if len(set(labels)) != len(labels):
         msg = "labels are not unique"
         raise DuplicateError(msg)
-    return list(intervals), list(labels)
+    return breaks, list(labels)
 
 
 def _parse_time_unit_and_time_zone(
@@ -1956,6 +1953,11 @@ def _is_naive_format(format: str) -> bool:
         bool: True if the format is naive (does not include timezone info), False otherwise.
     """
     return not any(x in format for x in ("%s", "%z", "Z"))
+
+
+_UNSTABLE_METHOD_HINT: Final = (
+    "This unstable method is only available in the main `narwhals` namespace."
+)
 
 
 class not_implemented:  # noqa: N801

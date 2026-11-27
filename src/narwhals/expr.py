@@ -9,10 +9,10 @@ from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
     NO_DEFAULT,
     Version,
+    _validate_bin_intervals,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
-    prepare_bin_intervals,
     unstable,
 )
 from narwhals.dtypes import _validate_dtype
@@ -1714,13 +1714,11 @@ class Expr:
             without it being considered a breaking change.
 
         Arguments:
-            intervals: Finite breakpoints in strictly increasing order.
-                An empty sequence gives a single bin.
+            intervals: Strictly increasing, finite breakpoints. Pass `[]` for a single bin.
             labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
                 Labels have dtype `Enum` on Polars and pandas-like backends and
                 `Categorical` on PyArrow.
-            right_closed: Whether each bin includes its right edge. By default, bins
-                include their left edge, so a value equal to a breakpoint starts a new bin.
+            right_closed: Use right-closed bins `(a, b]`. Defaults to left-closed bins `[a, b)`.
 
         Raises:
             DuplicateError: If breakpoints or labels contain duplicates.
@@ -1728,8 +1726,8 @@ class Expr:
             ShapeError: If the number of labels differs from `len(intervals) + 1`.
 
         Notes:
-            Nulls remain null. NaN goes in the last bin. A NumPy-backed pandas float
-            column also puts missing values in the last bin because it stores them as NaN.
+            Nulls stay null. NaN goes in the last bin, including missing values stored as
+            NaN in NumPy-backed pandas float columns.
 
         Examples:
             >>> import polars as pl
@@ -1741,13 +1739,13 @@ class Expr:
             >>> df.select(bins).collect()["x"].to_list()
             ['low', 'low', 'mid', 'high']
         """
-        intervals_, labels_ = prepare_bin_intervals(intervals, labels)
+        intervals, labels = _validate_bin_intervals(intervals, labels)
         return self._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "bin_intervals",
-                intervals=intervals_,
-                labels=labels_,
+                intervals=intervals,
+                labels=labels,
                 right_closed=right_closed,
             )
         )

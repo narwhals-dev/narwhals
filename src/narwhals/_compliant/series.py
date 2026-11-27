@@ -77,40 +77,46 @@ __all__ = [
 
 
 def bin_interval_search_bounds(
-    series: EagerSeries[Any], intervals: Sequence[float], *, right_closed: bool
+    dtype: DType, version: Version, intervals: Sequence[float], *, right_closed: bool
 ) -> tuple[Sequence[float], int, IntoDType]:
     """Return searchable breakpoints, the index offset and the comparison dtype.
 
-    For integer columns, round fractional edges up for left-closed bins and down for
-    right-closed bins. The offset counts edges below the 64-bit range so the retained
-    edges keep their original bin numbers.
+    Round each edge up for left-closed bins and down for right-closed bins to a
+    value representable in the comparison dtype. The offset counts edges below
+    the integer range so the retained edges keep their original bin numbers.
     """
-    from bisect import bisect_left, bisect_right
-    from math import ceil, floor
-    from numbers import Integral
+    from bisect import bisect_left
+    from math import ceil, floor, inf, nextafter
+    from operator import gt, lt
 
     from narwhals.exceptions import InvalidOperationError
 
-    dtype = series.dtype
-    dtypes = series._version.dtypes
-    if not (dtype.is_integer() or dtype.is_float()):
+    dtypes = version.dtypes
+    if dtype.is_float():
+        direction = -inf if right_closed else inf
+        needs_adjustment = gt if right_closed else lt
+        float_bounds = []
+        for edge in intervals:
+            rounded = float(edge)
+            # A wide integer can round to a Float64 on the wrong side of the edge.
+            if needs_adjustment(rounded, edge):
+                rounded = nextafter(rounded, direction)
+            float_bounds.append(rounded)
+        return float_bounds, 0, dtypes.Float64
+    if not dtype.is_integer():
         msg = f"bin_intervals requires an integer or floating-point column, got {dtype}"
         raise InvalidOperationError(msg)
-    if dtype.is_integer():
-        round_bound = floor if right_closed else ceil
-        bounds = [
-            int(x) if isinstance(x, Integral) else round_bound(x) for x in intervals
-        ]
-        unsigned = dtype.is_unsigned_integer()
-        lower = 0 if unsigned else -(2**63)
-        upper = lower + 2**64 - 1
-        start = bisect_left(bounds, lower)
-        return (
-            bounds[start : bisect_right(bounds, upper)],
-            start,
-            dtypes.UInt64 if unsigned else dtypes.Int64,
-        )
-    return [float(value) for value in intervals], 0, dtypes.Float64
+    round_edge = floor if right_closed else ceil
+    bounds = [round_edge(edge) for edge in intervals]
+    unsigned = dtype.is_unsigned_integer()
+    if dtype in {dtypes.Int128, dtypes.UInt128}:
+        bits, comparison_dtype = 128, dtype
+    else:
+        bits, comparison_dtype = 64, dtypes.UInt64 if unsigned else dtypes.Int64
+    lower = 0 if unsigned else -(2 ** (bits - 1))
+    start = bisect_left(bounds, lower)
+    stop = bisect_left(bounds, lower + 2**bits)
+    return bounds[start:stop], start, comparison_dtype
 
 
 class CompliantSeries(

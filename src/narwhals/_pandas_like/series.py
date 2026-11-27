@@ -1220,7 +1220,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         native = self.native
         ns = self.__native_namespace__()
         bounds, offset, dtype = bin_interval_search_bounds(
-            self, intervals, right_closed=right_closed
+            self.dtype, self._version, intervals, right_closed=right_closed
         )
         native_dtype = narwhals_to_native_dtype(
             dtype, None, self._implementation, self._version
@@ -1228,23 +1228,17 @@ class PandasLikeSeries(EagerSeries[Any]):
         # A comparison propagates masked nulls while a stored IEEE NaN compares false.
         null_mask = native.eq(native).isna()
         values = native.where(~null_mask, 0).astype(native_dtype)
-        indices = (
-            ns.Series(bounds, dtype=native_dtype).searchsorted(
-                values, side="left" if right_closed else "right"
-            )
-            + offset
-        )
+        edges = ns.Series(bounds, dtype=native_dtype)
+        indices = edges.searchsorted(values, side="left" if right_closed else "right")
+        if offset:
+            indices += offset
         if labels is False:
-            index_type = "uint32" if self._implementation.is_cudf() else "UInt32"
-            result = ns.Series(
-                indices, dtype=index_type, index=native.index, name=self.name
-            )
+            data = indices
+            result_dtype = "uint32" if self._implementation.is_cudf() else "UInt32"
         else:
-            categories = ns.CategoricalDtype(list(labels), ordered=True)
-            bins = ns.Series(labels, dtype=categories, name=self.name)
-            result = set_index(
-                bins.iloc[indices], native.index, implementation=self._implementation
-            )
+            result_dtype = ns.CategoricalDtype(labels, ordered=True)
+            data = ns.CategoricalIndex(labels, dtype=result_dtype).take(indices)
+        result = ns.Series(data, dtype=result_dtype, index=native.index, name=self.name)
         return self._with_native(result.where(~null_mask), preserve_broadcast=True)
 
     def hist_from_bins(

@@ -8,7 +8,6 @@ from polars.selectors import is_selector
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
-    HAS_INT_128,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -20,6 +19,7 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
     native_get_categories,
+    native_to_narwhals_dtype,
 )
 from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
@@ -249,65 +249,40 @@ class PolarsExpr:
         labels: Sequence[str] | Literal[False],
         right_closed: bool,
     ) -> Self:
-        native = self.native
-        # An integral float breakpoint can otherwise round an adjacent integer column
-        # value to the breakpoint. Keep floats outside the supported integer range.
-        lower, upper = (-(2**127), 2**127) if HAS_INT_128 else (-(2**63), 2**64)
-        intervals = [
-            int(edge)
-            if isinstance(edge, float) and edge.is_integer() and lower <= edge < upper
-            else edge
-            for edge in intervals
-        ]
-        if BACKEND_VERSION < (2,):
-            if any(abs(edge) >= 2**53 for edge in intervals):
-                # A shared Float64 breakpoint array can round large integer boundaries.
-                indices = pl.when(native.is_not_null()).then(
-                    native.is_null().cast(pl.UInt32)
-                )
-                for edge in intervals:
-                    boundary: float | pl.Expr = edge
-                    if isinstance(edge, float):
-                        boundary = pl.lit(edge, dtype=pl.Float64)
-                    elif HAS_INT_128 and lower <= edge < upper:
-                        # Keep signed and unsigned 64-bit inputs comparable without rounding.
-                        boundary = pl.lit(edge, dtype=pl.Int128)
-                    crossed = native > boundary if right_closed else native >= boundary
-                    indices = indices + crossed.cast(pl.UInt32)
-            else:
-                breaks = pl.Series(intervals, dtype=pl.Float64)
-                position = pl.lit(breaks).search_sorted(
-                    native, side="left" if right_closed else "right"
-                )
-                # search_sorted assigns null an index. The first branch also keeps the name.
-                indices = (
-                    pl.when(native.is_null())
-                    .then(native.cast(pl.UInt32, strict=False))
-                    .otherwise(position)
-                    .cast(pl.UInt32)
-                )
+        if BACKEND_VERSION >= (2,) and all(abs(edge) < 2**53 for edge in intervals):
+            breaks = pl.Series(intervals, dtype=pl.Float64)
             return self._with_native(
-                indices if labels is False else indices.cast(pl.Enum(labels))
+                self.native.bin_intervals(
+                    breaks, labels=labels, right_closed=right_closed
+                )
             )
 
-        # A Polars breakpoint Series has one dtype. Counting the two types separately
-        # preserves integer precision when the user also supplied fractional breakpoints.
-        floats = [edge for edge in intervals if isinstance(edge, float)]
-        if not floats or len(floats) == len(intervals):
-            return self._with_native(
-                native.bin_intervals(
-                    pl.Series(intervals, strict=False),
-                    labels=labels,
-                    right_closed=right_closed,
-                )
+        from narwhals._compliant.series import bin_interval_search_bounds
+
+        categories = None if labels is False else pl.Series(labels, dtype=pl.Enum(labels))
+        result_dtype = pl.UInt32 if categories is None else categories.dtype
+
+        # Batches expose the input dtype without collecting a lazy frame. This keeps
+        # wide integers exact and supplies the binary search missing on older Polars.
+        def bin_batch(batch: pl.Series) -> pl.Series:
+            if batch.dtype == pl.Null:
+                return batch.cast(result_dtype)
+            dtype = native_to_narwhals_dtype(batch.dtype, self._version)
+            bounds, offset, comparison_dtype = bin_interval_search_bounds(
+                dtype, self._version, intervals, right_closed=right_closed
             )
-        integers = [edge for edge in intervals if not isinstance(edge, float)]
-        indices = native.bin_intervals(
-            pl.Series(integers, strict=False), labels=False, right_closed=right_closed
-        )
-        indices += native.bin_intervals(floats, labels=False, right_closed=right_closed)
+            values = batch.cast(narwhals_to_native_dtype(comparison_dtype, self._version))
+            breaks = pl.Series(bounds, dtype=values.dtype)
+            indices = breaks.search_sorted(
+                values, side="left" if right_closed else "right"
+            ).cast(pl.UInt32)
+            indices = (indices + offset).set(values.is_null(), None)
+            return indices if categories is None else categories.gather(indices)
+
         return self._with_native(
-            indices if labels is False else indices.cat.to(pl.Enum(labels))
+            self.native.map_batches(
+                bin_batch, return_dtype=result_dtype, is_elementwise=True
+            )
         )
 
     @requires.backend_version((1,))

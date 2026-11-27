@@ -11,6 +11,7 @@ from narwhals._utils import (
     Version,
     _Implementation,
     _resolve_sample_size,
+    _validate_bin_intervals,
     _validate_rolling_arguments,
     eager_namespace,
     ensure_type,
@@ -18,7 +19,6 @@ from narwhals._utils import (
     is_compliant_series,
     is_index_selector,
     native_repr,
-    prepare_bin_intervals,
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
@@ -1053,13 +1053,11 @@ class Series(Generic[IntoSeriesT]):
             without it being considered a breaking change.
 
         Arguments:
-            intervals: Finite breakpoints in strictly increasing order.
-                An empty sequence gives a single bin.
+            intervals: Strictly increasing, finite breakpoints. Pass `[]` for a single bin.
             labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
                 Labels have dtype `Enum` on Polars and pandas-like backends and
                 `Categorical` on PyArrow.
-            right_closed: Whether each bin includes its right edge. By default, bins
-                include their left edge, so a value equal to a breakpoint starts a new bin.
+            right_closed: Use right-closed bins `(a, b]`. Defaults to left-closed bins `[a, b)`.
 
         Raises:
             DuplicateError: If breakpoints or labels contain duplicates.
@@ -1067,8 +1065,8 @@ class Series(Generic[IntoSeriesT]):
             ShapeError: If the number of labels differs from `len(intervals) + 1`.
 
         Notes:
-            Nulls remain null. NaN goes in the last bin. A NumPy-backed pandas float
-            column also puts missing values in the last bin because it stores them as NaN.
+            Nulls stay null. NaN goes in the last bin, including missing values stored as
+            NaN in NumPy-backed pandas float columns.
 
         Examples:
             >>> import pyarrow as pa
@@ -1078,10 +1076,10 @@ class Series(Generic[IntoSeriesT]):
             >>> s.bin_intervals([1, 2], labels=False).to_list()
             [0, 1, None, 2]
         """
-        intervals_, labels_ = prepare_bin_intervals(intervals, labels)
+        intervals, labels = _validate_bin_intervals(intervals, labels)
         return self._with_compliant(
             self._compliant_series.bin_intervals(
-                intervals_, labels=labels_, right_closed=right_closed
+                intervals, labels=labels, right_closed=right_closed
             )
         )
 
