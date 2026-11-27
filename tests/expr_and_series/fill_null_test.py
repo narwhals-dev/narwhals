@@ -15,6 +15,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -36,6 +37,22 @@ def test_fill_null(constructor: Constructor) -> None:
         "c": [5.0, 99, 3, 2, 1],
     }
     assert_equal_data(result, expected)
+
+
+def test_arrow_fill_null_with_typed_nan(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    pa = pytest.importorskip("pyarrow")
+    df = nw.from_native(
+        arrow_constructor({"a": [pa.scalar(1.5, type=pa.float32()), None]})
+    )
+    xfail_if_builtin_dask(df, request)
+    result = df.select(nw.col("a").fill_null(nw.lit(float("nan"), nw.Float32)))
+    assert result.collect_schema() == {"a": nw.Float32}
+    assert_equal_data(
+        result.select(null=nw.col("a").is_null(), nan=nw.col("a").is_nan()),
+        {"null": [False, False], "nan": [False, True]},
+    )
 
 
 def test_fill_null_scalar_receiver(

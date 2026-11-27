@@ -103,8 +103,10 @@ class DaskLazyFrame(
         for _col, ser in self.native.items():  # noqa: PERF102
             yield ser
 
-    def _evaluate_single_output_expr(self, obj: DaskExpr) -> dx.Series:
-        results = obj._call(self)
+    def _evaluate_single_output_expr(
+        self, obj: DaskExpr, *, as_scalar: bool = False, index: dx.Index | None = None
+    ) -> dx.Series:
+        results = obj._call(self) if as_scalar else obj(self, index=index)
         if len(results) != 1:  # pragma: no cover
             msg = "multi-output expressions not allowed in this context"
             raise MultiOutputExpressionError(msg)

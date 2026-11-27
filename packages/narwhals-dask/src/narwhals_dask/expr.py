@@ -129,6 +129,7 @@ def trivial_binary_right(op: Callable[..., dx.Series]) -> Any:
 
 class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
     _implementation: Implementation = Implementation.DASK
+    _broadcast_literal: Self | None = None
 
     # Methods which are simple Narwhals->Dask translations.
     # Keep this simple, resist the temptation to do anything complex or clever.
@@ -180,41 +181,38 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         self._alias_output_names = alias_output_names
         self._version = version
 
-    def __call__(self, df: DaskLazyFrame) -> Sequence[dx.Series]:
-        return self._call(df)
-
     def __narwhals_namespace__(self) -> DaskNamespace:  # pragma: no cover
         from narwhals_dask.namespace import DaskNamespace
 
         return DaskNamespace(version=self._version)
 
     def broadcast(self) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            def broadcast_series(result: dx.Series) -> dx.Series:
-                # dask<=2024.10.0 raised KeyError for result[0] during collection.
-                scalar = result.loc[0][0]
-                if (
-                    is_dtype_pyarrow(result.dtype)
-                    and self._opt_metadata is not None
-                    and self._metadata.is_literal
-                ):
-                    # Broadcast a scalar without aligning against a second frame index.
-                    return df.native.index.map_partitions(
-                        _broadcast_arrow_literal,
-                        scalar,
-                        result.dtype,
-                        meta=result._meta.set_axis(df.native._meta.index),
-                    )
-                return scalar
+        # dask<=2024.10.0 raised KeyError for result[0] during collection.
+        expr = self._with_callable(lambda result: result.loc[0][0])
+        if self._opt_metadata is not None and self._metadata.is_literal:
+            expr._broadcast_literal = self
+        return expr
 
-            return [broadcast_series(result) for result in self(df)]
+    def __call__(
+        self, df: DaskLazyFrame, *, index: dx.Index | None = None
+    ) -> Sequence[dx.Series]:
+        """Preserve the dtype of an Arrow literal when expanding it into a column."""
+        if self._broadcast_literal is None:
+            return self._call(df)
+        target_index = df.native.index if index is None else index
 
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
+        def broadcast_literal(result: dx.Series) -> dx.Series:
+            scalar = result.loc[0][0]
+            if is_dtype_pyarrow(result.dtype):
+                return target_index.map_partitions(
+                    _broadcast_arrow_literal,
+                    scalar,
+                    result.dtype,
+                    meta=result._meta.set_axis(target_index._meta),
+                )
+            return scalar
+
+        return [broadcast_literal(result) for result in self._broadcast_literal(df)]
 
     @classmethod
     def from_column_names(
@@ -260,12 +258,14 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         call: Callable[..., dx.Series],
         /,
         expression_args: dict[str, Self] | None = None,
+        *,
+        scalar_args: bool = False,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             native_results: list[dx.Series] = []
-            native_series_list = self._call(df)
+            native_series_list = self(df)
             other_native_series = {
-                key: df._evaluate_single_output_expr(value)
+                key: df._evaluate_single_output_expr(value, as_scalar=scalar_args)
                 for key, value in (expression_args or {}).items()
             }
             for native_series in native_series_list:
@@ -297,9 +297,46 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         )
 
     def _with_binary(
-        self, call: Callable[[dx.Series, Any], dx.Series], other: Any
+        self,
+        call: Callable[[dx.Series, Any], dx.Series],
+        other: Self,
+        *,
+        broadcast: bool = False,
     ) -> Self:
-        return self._with_callable(call, expression_args={"other": other})
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            # A grouped expression may have different partitions from the source frame.
+            # Expand a typed literal on the index of the row-valued operand.
+            right = (
+                df._evaluate_single_output_expr(other)
+                if other._broadcast_literal is None
+                else None
+            )
+            index = (
+                right.index
+                if self._broadcast_literal is not None and right is not None
+                else None
+            )
+            results = []
+            for left in self(df, index=index):
+                rhs = (
+                    right
+                    if right is not None
+                    else df._evaluate_single_output_expr(other, index=left.index)
+                )
+                operands = (
+                    align_series_full_broadcast(df, left, rhs)
+                    if broadcast
+                    else (left, rhs)
+                )
+                results.append(call(*operands))
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def _binary_op(self, op_name: str, other: Any) -> Self:
         return self._with_binary(lambda expr, other: getattr(expr, op_name)(other), other)
@@ -312,39 +349,11 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
         ).alias("literal")
 
     def __floordiv__(self, other: Any) -> Self:
-        def _floordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series
-        ) -> dx.Series:
-            series, other = align_series_full_broadcast(df, series, other)
-            return floordiv_null_on_zero(series, other)
-
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_series = df._evaluate_single_output_expr(other)
-            return [_floordiv(df, series, other_series) for series in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
-        )
+        return self._with_binary(floordiv_null_on_zero, other, broadcast=True)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        def _rfloordiv(
-            df: DaskLazyFrame, series: dx.Series, other: dx.Series
-        ) -> dx.Series:
-            series, other = align_series_full_broadcast(df, series, other)
-            return floordiv_null_on_zero(other, series)
-
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            other_native = df._evaluate_single_output_expr(other)
-            return [_rfloordiv(df, series, other_native) for series in self(df)]
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
+        return self._with_binary(
+            lambda left, right: floordiv_null_on_zero(right, left), other, broadcast=True
         ).alias("literal")
 
     def max(self) -> Self:
@@ -523,18 +532,21 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                 lower=lower_bound, upper=upper_bound
             ),
             expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
+            scalar_args=True,
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
         return self._with_callable(
             lambda expr, lower_bound: expr.clip(lower=lower_bound),
             expression_args={"lower_bound": lower_bound},
+            scalar_args=True,
         )
 
     def clip_upper(self, upper_bound: Self) -> Self:
         return self._with_callable(
             lambda expr, upper_bound: expr.clip(upper=upper_bound),
             expression_args={"upper_bound": upper_bound},
+            scalar_args=True,
         )
 
     def n_unique(self) -> Self:
