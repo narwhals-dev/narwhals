@@ -19,6 +19,7 @@
         - cum_min
         - cum_prod
         - cum_sum
+        - cut
         - diff
         - drop_nulls
         - ewm_mean

@@ -18,6 +18,7 @@ from narwhals._utils import (
     is_compliant_series,
     is_index_selector,
     native_repr,
+    prepare_cut_arguments,
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
@@ -1035,6 +1036,46 @@ class Series(Generic[IntoSeriesT]):
                 lower_bound=self._extract_native(lower_bound),
                 upper_bound=self._extract_native(upper_bound),
             )
+        )
+
+    @unstable
+    def cut(
+        self,
+        breaks: Sequence[float],
+        *,
+        labels: Sequence[str] | None = None,
+        left_closed: bool = False,
+    ) -> Self:
+        r"""Bin continuous values into discrete categories.
+
+        Warning:
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            breaks: Unique cut points, in increasing order.
+            labels: Names of the categories, one more than the number of `breaks`.
+                If not given, they are built from the bin edges like in Polars,
+                for example `"(-inf, 1]"`.
+            left_closed: Whether to close the bins on the left (`[a, b)`) instead of on
+                the right (`(a, b]`).
+
+        Notes:
+            - The result is an `Enum` of the labels, except for PyArrow which returns a
+              `Categorical`.
+            - NaN values are mapped to null.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([-1.0, 0.5, 2.0, 3.5])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.cut([0, 2], labels=["low", "mid", "high"]).to_list()
+            ['low', 'mid', 'mid', 'high']
+        """
+        breaks_, labels_ = prepare_cut_arguments(breaks, labels, left_closed=left_closed)
+        return self._with_compliant(
+            self._compliant_series.cut(breaks_, labels=labels_, left_closed=left_closed)
         )
 
     def first(self) -> PythonLiteral:

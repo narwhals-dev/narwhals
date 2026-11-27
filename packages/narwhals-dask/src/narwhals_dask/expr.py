@@ -767,6 +767,7 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             use="lf.filter(nw.col('b') > 0).select('a')",
         )
     )
+    cut = not_implemented()
     first = not_implemented()
     rank = not_implemented()
     last = not_implemented()

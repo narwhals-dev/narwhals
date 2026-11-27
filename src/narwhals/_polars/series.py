@@ -342,6 +342,21 @@ class PolarsSeries:
             self.native.clip(upper_bound=extract_native(upper_bound))
         )
 
+    def cut(
+        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    ) -> Self:
+        if BACKEND_VERSION < (2,):  # pragma: no cover
+            # Polars 1 returns `Categorical` rather than `Enum`.
+            native = self.native.cut(
+                list(breaks), labels=list(labels), left_closed=left_closed
+            )
+            return self._with_native(native.cast(pl.Enum(list(labels))))
+        # `cut` is deprecated in favour of `bin_intervals`, which puts NaN in the last bin.
+        native = self.native.fill_nan(None).bin_intervals(
+            list(breaks), labels=list(labels), right_closed=not left_closed
+        )
+        return self._with_native(native)
+
     @requires.backend_version((1,))
     def replace_strict(
         self,

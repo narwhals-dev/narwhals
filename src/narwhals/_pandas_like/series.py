@@ -1304,6 +1304,26 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return self._with_native(result_native)
 
+    def cut(
+        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    ) -> Self:
+        inf = float("inf")
+        native = self.native
+        # `include_lowest` keeps `-inf` in the first bin, like Polars.
+        result = self.__native_namespace__().cut(
+            native,
+            bins=[-inf, *breaks, inf],
+            right=not left_closed,
+            labels=list(labels),
+            ordered=True,
+            include_lowest=True,
+        )
+        if left_closed:
+            # The last bin can't be closed on the right, so `cut` turns `inf` into null.
+            is_inf = native.eq(inf).fillna(value=False)
+            result = result.where(~is_inf, labels[-1])
+        return self._with_native(result)
+
     def is_native_dtype_pyarrow(self, native_dtype: Any) -> bool:
         impl = self._implementation
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"

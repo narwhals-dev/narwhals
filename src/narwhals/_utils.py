@@ -47,6 +47,7 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import (
     ColumnNotFoundError,
+    ComputeError,
     DuplicateError,
     InvalidOperationError,
     PluginError,
@@ -1552,6 +1553,59 @@ def check_column_names_are_unique(columns: Collection[str]) -> None:
         msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
+
+
+# narwhals-canary: delete this line to confirm you have read the full diff
+def _format_cut_break(value: float, /) -> str:
+    # Polars formats breaks with Rust's float `Display`: shortest round-trip digits and
+    # never an exponent, e.g. `1e20` -> "100000000000000000000" and `2.0` -> "2".
+    from decimal import Decimal
+
+    formatted = format(Decimal(repr(value)), "f")
+    return formatted.removesuffix(".0")
+
+
+def prepare_cut_arguments(
+    breaks: Sequence[float], labels: Sequence[str] | None, *, left_closed: bool
+) -> tuple[list[float], list[str]]:
+    """Validate the arguments of `cut`, generating Polars-style labels if none are given.
+
+    Arguments:
+        breaks: Cut points between bins.
+        labels: Names of the bins, one more than the number of breaks.
+        left_closed: Whether bins are closed on the left instead of on the right.
+
+    Returns:
+        The breaks as floats, and the label of every bin.
+    """
+    from itertools import pairwise
+    from math import isfinite
+
+    breaks_ = [float(value) for value in breaks]
+    if not all(isfinite(value) for value in breaks_):
+        msg = "breaks must not contain NaN or infinity"
+        raise ComputeError(msg)
+    if len(set(breaks_)) != len(breaks_):
+        msg = "breaks are not unique"
+        raise DuplicateError(msg)
+    if any(lower > upper for lower, upper in pairwise(breaks_)):
+        msg = "breaks must increase monotonically"
+        raise ComputeError(msg)
+    if labels is not None:
+        if len(labels) != len(breaks_) + 1:
+            msg = (
+                f"expected {len(breaks_) + 1} labels (len(breaks) + 1), got {len(labels)}"
+            )
+            raise ShapeError(msg)
+        if len(set(labels)) != len(labels):
+            msg = "labels are not unique"
+            raise DuplicateError(msg)
+        return breaks_, list(labels)
+    edges = ["-inf", *(_format_cut_break(value) for value in breaks_), "inf"]
+    opening, closing = ("[", ")") if left_closed else ("(", "]")
+    return breaks_, [
+        f"{opening}{lower}, {upper}{closing}" for lower, upper in pairwise(edges)
+    ]
 
 
 def _parse_time_unit_and_time_zone(

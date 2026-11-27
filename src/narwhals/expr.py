@@ -12,6 +12,7 @@ from narwhals._utils import (
     _validate_rolling_arguments,
     ensure_type,
     flatten,
+    prepare_cut_arguments,
     unstable,
 )
 from narwhals.dtypes import _validate_dtype
@@ -1696,6 +1697,61 @@ class Expr:
             )
         return self._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "clip", exprs=(lower_bound, upper_bound))
+        )
+
+    @unstable
+    def cut(
+        self,
+        breaks: Sequence[float],
+        *,
+        labels: Sequence[str] | None = None,
+        left_closed: bool = False,
+    ) -> Self:
+        r"""Bin continuous values into discrete categories.
+
+        Warning:
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            breaks: Unique cut points, in increasing order.
+            labels: Names of the categories, one more than the number of `breaks`.
+                If not given, they are built from the bin edges like in Polars,
+                for example `"(-inf, 1]"`.
+            left_closed: Whether to close the bins on the left (`[a, b)`) instead of on
+                the right (`(a, b]`).
+
+        Notes:
+            - The result is an `Enum` of the labels, except for PyArrow which returns a
+              `Categorical`.
+            - NaN values are mapped to null.
+            - Not yet supported for Dask, DuckDB, Ibis, PySpark and SQLFrame.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [-1.0, 0.5, 2.0, 3.5]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_bin=nw.col("a").cut([0, 2]))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |     a      a_bin |
+            |0 -1.0  (-inf, 0] |
+            |1  0.5     (0, 2] |
+            |2  2.0     (0, 2] |
+            |3  3.5   (2, inf] |
+            └──────────────────┘
+        """
+        breaks_, labels_ = prepare_cut_arguments(breaks, labels, left_closed=left_closed)
+        return self._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "cut",
+                breaks=breaks_,
+                labels=labels_,
+                left_closed=left_closed,
+            )
         )
 
     def first(self, order_by: str | Iterable[str] | None = None) -> Self:
