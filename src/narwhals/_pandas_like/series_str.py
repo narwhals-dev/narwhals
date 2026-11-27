@@ -107,7 +107,7 @@ class PandasLikeSeriesStringNamespace(
                 "Additionally, make sure you have pandas version 1.5+ and pyarrow installed. "
             )
             raise TypeError(msg)
-        return self.with_native(self.native.str.split(pat=by))
+        return self.with_native(self.native.str.split(pat=by, regex=False))
 
     def to_datetime(self, format: str | None) -> PandasLikeSeries:
         # If we know inputs are timezone-aware, we can pass `utc=True` for better performance.

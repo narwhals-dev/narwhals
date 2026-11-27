@@ -4,7 +4,7 @@ import re
 from functools import partial
 from typing import TYPE_CHECKING
 
-from narwhals._spark_like.utils import strptime_to_pyspark_format
+from narwhals._spark_like.utils import _sqlframe_dialect, strptime_to_pyspark_format
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, not_implemented, requires
 
@@ -15,6 +15,14 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
+    def split(self, by: str) -> SparkLikeExpr:
+        if self.compliant._implementation.is_sqlframe() and _sqlframe_dialect() in {
+            "bigquery",
+            "snowflake",
+        }:
+            return super().split(by)
+        return super().split(re.escape(by))
+
     def _strip_chars(self, characters: str, *, start: bool) -> SparkLikeExpr:
         escaped = re.escape(characters)
         pattern = rf"^[{escaped}]+" if start else rf"[{escaped}]+$"
