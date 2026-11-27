@@ -92,7 +92,12 @@ def _arrow_replacement_dtype(
             fallback_dtype = pd.ArrowDtype(pa.scalar(node.kwargs["value"]).type)
     if fallback_dtype == "null[pyarrow]":
         return replacements.dtype
-    dtype = pd.concat([replacements, pd.Series(dtype=fallback_dtype)]).dtype
+    fallback = pd.Series(dtype=fallback_dtype)
+    if get_dtype_backend(fallback_dtype) == "numpy_nullable":
+        fallback = fallback.convert_dtypes(dtype_backend="pyarrow")
+    if replacements.dtype == "null[pyarrow]" and fallback.dtype.kind in "biuf":
+        return pd.ArrowDtype(pa.array(fallback).type)
+    dtype = pd.concat([replacements, fallback]).dtype
     if not pd.api.types.is_object_dtype(dtype):
         return dtype
     if any(

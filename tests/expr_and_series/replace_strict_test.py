@@ -199,6 +199,42 @@ def test_replace_strict_dask_arrow_inferred_dtype(
     assert_equal_data(collected, {"a": expected})
 
 
+@pytest.mark.parametrize(
+    ("replacement", "storage", "default", "expected"),
+    [
+        (9, "Int64", nw.col("b"), [9, 4, None]),
+        (None, "Int64", nw.col("b"), [None, 4, None]),
+        (None, "int64[pyarrow]", nw.col("b"), [None, 4, None]),
+        (None, "Int64", 4, [None, 4, 4]),
+    ],
+)
+def test_replace_strict_dask_arrow_integer_default(
+    replacement: int | None,
+    storage: str,
+    default: nw.Expr | int,
+    expected: list[int | None],
+    request: pytest.FixtureRequest,
+) -> None:
+    dd = pytest.importorskip("dask.dataframe")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    frame = pd.DataFrame(
+        {
+            "a": pd.array([1, 2, 3], dtype="int64[pyarrow]"),
+            "b": pd.Series([3, 4, None], dtype=storage),
+        }
+    )
+    df = nw.from_native(dd.from_pandas(frame, npartitions=2))
+    if replacement is None:
+        xfail_if_builtin_dask(df, request)
+    result = df.select(nw.col("a").replace_strict({1: replacement}, default=default))
+    assert result.collect_schema() == {"a": nw.Int64}
+    collected = result.collect()
+    assert collected.schema == {"a": nw.Int64}
+    assert_equal_data(collected, {"a": expected})
+
+
 def test_replace_strict_dask_arrow_casts_only_used_defaults(
     request: pytest.FixtureRequest,
 ) -> None:
