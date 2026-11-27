@@ -731,12 +731,12 @@ def bin_interval_indices(
         # `pc.search_sorted` requires pyarrow 26.
         import numpy as np  # ignore-banned-import
 
-        needles = values.fill_null(lit(0, values.type)).to_numpy()
-        found = np.searchsorted(edges.to_numpy(), needles, side=side)
+        search_values = values.fill_null(lit(0, values.type)).to_numpy()
+        bin_indices = np.searchsorted(edges.to_numpy(), search_values, side=side)
         indices = pc.if_else(
             values.is_null(),
             lit(None, index_type),
-            pa.array(np.asarray(found, dtype=np.uint32)),
+            pa.array(np.asarray(bin_indices, dtype=np.uint32)),
         )
     else:
         indices = pc.search_sorted(edges, values, side=side).cast(index_type)  # type: ignore[attr-defined]
