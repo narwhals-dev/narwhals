@@ -57,12 +57,29 @@ class SQLExprStringNamespace(
         options: list[Any] = []
         if not literal and self.compliant._implementation.is_duckdb():
             options = [self._lit("g")]
+        # A null `value` leaves the string unchanged (as in Polars). Falling back to the
+        # match itself does that without repeating `expr`, which grows exponentially
+        # when calls are chained.
+        unchanged = self._lit(pattern if literal else self._whole_match)
         return self.compliant._with_elementwise(
             lambda expr, value: self._function(
-                fname, expr, self._lit(pattern), value, *options
+                fname,
+                expr,
+                self._lit(pattern),
+                self.compliant._coalesce(value, unchanged),
+                *options,
             ),
             expression_args={"value": value},
         )
+
+    @property
+    def _whole_match(self) -> str:
+        # Java regex (PySpark) refers to the whole match as `$0`; RE2 (DuckDB, and
+        # SQLFrame and Ibis on top of it) as `\0`.
+        implementation = self.compliant._implementation
+        if implementation.is_pyspark() or implementation.is_pyspark_connect():
+            return "$0"
+        return r"\0"
 
     def slice(self, offset: int, length: int | None) -> SQLExprT:
         def func(expr: NativeExpr) -> NativeExpr:

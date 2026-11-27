@@ -322,8 +322,13 @@ def test_str_replace_null_value_series(
     assert_equal_data({"a": result_series}, {"a": ["aXc", "def"]})
 
 
+@pytest.mark.parametrize("n", [1, -1])
+@pytest.mark.parametrize("literal", [True, False])
 def test_str_replace_null_value_expr(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    n: int,
+    literal: bool,  # noqa: FBT001
 ) -> None:
     if any(x in str(constructor) for x in ("pyspark", "ibis")):
         request.applymarker(
@@ -340,9 +345,47 @@ def test_str_replace_null_value_expr(
         request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
     df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
     result_df = df.select(
-        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=1, literal=True)
+        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=n, literal=literal)
     )
     assert_equal_data(result_df, {"a": ["aXc", "def"]})
+
+
+@pytest.mark.parametrize("literal", [True, False])
+def test_str_replace_all_null_value_expr(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    literal: bool,  # noqa: FBT001
+) -> None:
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(
+            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
+        )
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37"):
+        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
+    data = {"a": ["abc", "def", None], "b": ["X", None, "Y"]}
+    df = nw.from_native(constructor(data))
+    result_df = df.select(
+        nw.col("a").str.replace_all(pattern="b", value=nw.col("b"), literal=literal)
+    )
+    assert_equal_data(result_df, {"a": ["aXc", "def", None]})
+
+
+def test_str_replace_all_null_value_chained(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Falling back to the input would repeat it in every call, so the expression
+    # would double in size each time and this would effectively hang.
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(
+            pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
+        )
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37"):
+        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
+    expr = nw.col("a")
+    for _ in range(20):
+        expr = expr.str.replace_all("a", nw.col("b"), literal=True)
+    df = nw.from_native(constructor({"a": ["aa", "x"], "b": ["b", None]}))
+    assert_equal_data(df.select(expr), {"a": ["bb", "x"]})
 
 
 @pytest.mark.parametrize(
