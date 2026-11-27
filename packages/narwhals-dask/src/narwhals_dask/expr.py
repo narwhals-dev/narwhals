@@ -200,7 +200,10 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                 ):
                     # Broadcast a scalar without aligning against a second frame index.
                     return df.native.index.map_partitions(
-                        _broadcast_arrow_literal, scalar, result.dtype, meta=result._meta
+                        _broadcast_arrow_literal,
+                        scalar,
+                        result.dtype,
+                        meta=result._meta.set_axis(df.native._meta.index),
                     )
                 return scalar
 
@@ -797,13 +800,16 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
             msg = "`replace_strict` requires an explicit value for `default` for dask backend."
             raise ValueError(msg)
 
+        scalar_only = self._metadata.is_scalar_like and default._metadata.is_scalar_like
         mapping = dict(zip(old, new, strict=False))
         old_ = list(old)
 
         def replace(
             df: DaskLazyFrame, series: dx.Series, default_series: dx.Series
         ) -> dx.Series:
-            if is_dtype_pyarrow(series.dtype):
+            if is_dtype_pyarrow(series.dtype) or (
+                scalar_only and is_dtype_pyarrow(default_series.dtype)
+            ):
                 if return_dtype is not None:
                     dtype = _schema_class(self._version)({"": return_dtype}).to_pandas(
                         "pyarrow"
@@ -841,7 +847,9 @@ class DaskExpr(CompliantExpr["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[
                         )
                     return result
 
-                aligned = align_series_by_index(df, value=series, fallback=default_series)
+                aligned = align_series_by_index(
+                    df, scalar_only=scalar_only, value=series, fallback=default_series
+                )
                 return aligned.map_partitions(
                     replace_partition, meta=(series.name, dtype)
                 )

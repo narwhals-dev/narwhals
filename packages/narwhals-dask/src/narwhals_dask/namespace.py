@@ -222,8 +222,13 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
             series = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
             )
+            if not series:
+                msg = "mean_horizontal requires at least one input column"
+                raise ValueError(msg)
             columns = align_series_by_index(
-                df, **{str(i): s for i, s in enumerate(series)}
+                df,
+                scalar_only=all(expr._metadata.is_scalar_like for expr in exprs),
+                **{str(i): s for i, s in enumerate(series)},
             )
             return [columns.mean(axis=1)]
 

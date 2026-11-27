@@ -50,10 +50,15 @@ def align_series_full_broadcast(
     ]  # pyright: ignore[reportReturnType]
 
 
-def align_series_by_index(df: DaskLazyFrame, **series: dx.Series) -> dx.DataFrame:
-    """Align expression results on the source index, including shuffled group transforms."""
-    frame = df.native[[]].assign(**series)
-    if dx.expr.are_co_aligned(df.native._expr, *(s._expr for s in series.values())):
+def align_series_by_index(
+    df: DaskLazyFrame, *, scalar_only: bool, **series: dx.Series
+) -> dx.DataFrame:
+    """Align expression results on their one-row scalar index or the source frame index."""
+    source = next(iter(series.values())).to_frame() if scalar_only else df.native
+    frame = source[[]].assign(**series)
+    if scalar_only or dx.expr.are_co_aligned(
+        source._expr, *(s._expr for s in series.values())
+    ):
         return frame
 
     def check_index(part: pd.DataFrame) -> pd.DataFrame:

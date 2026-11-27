@@ -14,6 +14,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    maybe_collect,
     xfail_if_builtin_dask,
     xfail_if_pyspark_connect,
 )
@@ -217,6 +218,27 @@ def test_replace_strict_with_grouped_default(arrow_constructor: Constructor) -> 
     expr = nw.col("a").replace_strict({1: 9}, default=nw.col("a").sum().over("g"))
     result = df.select("a", replaced=expr).sort("a")
     assert_equal_data(result, {"a": [1, 2, 3, 4], "replaced": [9, 6, 4, 6]})
+
+
+@pytest.mark.parametrize(
+    ("value", "default", "expected"),
+    [
+        (nw.lit(7, dtype=nw.Int64), nw.col("a").sum(), 6),
+        (nw.col("a").sum(), nw.lit(7, dtype=nw.Int64), 7),
+    ],
+    ids=["literal", "reduction"],
+)
+def test_replace_strict_scalar_default(
+    arrow_constructor: Constructor, value: nw.Expr, default: nw.Expr, expected: int
+) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, 2, 3]}))
+    result = df.select(
+        replaced=value.replace_strict({1: 9}, default=default, return_dtype=nw.Int64)
+    )
+    assert result.collect_schema() == {"replaced": nw.Int64}
+    collected = maybe_collect(result)
+    assert collected.schema == {"replaced": nw.Int64}
+    assert_equal_data(collected, {"replaced": [expected]})
 
 
 def test_dask_replace_strict_with_shuffled_duplicate_index(
