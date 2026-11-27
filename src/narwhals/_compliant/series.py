@@ -97,7 +97,10 @@ def bin_interval_search_bounds(
         needs_adjustment = gt if right_closed else lt
         float_bounds = []
         for edge in intervals:
-            rounded = float(edge)
+            try:
+                rounded = float(edge)
+            except OverflowError:
+                rounded = inf if edge > 0 else -inf
             # A wide integer can round to a Float64 on the wrong side of the edge.
             if needs_adjustment(rounded, edge):
                 rounded = nextafter(rounded, direction)

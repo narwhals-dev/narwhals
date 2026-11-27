@@ -1571,7 +1571,7 @@ def _validate_bin_intervals(
     breaks: list[float] = [
         int(value) if isinstance(value, Integral) else value for value in intervals
     ]
-    if not all(isfinite(value) for value in breaks):
+    if not all(isinstance(value, int) or isfinite(value) for value in breaks):
         msg = "intervals must not contain NaN or infinity"
         raise ComputeError(msg)
     if len(set(breaks)) != len(breaks):

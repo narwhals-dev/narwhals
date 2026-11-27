@@ -5,6 +5,7 @@
 # https://github.com/pola-rs/polars/blob/7f902bd3ffd27ff82d14278a09a295ff2f7aed92/py-polars/tests/unit/operations/test_binning.py
 from __future__ import annotations
 
+from sys import float_info
 from typing import Any, Literal
 
 import pytest
@@ -124,6 +125,22 @@ def test_bin_intervals_wide_breaks_on_floats(constructor_eager: ConstructorEager
         right=a.bin_intervals(breaks, labels=False, right_closed=True),
     )
     assert_equal_data(result, {"left": [0, 1, 2], "right": [0, 1, 2]})
+
+
+def test_bin_intervals_breaks_outside_float64(
+    constructor_eager: ConstructorEager,
+) -> None:
+    data = {"i": [0, 1, 2, 3], "f": [-inf, -float_info.max, float_info.max, inf]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    huge = 10**400
+    result = df.select(
+        integer=nw.col("i").bin_intervals([huge], labels=False),
+        left=nw.col("f").bin_intervals([-huge, huge], labels=False),
+        right=nw.col("f").bin_intervals([-huge, huge], labels=False, right_closed=True),
+    )
+    assert_equal_data(
+        result, {"integer": [0, 0, 0, 0], "left": [0, 1, 1, 2], "right": [0, 1, 1, 2]}
+    )
 
 
 def test_bin_intervals_nan_and_null(constructor_eager: ConstructorEager) -> None:
