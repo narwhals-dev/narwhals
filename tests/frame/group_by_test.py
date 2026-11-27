@@ -49,6 +49,70 @@ def test_group_by_complex() -> None:
         )
 
 
+def test_group_by_complex_preserves_cast_dtype() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4005
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame({"k": ["a", "a", "b"], "v": [1, 2, 2], "x": [1.0, 2.0, 3.0]})
+    )
+    with pytest.warns(UserWarning, match="complex group-by"):
+        result = df.group_by("k").agg(
+            n=nw.len().cast(nw.Int64),
+            u=nw.col("v").n_unique().cast(nw.Int64),
+            m=nw.col("x").mean(),
+        )
+    assert_equal_data(
+        result.sort("k"), {"k": ["a", "b"], "n": [2, 1], "u": [2, 1], "m": [1.5, 3.0]}
+    )
+    assert result.schema["n"].is_integer()
+    assert result.schema["u"].is_integer()
+    assert result.schema["m"] == nw.Float64
+
+
+def test_group_by_complex_mixed_dtype_outputs() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4005
+    # If an expression evaluates to different dtypes across groups, there is
+    # no single dtype to restore, so the output is left alone.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame(
+            {"k": ["a", "a", "b"], "x": [1, 2, "z"], "v": [1, 2, 2]}, dtype=object
+        )
+    )
+    with pytest.warns(UserWarning, match="complex group-by"):
+        result = df.group_by("k").agg(
+            s=nw.col("x").sum(), m=nw.col("v").mean(), t=(nw.col("v").sum() + 1)
+        )
+    native = result.sort("k").to_native()
+    assert native["s"].tolist() == [3, "z"]
+    assert native["s"].dtype == object
+    assert native["m"].dtype == "float64"
+    assert native["t"].dtype == "int64"
+
+
+def test_group_by_complex_duplicate_output_names() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4005
+    # Duplicate output names are still rejected, as before.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame({"k": ["a", "a", "b"], "v": [1, 2, 2], "x": [1.0, 2.0, 3.0]})
+    )
+    with (
+        pytest.warns(UserWarning, match="complex group-by"),
+        pytest.raises(DuplicateError, match="unique column names"),
+    ):
+        df.group_by("k").agg(
+            nw.col("v").sum().cast(nw.Int64).alias("x"),
+            nw.col("v").n_unique().cast(nw.Int64).alias("x"),
+        )
+
+
 def test_group_by_complex_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
