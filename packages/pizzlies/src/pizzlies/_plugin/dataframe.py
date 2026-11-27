@@ -1,0 +1,1448 @@
+from __future__ import annotations
+
+import heapq
+import operator
+import random
+from bisect import bisect_left, bisect_right
+from collections import Counter
+from collections.abc import Mapping
+from functools import cache
+from itertools import chain, compress, islice, repeat
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
+
+from narwhals.compliant import EagerDataFrame
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.utils import Implementation
+from pizzlies._plugin._vendored import (
+    assert_never,
+    check_column_names_are_unique,
+    not_implemented,
+    scale_bytes,
+)
+from pizzlies._plugin.repr import frame_repr
+from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.utils import (
+    asof_excluded_right,
+    canonical_nans,
+    dtypes_compatible,
+    gatherer,
+    infer_dtype,
+    is_native_frame,
+    nan_last,
+    nan_last_column,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Collection, Iterable, Iterator, Sequence
+    from io import BytesIO
+    from pathlib import Path
+    from types import ModuleType
+
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+    from _typeshed import SupportsWrite
+    from typing_extensions import Self, TypeIs
+
+    from narwhals.compliant import CompliantDataFrame, CompliantLazyFrame
+    from narwhals.dtypes import DType
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        Backend,
+        IntoDType,
+        JoinStrategy,
+        PivotAgg,
+        SizedMultiIndexSelector,
+        SizedMultiNameSelector,
+        SizeUnit,
+        _2DArray,
+        _SliceIndex,
+        _SliceName,
+    )
+    from narwhals.utils import Version
+    from pizzlies._plugin.expr import DictExpr
+    from pizzlies._plugin.group_by import DictGroupBy
+    from pizzlies._plugin.namespace import DictNamespace
+    from pizzlies._plugin.typing import Context, DictFrame, NativeSeries
+
+
+def _pivot_label(value: Any, *, quote: bool) -> str:
+    """Format a pivot key as Polars does in output column names."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return f'"{value}"' if quote else value
+    return str(value)
+
+
+def _row_filter(
+    mask: Sequence[Any], *, n_kept: int, n_columns: int
+) -> Callable[[Sequence[Any]], list[Any]]:
+    """Keep the rows of any column where `mask` is truthy, in order."""
+    if n_columns > 1 and n_kept * 2 < len(mask):
+        # Gathering the kept rows beats scanning each whole column with `compress`,
+        # once their indices are found (in one scan, shared by all columns).
+        return gatherer(list(compress(range(len(mask)), mask)))
+    return lambda column: list(compress(column, mask))
+
+
+def _nullable_gatherer(
+    indices: Sequence[int | None],
+) -> Callable[[Sequence[Any]], list[Any]]:
+    """Like `gatherer`, where a `None` index yields a null."""
+    # Shift by one and gather from the column with a leading null, so that `None`
+    # becomes index 0 and the getter can stay at C speed.
+    gather = gatherer([0 if i is None else i + 1 for i in indices])
+    return lambda column: gather([None, *column])
+
+
+def _unique_key_index(keys: list[Any]) -> dict[Any, int] | None:
+    """Map each non-null key to its 1-based row, or return `None` if any key repeats.
+
+    Rows are 1-based so that every hit is truthy, and probe results can be filtered at
+    C speed with `compress` and `filter(None, ...)`.
+    """
+    index = dict(zip(keys, range(1, len(keys) + 1), strict=True))
+    n_nulls = keys.count(None)
+    if len(index) != len(keys) - n_nulls + (n_nulls > 0):
+        return None
+    index.pop(None, None)
+    return index
+
+
+class DictDataFrame(
+    EagerDataFrame["DictSeries", "DictExpr", "DictFrame", "NativeSeries"]  # type: ignore[type-var]
+):
+    _implementation = Implementation.UNKNOWN
+    # Set on the sub-frames of `over` partitions and `group_by` groups, so that dtype
+    # selectors pick the same columns in each (e.g. an all-null slice infers `Unknown`).
+    _parent_schema: Callable[[], Mapping[str, DType]] | None = None
+
+    def __init__(
+        self,
+        native_dataframe: DictFrame,
+        *,
+        version: Version,
+        validate_column_names: bool = True,
+        validate_lengths: bool = True,
+    ) -> None:
+        if validate_column_names:
+            check_column_names_are_unique(native_dataframe.keys())
+        if validate_lengths:
+            lengths = {len(column) for column in native_dataframe.values()}
+            if len(lengths) > 1:
+                msg = f"Expected all columns to have the same length, got: {sorted(lengths)}."
+                raise ShapeError(msg)
+        self._native_frame: DictFrame = native_dataframe
+        self._version = version
+
+    @staticmethod
+    def _is_native(obj: DictFrame | Any) -> TypeIs[DictFrame]:
+        return is_native_frame(obj)
+
+    @classmethod
+    def from_native(cls, data: DictFrame, /, *, context: Context) -> Self:
+        return cls(data, version=context._version)
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: Context,
+        schema: Mapping[str, IntoDType | None] | None,
+    ) -> Self:
+        names = list(schema) if schema else list(data)
+        native: DictFrame = {name: list(data[name]) if data else [] for name in names}
+        result = cls(native, version=context._version)
+        if schema:
+            casts = {name: dtype for name, dtype in schema.items() if dtype is not None}
+            if casts:
+                result = result.with_columns(
+                    *(
+                        result.__narwhals_namespace__().col(name).cast(dtype)
+                        for name, dtype in casts.items()
+                    )
+                )
+        return result
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        /,
+        *,
+        context: Context,
+        schema: Mapping[str, IntoDType | None] | None,
+    ) -> Self:
+        names = list(schema) if schema else list(dict.fromkeys(chain.from_iterable(data)))
+        native: DictFrame = {name: [row.get(name) for row in data] for name in names}
+        if schema:
+            return cls.from_dict(native, context=context, schema=schema)
+        return cls(native, version=context._version)
+
+    @classmethod
+    def from_numpy(
+        cls,
+        data: _2DArray,
+        /,
+        *,
+        context: Context,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
+    ) -> Self:
+        names = (
+            list(schema)
+            if isinstance(schema, Mapping)
+            else cls._numpy_column_names(data, schema)
+        )
+        check_column_names_are_unique(names)
+        native = {
+            name: column.tolist() for name, column in zip(names, data.T, strict=True)
+        }
+        if isinstance(schema, Mapping):
+            return cls.from_dict(native, context=context, schema=schema)
+        return cls(native, version=context._version)
+
+    @classmethod
+    def from_arrow(cls, data: Any, /, *, context: Context) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        # Accepts both `pa.Table` and any `__arrow_c_stream__` object.
+        table = pa.table(data)
+        check_column_names_are_unique(table.column_names)
+        native: DictFrame = {
+            name: column.to_pylist()
+            for name, column in zip(table.column_names, table.columns, strict=True)
+        }
+        return cls(native, version=context._version)
+
+    def __narwhals_namespace__(self) -> DictNamespace:
+        from pizzlies._plugin.namespace import DictNamespace
+
+        return DictNamespace(version=self._version)
+
+    def __native_namespace__(self) -> ModuleType:
+        # The plugin module, not `builtins`: Narwhals resolves it back as a
+        # backend, e.g. `nw.from_numpy(arr, backend=nw.get_native_namespace(df))`.
+        import pizzlies
+
+        return pizzlies
+
+    def __narwhals_dataframe__(self) -> Self:
+        return self
+
+    def __narwhals_lazyframe__(self) -> Self:
+        return self
+
+    def _with_version(self, version: Version) -> Self:
+        return self.__class__(
+            self.native,
+            version=version,
+            validate_column_names=False,
+            validate_lengths=False,
+        )
+
+    def _with_native(self, df: DictFrame, *, validate_column_names: bool = True) -> Self:
+        return self.__class__(
+            df,
+            version=self._version,
+            validate_column_names=validate_column_names,
+            validate_lengths=False,
+        )
+
+    @property
+    def columns(self) -> list[str]:
+        return list(self.native.keys())
+
+    @property
+    def schema(self) -> dict[str, DType]:
+        version = self._version
+        return {
+            name: infer_dtype(column, version) for name, column in self.native.items()
+        }
+
+    def collect_schema(self) -> dict[str, DType]:
+        return self.schema
+
+    def _schema_for_sub_frames(self) -> Callable[[], Mapping[str, DType]]:
+        """This frame's schema, inferred on first call, for its sub-frames' `_parent_schema`."""
+        return self._parent_schema or cache(lambda: self.schema)
+
+    def native_repr(self) -> str:
+        return frame_repr(self.native, self.schema)
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return (len(self), len(self.native))
+
+    def __len__(self) -> int:
+        return len(next(iter(self.native.values()), []))
+
+    # Selection and projection
+    def get_column(self, name: str) -> DictSeries:
+        # Membership first: the full existence check is O(columns), for the error only.
+        if name not in self.native and (error := self._check_columns_exist([name])):
+            raise error
+        return DictSeries(self.native[name], name=name, version=self._version)
+
+    def iter_columns(self) -> Iterator[DictSeries]:
+        for name, column in self.native.items():
+            yield DictSeries(column, name=name, version=self._version)
+
+    _iter_columns = iter_columns
+
+    def simple_select(self, *column_names: str) -> Self:
+        if error := self._check_columns_exist(column_names):
+            raise error
+        check_column_names_are_unique(column_names)
+        return self._with_native(
+            {name: self.native[name] for name in column_names},
+            validate_column_names=False,
+        )
+
+    def select(self, *exprs: DictExpr) -> Self:
+        new_series = self._evaluate_exprs(*exprs)
+        if not new_series:
+            return self._with_native({}, validate_column_names=False)
+        names = [s.name for s in new_series]
+        check_column_names_are_unique(names)
+        aligned = new_series[0]._align_full_broadcast(*new_series)
+        return self._with_native(
+            {s.name: s.native for s in aligned}, validate_column_names=False
+        )
+
+    def with_columns(self, *exprs: DictExpr) -> Self:
+        native = dict(self.native)
+        new_series = self._evaluate_exprs(*exprs)
+        check_column_names_are_unique([series.name for series in new_series])
+        for series in new_series:
+            native[series.name] = self._extract_comparand(series)
+        return self._with_native(native, validate_column_names=False)
+
+    def _extract_comparand(self, other: DictSeries) -> list[Any]:
+        length = len(self)
+        if not other._broadcast:
+            if (len_other := len(other)) != length:
+                msg = f"Expected object of length {length}, got: {len_other}."
+                raise ShapeError(msg)
+            return other.native
+        value = other.native[0] if other.native else None
+        return [value] * length
+
+    def rename(self, mapping: Mapping[str, str]) -> Self:
+        if error := self._check_columns_exist(list(mapping)):
+            raise error
+        # Check before building the dict: duplicate keys would silently drop columns.
+        names = [mapping.get(name, name) for name in self.native]
+        check_column_names_are_unique(names)
+        native = dict(zip(names, self.native.values(), strict=True))
+        return self._with_native(native, validate_column_names=False)
+
+    def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
+        if strict and (error := self._check_columns_exist(columns)):
+            raise error
+        to_drop = set(columns)
+        return self._with_native(
+            {name: column for name, column in self.native.items() if name not in to_drop},
+            validate_column_names=False,
+        )
+
+    # Row-wise operations
+    def _mask_rows(self, mask: Sequence[bool]) -> Self:
+        if len(mask) != len(self):
+            msg = f"Expected mask of length {len(self)}, got: {len(mask)}."
+            raise ShapeError(msg)
+        keep = _row_filter(mask, n_kept=mask.count(True), n_columns=len(self.native))
+        return self._with_native(
+            {name: keep(column) for name, column in self.native.items()},
+            validate_column_names=False,
+        )
+
+    def filter(self, predicate: DictExpr | Any) -> Self:
+        if isinstance(predicate, list):
+            return self._mask_rows(predicate)
+        mask = self._evaluate_single_output_expr(predicate)
+        return self._mask_rows(self._extract_comparand(mask))
+
+    def drop_nulls(self, subset: Sequence[str] | None) -> Self:
+        if subset is not None and (error := self._check_columns_exist(subset)):
+            raise error
+        columns = [self.native[name] for name in (subset or self.columns)]
+        if not columns:
+            return self
+        if len(columns) == 1:
+            mask = [value is not None for value in columns[0]]
+        else:
+            mask = [
+                all(value is not None for value in row)
+                for row in zip(*columns, strict=True)
+            ]
+        return self._mask_rows(mask)
+
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeries]) -> Self:
+        # Public entry point (e.g. `df[indices]`): coerce arbitrary index objects
+        # (NumPy ints, ...) to `int` once, then reuse across every column.
+        return self._gather_positions([operator.index(i) for i in rows])
+
+    def _gather_positions(self, indices: Iterable[int]) -> Self:
+        """Gather rows at `indices`, which must already be plain `int` positions.
+
+        The trusted-int counterpart to `_gather`: internal callers that build
+        their own positions (`sort`, `unique`, `sample`, grouping) skip the
+        per-row `operator.index` coercion.
+        """
+        return self._with_native(
+            {name: [column[i] for i in indices] for name, column in self.native.items()},
+            validate_column_names=False,
+        )
+
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
+        return self._with_native(
+            {
+                name: column[rows.start : rows.stop : rows.step]
+                for name, column in self.native.items()
+            },
+            validate_column_names=False,
+        )
+
+    def _select_multi_index(self, columns: SizedMultiIndexSelector[NativeSeries]) -> Self:
+        names = self.columns
+        return self.simple_select(*(names[i] for i in columns))
+
+    def _select_multi_name(self, columns: SizedMultiNameSelector[NativeSeries]) -> Self:
+        return self.simple_select(*columns)
+
+    def _select_slice_index(self, columns: _SliceIndex | range) -> Self:
+        return self.simple_select(
+            *self.columns[columns.start : columns.stop : columns.step]
+        )
+
+    def _select_slice_name(self, columns: _SliceName) -> Self:
+        names = self.columns
+        start = names.index(columns.start) if columns.start is not None else None
+        stop = names.index(columns.stop) + 1 if columns.stop is not None else None
+        step: Any = columns.step
+        return self.simple_select(*names[start:stop:step])
+
+    def head(self, n: int) -> Self:
+        return self._gather_slice(slice(None, n))
+
+    def tail(self, n: int) -> Self:
+        length = len(self)
+        start = max(length - n, 0) if n >= 0 else -n
+        return self._gather_slice(slice(start, None))
+
+    def gather_every(self, n: int, offset: int) -> Self:
+        return self._gather_slice(slice(offset, None, n))
+
+    def _sorted_indices(
+        self, by: Sequence[str], *, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> list[int]:
+        """Row indices ordered by `by`, ascending unless `descending` says otherwise."""
+        flags = [descending] * len(by) if isinstance(descending, bool) else descending
+        indices = list(range(len(self)))
+        # Python's sort is stable (with `reverse=True` too), so sorting by each key
+        # from the least to the most significant one orders by all of them, keyed
+        # in C by `column.__getitem__` rather than by a per-row Python tuple. Nulls
+        # can't be compared, so they are split off onto the requested end.
+        for name, desc in reversed(tuple(zip(by, flags, strict=True))):
+            column = nan_last_column(self.native[name])
+            if None not in column:
+                indices.sort(key=column.__getitem__, reverse=desc)
+                continue
+            nulls = [i for i in indices if column[i] is None]
+            rest = [i for i in indices if column[i] is not None]
+            rest.sort(key=column.__getitem__, reverse=desc)
+            indices = rest + nulls if nulls_last else nulls + rest
+        return indices
+
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
+        if error := self._check_columns_exist(by):
+            raise error
+        return self._gather_positions(
+            self._sorted_indices(by, descending=descending, nulls_last=nulls_last)
+        )
+
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        by = list(by)
+        if error := self._check_columns_exist(by):
+            raise error
+        if len(by) == 1:
+            column = nan_last_column(self.native[by[0]])
+            smallest = reverse if isinstance(reverse, bool) else reverse[0]
+            picker = heapq.nsmallest if smallest else heapq.nlargest
+            indices = (i for i in range(len(self)) if column[i] is not None)
+            top = picker(k, indices, key=column.__getitem__)
+            if len(top) < k:
+                # `k` exceeds the non-null count, so `sort(nulls_last=True).head(k)`
+                # would spill into the null rows (original order); match that.
+                nulls = (i for i in range(len(self)) if column[i] is None)
+                top += list(islice(nulls, k - len(top)))
+            return self._gather_positions(top)
+        descending = (
+            not reverse if isinstance(reverse, bool) else [not r for r in reverse]
+        )
+        order = self._sorted_indices(by, descending=descending, nulls_last=True)
+        return self._gather_positions(order[:k])
+
+    def unique(
+        self,
+        subset: Sequence[str] | None,
+        *,
+        keep: Any,
+        maintain_order: bool | None = None,
+        order_by: Sequence[str] | None = None,
+    ) -> Self:
+        if order_by and (error := self._check_columns_exist(order_by)):
+            raise error
+        if subset is not None and (error := self._check_columns_exist(subset)):
+            raise error
+        columns = [canonical_nans(self.native[name]) for name in (subset or self.columns)]
+        if keep in {"any", "first", "last"}:
+            seen: dict[Any, int] = {}
+            if order_by:
+                rows = list(zip(*columns, strict=True))
+                order = self._sorted_indices(order_by, descending=False, nulls_last=False)
+                for index in order if keep != "last" else reversed(order):
+                    seen.setdefault(rows[index], index)
+            elif keep == "last":
+                size = len(self)
+                reversed_rows = zip(*map(reversed, columns), strict=True)
+                for index, row in enumerate(reversed_rows):
+                    seen.setdefault(row, size - 1 - index)
+            else:
+                for index, row in enumerate(zip(*columns, strict=True)):
+                    seen.setdefault(row, index)
+
+            indices = sorted(seen.values())
+        elif keep == "none":
+            keys = self._row_keys(columns)
+            counts = map(Counter(keys).__getitem__, keys)
+            indices = [index for index, n in enumerate(counts) if n == 1]
+        else:  # pragma: no cover
+            msg = f"Unsupported `keep` strategy: {keep}"
+            raise ValueError(msg)
+        return self._gather_positions(indices)
+
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
+        if not order_by:
+            index_column: list[Any] = list(range(len(self)))
+        else:
+            if error := self._check_columns_exist(order_by):
+                raise error
+            # Number the rows in order-by order, then scatter each rank back to
+            # its original position so the index column aligns with the frame.
+            index_column = [0] * len(self)
+            order = self._sorted_indices(order_by, descending=False, nulls_last=False)
+            for rank, original in enumerate(order):
+                index_column[original] = rank
+        check_column_names_are_unique([name, *self.columns])
+        return self._with_native({name: index_column, **self.native})
+
+    # Conversions
+    def clone(self) -> Self:
+        return self._with_native(
+            {name: list(column) for name, column in self.native.items()},
+            validate_column_names=False,
+        )
+
+    @overload
+    def to_dict(self, *, as_series: Literal[True]) -> dict[str, DictSeries]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    def to_dict(self, *, as_series: bool) -> dict[str, DictSeries] | dict[str, list[Any]]:
+        if as_series:
+            return {series.name: series for series in self.iter_columns()}
+        return {name: list(column) for name, column in self.native.items()}
+
+    @overload
+    def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
+    @overload
+    def rows(self, *, named: Literal[False]) -> list[tuple[Any, ...]]: ...
+    @overload
+    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
+    def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
+        if named:
+            return list(self.iter_rows(named=True, buffer_size=512))
+        return list(self.iter_rows(named=False, buffer_size=512))
+
+    @overload
+    def iter_rows(
+        self, *, named: Literal[True], buffer_size: int
+    ) -> Iterator[dict[str, Any]]: ...
+    @overload
+    def iter_rows(
+        self, *, named: Literal[False], buffer_size: int
+    ) -> Iterator[tuple[Any, ...]]: ...
+    @overload
+    def iter_rows(
+        self, *, named: bool, buffer_size: int
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
+    def iter_rows(
+        self, *, named: bool, buffer_size: int
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
+        # Columns are sliced one chunk of `buffer_size` rows at a time, so extra
+        # memory is bounded by the buffer and each chunk is a snapshot: mutating
+        # the native lists mid-iteration cannot affect already-buffered rows.
+        columns = self.native.values()
+        names = self.columns
+        num_rows = len(self)
+
+        for idx in range(0, num_rows, buffer_size):
+            buffer = (column[idx : idx + buffer_size] for column in columns)
+            if named:
+                for row in zip(*buffer, strict=True):
+                    yield dict(zip(names, row, strict=True))
+            else:
+                yield from zip(*buffer, strict=True)
+
+    def row(self, index: int) -> tuple[Any, ...]:
+        return tuple(column[index] for column in self.native.values())
+
+    def item(self, row: int | None, column: int | str | None) -> Any:
+        if row is None and column is None:
+            if self.shape != (1, 1):
+                msg = (
+                    'can only call `.item()` without "row" or "column" values '
+                    f"if the DataFrame has a single element; shape={self.shape!r}"
+                )
+                raise ValueError(msg)
+            return next(iter(self.native.values()))[0]
+        if row is None or column is None:
+            msg = "cannot call `.item()` with only one of `row` or `column`"
+            raise ValueError(msg)
+        name = self.columns[column] if isinstance(column, int) else column
+        return self.native[name][row]
+
+    def group_by(
+        self, keys: Sequence[str] | Sequence[DictExpr], *, drop_null_keys: bool
+    ) -> DictGroupBy:
+        from pizzlies._plugin.group_by import DictGroupBy
+
+        return DictGroupBy(self, keys, drop_null_keys=drop_null_keys)
+
+    # Joins are plain hash joins: build `key -> row indices` for the right side,
+    # probe with the left rows, then gather both sides into the output columns.
+    # When one side's keys are unique, a cheaper `key -> row` index is used instead
+    # (see `_unique_key_index`), built on either side for inner joins.
+    # Following polars semantics: null keys do not match (nulls_equal = False is
+    # the polars default), `inner`/`left` coalesce the key columns (right keys are
+    # dropped), `full` keeps both sides' keys, and right columns colliding with
+    # left ones get the suffix appended.
+    def _join_keys(self, keys: Sequence[str]) -> Iterable[Any]:
+        """One hashable key per row, with `None` for rows with any null key.
+
+        Single-key joins reuse the column itself (no copy, no tuple per row);
+        multi-key joins yield one value tuple per row.
+        """
+        if len(keys) == 1:
+            return canonical_nans(self.native[keys[0]])
+        columns = [canonical_nans(self.native[key]) for key in keys]
+        if not any(None in column for column in columns):
+            return zip(*columns, strict=True)
+        return (None if None in row else row for row in zip(*columns, strict=True))
+
+    def _join_key_list(self, keys: Sequence[str]) -> list[Any]:
+        """`_join_keys`, as a list."""
+        join_keys = self._join_keys(keys)
+        return join_keys if isinstance(join_keys, list) else list(join_keys)
+
+    def _join_key_index(self, keys: Sequence[str]) -> dict[Any, list[int]]:
+        """Map each (non-null) key to the row indices where it appears.
+
+        Null keys are left out, so probing with `index.get` makes them miss
+        without a per-row null check (`None` is never a stored key).
+        """
+        index: dict[Any, list[int]] = {}
+        get = index.get
+        for row, key in enumerate(self._join_keys(keys)):
+            if (rows := get(key)) is None:
+                index[key] = [row]
+            else:
+                rows.append(row)
+        index.pop(None, None)
+        return index
+
+    def _join_key_set(self, keys: Sequence[str]) -> set[Any]:
+        """Distinct non-null keys; enough for `semi`/`anti`, cheaper than the index."""
+        key_set = set(self._join_keys(keys))
+        key_set.discard(None)
+        return key_set
+
+    def _join_output_names(
+        self, other: Self, *, exclude_right: Collection[str], suffix: str
+    ) -> dict[str, str]:
+        """Map right column names to output names, raising on duplicates."""
+        left_names = set(self.columns)
+        right_names = {
+            name: f"{name}{suffix}" if name in left_names else name
+            for name in other.columns
+            if name not in exclude_right
+        }
+        check_column_names_are_unique([*self.columns, *right_names.values()])
+        return right_names
+
+    def _join_gather(
+        self,
+        other: Self,
+        left_rows: Sequence[int],
+        counts: Sequence[int],
+        right_indices: Sequence[int | None],
+        *,
+        left_tail: int,
+        exclude_right: Collection[str],
+        suffix: str,
+    ) -> Self:
+        """Assemble the joined frame from a run-length left selection.
+
+        The output has one row per entry of `right_indices`: first the matched block,
+        where left row `left_rows[i]` repeats `counts[i]` times, then `left_tail` rows
+        whose left side is all null (unmatched right rows of a full join).
+        """
+        right_names = self._join_output_names(
+            other, exclude_right=exclude_right, suffix=suffix
+        )
+        # Runs are all length 1 only if the lengths match *and* no run is empty
+        # (`counts` may hold zeros for unmatched inner-join rows, and e.g. one 0
+        # and one 2 also keep the lengths equal).
+        n_left = len(left_rows)
+        all_single = (n_left == len(right_indices) - left_tail) and (0 not in counts)
+        if all_single and left_tail == 0 and n_left == len(self):
+            # Every left row kept exactly once, in order: reuse the columns
+            # as-is (native lists are shared freely, never mutated in place).
+            result: DictFrame = dict(self.native)
+        else:
+            left_indices: Sequence[int | None] = (
+                left_rows
+                if all_single
+                else list(chain.from_iterable(map(repeat, left_rows, counts)))
+            )
+            take_left = (
+                _nullable_gatherer((*left_indices, *repeat(None, left_tail)))
+                if left_tail
+                else gatherer(cast("Sequence[int]", left_indices))
+            )
+            result = {name: take_left(column) for name, column in self.native.items()}
+        take_right = (
+            _nullable_gatherer(right_indices)
+            if None in right_indices
+            else gatherer(cast("Sequence[int]", right_indices))
+        )
+        for name, output_name in right_names.items():
+            result[output_name] = take_right(other.native[name])
+        return self._with_native(result, validate_column_names=False)
+
+    def _join_inner_unique(
+        self,
+        other: Self,
+        positions: list[int | None],
+        *,
+        probe_is_left: bool,
+        exclude_right: Collection[str],
+        suffix: str,
+    ) -> Self:
+        """Inner join where one side's keys are unique, see `_unique_key_index`.
+
+        `positions` holds, for each row of the probing side, the 1-based row of the
+        unique side that it matches, or `None`. The probing side is then filtered in
+        order with `compress`, and the unique side gathered.
+        """
+        right_names = self._join_output_names(
+            other, exclude_right=exclude_right, suffix=suffix
+        )
+        matches = list(map(operator.sub, filter(None, positions), repeat(1)))
+        gather = gatherer(matches)
+        if len(matches) == len(positions):  # every probing row matched
+            keep: Callable[[Sequence[Any]], Sequence[Any]] = lambda column: column  # noqa: E731
+        else:
+            n_columns = len(self.native if probe_is_left else other.native)
+            keep = _row_filter(positions, n_kept=len(matches), n_columns=n_columns)
+
+        take_left, take_right = (keep, gather) if probe_is_left else (gather, keep)
+        result: DictFrame = {
+            name: take_left(column) for name, column in self.native.items()
+        }
+        for name, output_name in right_names.items():
+            result[output_name] = take_right(other.native[name])
+        return self._with_native(result, validate_column_names=False)
+
+    def _join_inner(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> Self:
+        # Most joins match a unique key on one side (e.g. a primary key), which allows
+        # a much cheaper index. Row order isn't guaranteed for joins, so the index may
+        # be built on either side: probing from the right makes rows follow its order.
+        left_keys, right_keys = (
+            self._join_key_list(left_on),
+            other._join_key_list(right_on),
+        )
+        # Try the smaller side first: it's cheaper to index, and likelier to be unique.
+        candidates = [(left_keys, right_keys), (right_keys, left_keys)]
+        if len(left_keys) < len(right_keys):
+            candidates.reverse()
+        for probe_keys, build_keys in candidates:
+            if (index := _unique_key_index(build_keys)) is not None:
+                return self._join_inner_unique(
+                    other,
+                    list(map(index.get, probe_keys)),
+                    probe_is_left=probe_keys is left_keys,
+                    exclude_right=set(right_on),
+                    suffix=suffix,
+                )
+        get_matches = other._join_key_index(right_on).get
+        # `get_matches` misses on null keys directly (see `_join_key_index`);
+        # row positions stay implicit: `range` plus zero-length runs for misses.
+        # `filter(None)` drops the misses; match buckets are never empty, so no
+        # falsy value is lost.
+        matches_per_row = list(map(get_matches, left_keys))
+        counts = [0 if matches is None else len(matches) for matches in matches_per_row]
+        right_indices: list[int | None] = list(
+            chain.from_iterable(filter(None, matches_per_row))
+        )
+        return self._join_gather(
+            other,
+            range(len(counts)),
+            counts,
+            right_indices,
+            left_tail=0,
+            exclude_right=set(right_on),
+            suffix=suffix,
+        )
+
+    def _join_left(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> Self:
+        left_keys, right_keys = (
+            self._join_key_list(left_on),
+            other._join_key_list(right_on),
+        )
+        if len(left_keys) < len(right_keys) and (
+            (index := _unique_key_index(left_keys)) is not None
+        ):
+            # A small unique left side, e.g. a filtered dimension table: index it and
+            # scan the right side once, bucketing its rows by the left row they match,
+            # so that the output keeps the left order (as Polars does).
+            buckets: list[list[int | None]] = [[] for _ in range(len(left_keys))]
+            for right_row, left_row in enumerate(map(index.get, right_keys)):
+                if left_row is not None:
+                    buckets[left_row - 1].append(right_row)
+            return self._join_gather(
+                other,
+                range(len(self)),
+                [len(bucket) or 1 for bucket in buckets],
+                list(chain.from_iterable(bucket or [None] for bucket in buckets)),
+                left_tail=0,
+                exclude_right=set(right_on),
+                suffix=suffix,
+            )
+        if (index := _unique_key_index(right_keys)) is not None:
+            # Every left row is kept once and in order; misses map to row 0, the null
+            # which `_nullable_gatherer`-style padding puts in front of each column.
+            gather = gatherer(list(map(index.get, left_keys, repeat(0))))
+            right_names = self._join_output_names(
+                other, exclude_right=set(right_on), suffix=suffix
+            )
+            result = dict(self.native)
+            for name, output_name in right_names.items():
+                result[output_name] = gather([None, *other.native[name]])
+            return self._with_native(result, validate_column_names=False)
+        get_matches = other._join_key_index(right_on).get
+        counts: list[int] = []
+        right_indices: list[int | None] = []
+        add_count = counts.append
+        add_null, add_matches = right_indices.append, right_indices.extend
+        for matches in map(get_matches, self._join_keys(left_on)):
+            if matches is None:
+                add_count(1)
+                add_null(None)
+            else:
+                add_count(len(matches))
+                add_matches(matches)
+        return self._join_gather(
+            other,
+            range(len(self)),  # every left row is kept, in order
+            counts,
+            right_indices,
+            left_tail=0,
+            exclude_right=set(right_on),
+            suffix=suffix,
+        )
+
+    def _join_full(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> Self:
+        # Keys are not coalesced: both sides' keys stay in the output, and rows
+        # unmatched on either side get nulls for the opposite side's columns.
+        get_matches = other._join_key_index(right_on).get
+        counts: list[int] = []
+        right_indices: list[int | None] = []
+        matched_right: set[int] = set()
+        add_count = counts.append
+        add_null, add_matches = right_indices.append, right_indices.extend
+        for matches in map(get_matches, self._join_keys(left_on)):
+            if matches is None:
+                add_count(1)
+                add_null(None)
+            else:
+                add_count(len(matches))
+                add_matches(matches)
+                matched_right.update(matches)
+        unmatched_right = [row for row in range(len(other)) if row not in matched_right]
+        right_indices.extend(unmatched_right)
+        return self._join_gather(
+            other,
+            range(len(self)),
+            counts,
+            right_indices,
+            left_tail=len(unmatched_right),
+            exclude_right=(),
+            suffix=suffix,
+        )
+
+    def _join_cross(self, other: Self, *, suffix: str) -> Self:
+        # Values are laid out directly, no index lists: each left value is
+        # repeated `len(other)` times and each right column is tiled `len(self)`
+        # times, all at C speed via `chain`/`repeat` and list multiplication.
+        right_names = self._join_output_names(other, exclude_right=(), suffix=suffix)
+        n_left, n_right = len(self), len(other)
+        result: DictFrame = {
+            name: list(chain.from_iterable(map(repeat, column, repeat(n_right))))
+            for name, column in self.native.items()
+        }
+        for name, output_name in right_names.items():
+            result[output_name] = list(other.native[name]) * n_left
+        return self._with_native(result, validate_column_names=False)
+
+    def _join_semi(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> Self:
+        contains = other._join_key_set(right_on).__contains__
+        return self._mask_rows(list(map(contains, self._join_keys(left_on))))
+
+    def _join_anti(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> Self:
+        contains = other._join_key_set(right_on).__contains__
+        return self._mask_rows(
+            list(map(operator.not_, map(contains, self._join_keys(left_on))))
+        )
+
+    def _check_join_key_dtypes(
+        self, other: Self, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> None:
+        """Raise on keys of different dtypes, as Polars does.
+
+        Python would otherwise match e.g. `True` with `1`, and `1` with `1.0`. `Unknown`
+        (an empty or all-null column) matches anything, see `dtypes_compatible`.
+        """
+        version = self._version
+        for left, right in zip(left_on, right_on, strict=True):
+            left_dtype = infer_dtype(self.native[left], version)
+            right_dtype = infer_dtype(other.native[right], version)
+            if not dtypes_compatible(left_dtype, right_dtype, version):
+                msg = (
+                    f"datatypes of join keys don't match - `{left}`: {left_dtype} on "
+                    f"left does not match `{right}`: {right_dtype} on right"
+                )
+                raise InvalidOperationError(msg)
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: JoinStrategy,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self:
+        if how == "cross":
+            return self._join_cross(other, suffix=suffix)
+        if left_on is None or right_on is None:  # pragma: no cover
+            raise ValueError(left_on, right_on)
+        if error := self._check_columns_exist(left_on):
+            raise error
+        if error := other._check_columns_exist(right_on):
+            raise error
+        self._check_join_key_dtypes(other, left_on, right_on)
+        if how == "inner":
+            return self._join_inner(
+                other, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        if how == "left":
+            return self._join_left(
+                other, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        if how == "full":
+            return self._join_full(
+                other, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        if how == "semi":
+            return self._join_semi(other, left_on=left_on, right_on=right_on)
+        if how != "anti":
+            assert_never(how)
+        return self._join_anti(other, left_on=left_on, right_on=right_on)
+
+    def _asof_candidates(
+        self, on: str, by: Sequence[str] | None
+    ) -> dict[Any, tuple[list[Any], list[int]]]:
+        """Sorted `(keys, row indices)` per `by` group, for bisecting.
+
+        Rows with a null asof key (or any null `by` key) are never match
+        candidates. Keys are sorted here rather than validated as sorted, so
+        the probe side needs no ordering assumptions at all. They're `nan_last`
+        keys: Polars orders NaN after every other value.
+        """
+        groups: dict[Any, list[tuple[Any, int]]] = {}
+        by_keys: Iterable[Any] = repeat(None) if by is None else self._join_keys(by)
+        for row, (key, by_key) in enumerate(zip(self.native[on], by_keys, strict=False)):
+            if key is None or (by is not None and by_key is None):
+                continue
+            groups.setdefault(by_key, []).append((key, row))
+        result: dict[Any, tuple[list[Any], list[int]]] = {}
+        for by_key, pairs in groups.items():
+            keyed = sorted(
+                ((nan_last(key), row) for key, row in pairs), key=operator.itemgetter(0)
+            )
+            result[by_key] = ([key for key, _ in keyed], [row for _, row in keyed])
+        return result
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
+        strategy: AsofJoinStrategy,
+        suffix: str,
+    ) -> Self:
+        if error := self._check_columns_exist([left_on, *(by_left or ())]):
+            raise error
+        if error := other._check_columns_exist([right_on, *(by_right or ())]):
+            raise error
+        self._check_join_key_dtypes(
+            other, [left_on, *(by_left or ())], [right_on, *(by_right or ())]
+        )
+        candidates = other._asof_candidates(right_on, by_right)
+        by_keys: Iterable[Any] = (
+            repeat(None) if by_left is None else self._join_keys(by_left)
+        )
+        right_indices: list[int | None] = []
+        for key, by_key in zip(self.native[left_on], by_keys, strict=False):
+            if (group := candidates.get(by_key) if key is not None else None) is None:
+                right_indices.append(None)
+                continue
+            keys, rows = group
+            probe = nan_last(key)
+            backward = bisect_right(keys, probe) - 1  # last right key <= left key
+            forward = bisect_left(keys, probe)  # first right key >= left key
+            if strategy == "backward":
+                match = rows[backward] if backward >= 0 else None
+            elif strategy == "forward":
+                match = rows[forward] if forward < len(rows) else None
+            elif forward >= len(rows) or probe[0]:
+                # Nothing above, or a NaN left key (NaN is the largest value): backward.
+                # A NaN right key above compares as no closer, so it's taken, as Polars.
+                match = rows[backward] if backward >= 0 else None
+            elif backward >= 0 and (
+                keys[backward] == probe
+                or key - keys[backward][1] < keys[forward][1] - key
+            ):
+                # nearest resolving backward: `backward` is already the last
+                # row holding the winning value (exact match included).
+                match = rows[backward]
+            else:
+                # nearest resolving forward (equidistant ties included): among
+                # duplicates of the winning value polars takes the last row.
+                match = rows[bisect_right(keys, keys[forward]) - 1]
+            right_indices.append(match)
+        # One output row per left row: left columns pass through untouched, right
+        # `by` columns are dropped, and so is the right asof key if it has the left
+        # one's name (like Polars).
+        right_names = self._join_output_names(
+            other,
+            exclude_right=asof_excluded_right(left_on, right_on, by_right),
+            suffix=suffix,
+        )
+        take_right = (
+            _nullable_gatherer(right_indices)
+            if None in right_indices
+            else gatherer(cast("Sequence[int]", right_indices))
+        )
+        result: DictFrame = dict(self.native)
+        for name, output_name in right_names.items():
+            result[output_name] = take_right(other.native[name])
+        return self._with_native(result, validate_column_names=False)
+
+    def lazy(
+        self, backend: Implementation | None = None, *, session: Any = None
+    ) -> CompliantLazyFrame[Any, Any, Any]:
+        native: Any
+        match backend:
+            case None:
+                return self
+            case Implementation.POLARS:
+                native = self.to_polars().lazy()
+            case Implementation.DUCKDB:
+                import duckdb  # ignore-banned-import
+
+                native = duckdb.from_arrow(self.to_arrow())
+            case Implementation.DASK:
+                import dask.dataframe as dd  # ignore-banned-import
+
+                native = dd.from_pandas(self.to_pandas())
+            case Implementation.IBIS:
+                import ibis  # ignore-banned-import
+
+                native = ibis.memtable(self.to_arrow(), columns=self.columns)
+            case backend if backend.is_spark_like():
+                if session is None:
+                    msg = "Spark like backends require `session` to be not None."
+                    raise ValueError(msg)
+                native = session.createDataFrame(self.to_pandas())
+            case _:  # pragma: no cover
+                msg = f"Unsupported `backend` value: {backend}"
+                raise ValueError(msg)
+        namespace = self._version.namespace.from_backend(cast("Backend", backend))
+        return namespace.compliant.from_native(native)
+
+    def collect(
+        self, backend: Implementation | None, **kwargs: Any
+    ) -> CompliantDataFrame[Any, Any, Any, Any]:
+        native: Any
+        match backend:
+            case None:
+                return self
+            case Implementation.PANDAS:
+                native = self.to_pandas()
+            case Implementation.PYARROW:
+                native = self.to_arrow()
+            case Implementation.POLARS:
+                native = self.to_polars()
+            case _:  # pragma: no cover
+                msg = f"Unsupported `backend` value: {backend}"
+                raise ValueError(msg)
+        namespace = self._version.namespace.from_backend(cast("Backend", backend))
+        return namespace.compliant.from_native(native)
+
+    @staticmethod
+    def _row_keys(columns: Sequence[NativeSeries]) -> Sequence[Any]:
+        """One key per row: the column itself for a single column, else value tuples."""
+        return columns[0] if len(columns) == 1 else list(zip(*columns, strict=True))
+
+    def is_unique(self) -> DictSeries:
+        keys = self._row_keys(list(map(canonical_nans, self.native.values())))
+        counts = Counter(keys)
+        return DictSeries(
+            [counts[key] == 1 for key in keys], name="", version=self._version
+        )
+
+    def to_arrow(self) -> pa.Table:
+        import pyarrow as pa  # ignore-banned-import
+
+        return pa.Table.from_pydict(
+            {name: list(column) for name, column in self.native.items()}
+        )
+
+    def to_pandas(self) -> pd.DataFrame:
+        import pandas as pd  # ignore-banned-import
+
+        return pd.DataFrame(dict(self.native))
+
+    def to_polars(self) -> pl.DataFrame:
+        import polars as pl  # ignore-banned-import
+
+        return pl.DataFrame(dict(self.native))
+
+    def __array__(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+        import numpy as np  # ignore-banned-import
+
+        # Convert each column through the Series so time-zone-aware datetimes
+        # (-> UTC, naive `datetime64`) and numeric-with-null columns (-> float64
+        # NaN) are handled once, then stack the columns side by side.
+        columns = [series.__array__(dtype, copy=copy) for series in self.iter_columns()]
+        if not columns:
+            return np.empty((len(self), 0), dtype=dtype)
+        return np.column_stack(columns)
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+        return self.__array__(dtype, copy=copy)
+
+    def estimated_size(self, unit: SizeUnit) -> int | float:
+        from sys import getsizeof
+
+        # TODO(FBruzzesi): Is this the right/best approach?
+        total = sum(
+            getsizeof(column) + sum(map(getsizeof, column))
+            for column in self.native.values()
+        )
+        return scale_bytes(total, unit)
+
+    @overload
+    def write_csv(self, file: None) -> str: ...
+    @overload
+    def write_csv(self, file: str | Path | BytesIO) -> None: ...
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> str | None:
+        import csv
+        from io import StringIO
+        from pathlib import Path
+
+        class _LFStream:
+            # Before Python 3.12, `csv` only quotes a field containing `\r` if `\r`
+            # is in `lineterminator`, so write `\r\n` and swap it for `\n`.
+            def __init__(self, stream: SupportsWrite[str]) -> None:
+                self._stream = stream
+
+            def write(self, row: str) -> None:
+                self._stream.write(f"{row[:-2]}\n")
+
+        def dump(stream: SupportsWrite[str]) -> None:
+            writer = csv.writer(_LFStream(stream), lineterminator="\r\n")
+            writer.writerow(self.columns)
+            writer.writerows(self.iter_rows(named=False, buffer_size=512))
+
+        if isinstance(file, (str, Path)):
+            with Path(file).open("w", newline="", encoding="utf-8") as stream:
+                dump(stream)
+            return None
+        buffer = StringIO()
+        dump(buffer)
+        if file is None:
+            return buffer.getvalue()
+        file.write(buffer.getvalue().encode())  # binary stream, e.g. `BytesIO`
+        return None
+
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        variable_name: str,
+        value_name: str,
+    ) -> Self:
+        index = [] if index is None else list(index)
+        if on is None:
+            excluded = set(index)
+            on = [name for name in self.columns if name not in excluded]
+        else:
+            on = list(on)
+        if error := self._check_columns_exist([*index, *on]):
+            raise error
+        check_column_names_are_unique([*index, variable_name, value_name])
+        n = len(self)
+        native = self.native
+
+        result: DictFrame = {
+            # `list` only for other sequences: a `tuple` repeats as a tuple, a `range` not at all.
+            name: (col if isinstance(col := native[name], list) else list(col)) * len(on)
+            for name in index
+        }
+        result[variable_name] = list(chain.from_iterable(repeat(name, n) for name in on))
+        values = [native[name] for name in on]
+        self._check_unpivot_dtypes(values)
+        result[value_name] = list(chain.from_iterable(values))
+        return self._with_native(result)
+
+    def _check_unpivot_dtypes(self, columns: Sequence[Sequence[Any]]) -> None:
+        """Raise if `unpivot`'s value columns' dtypes differ.
+
+        Polars casts them to a common dtype. pizzlies only allows the mixes which dtype
+        inference resolves: integers with floats, and decimals of different scales.
+        """
+        dtypes = self._version.dtypes
+        found = {infer_dtype(column, self._version) for column in columns}
+        found = {dtype for dtype in found if dtype.base_type() is not dtypes.Unknown}
+        if (
+            all(dtypes_compatible(a, b, self._version) for a in found for b in found)
+            or all(isinstance(dtype, (dtypes.Int64, dtypes.Float64)) for dtype in found)
+            or all(isinstance(dtype, dtypes.Decimal) for dtype in found)
+        ):
+            return
+        msg = (
+            f"`unpivot` columns have different dtypes: {sorted(map(str, found))}. "
+            "Cast them to a common dtype first."
+        )
+        raise InvalidOperationError(msg)
+
+    def explode(
+        self,
+        columns: Sequence[str],
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> Self:
+        dtypes = self._version.dtypes
+        for name in columns:
+            # `Unknown`: no non-null values to infer the dtype from (e.g. all null).
+            dtype = self.get_column(name).dtype
+            if not isinstance(dtype, (dtypes.List, dtypes.Unknown)):
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+
+        def shape(cell: Sequence[Any] | None) -> tuple[bool, int]:
+            # `(is non-empty list, rows it expands to)`: a non-empty list never matches
+            # a null/empty one, which only match each other if they expand alike.
+            if cell:
+                return True, len(cell)
+            return False, int(keep_nulls if cell is None else empty_as_null)
+
+        shapes = [shape(cell) for cell in self.native[columns[0]]]
+        to_explode = set(columns)
+        for name in columns[1:]:
+            column = self.native[name]
+            if any(
+                shape(cell) != expected
+                for cell, expected in zip(column, shapes, strict=True)
+            ):
+                msg = "exploded columns must have matching element counts"
+                raise ShapeError(msg)
+        result: DictFrame = {}
+        for name, column in self.native.items():
+            if name in to_explode:
+                result[name] = [
+                    element
+                    for cell, (_, count) in zip(column, shapes, strict=True)
+                    for element in (cell or repeat(None, count))
+                ]
+            else:
+                result[name] = [
+                    value
+                    for value, (_, count) in zip(column, shapes, strict=True)
+                    for _ in range(count)
+                ]
+        return self._with_native(result, validate_column_names=False)
+
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
+        rng = random.Random(seed)  # noqa: S311
+        population = range(len(self))
+        indices = (
+            rng.choices(population, k=n)
+            if with_replacement
+            else rng.sample(population, k=n)
+        )
+        return self._gather_positions(indices)
+
+    def _pivot_resolve(
+        self, on: Sequence[str], index: Sequence[str] | None, values: Sequence[str] | None
+    ) -> tuple[Sequence[str], Sequence[str]]:
+        """Fill in `index`/`values` defaults as the complementary columns."""
+        on_set = set(on)
+        if index is None:
+            excluded = on_set | set(values) if values else on_set
+            index = [name for name in self.columns if name not in excluded]
+        if values is None:
+            excluded = on_set | set(index)
+            values = [name for name in self.columns if name not in excluded]
+        return index, values
+
+    @staticmethod
+    def _pivot_on_combos(
+        on_keys: Iterable[tuple[Any, ...]], *, sort_columns: bool
+    ) -> list[tuple[Any, ...]]:
+        """Distinct `on` combinations present in the data, one per output column.
+
+        In first-appearance order, or sorted with nulls first in each position.
+        """
+        combos = list(dict.fromkeys(on_keys))
+        if sort_columns:
+            combos.sort(key=lambda combo: tuple((v is not None, v) for v in combo))
+        return combos
+
+    @staticmethod
+    def _pivot_output_name(
+        value: str, on_combo: tuple[Any, ...], *, n_on: int, n_values: int, separator: str
+    ) -> str:
+        if n_on == 1:
+            label = _pivot_label(on_combo[0], quote=False)
+        else:
+            label = "{" + ",".join(_pivot_label(v, quote=True) for v in on_combo) + "}"
+        return f"{value}{separator}{label}" if n_values > 1 else label
+
+    def _pivot_aggregate(
+        self,
+        column: Sequence[Any],
+        rows: Sequence[int],
+        aggregate_function: PivotAgg | None,
+    ) -> Any:
+        # `rows` is the (non-empty) set of original row indices in this cell; only
+        # materialize the values when the aggregation actually needs them.
+        if aggregate_function == "len":
+            return len(rows)
+        if aggregate_function is None:
+            return column[rows[0]]  # exactly one element per cell (validated in `pivot`)
+        series = DictSeries([column[i] for i in rows], name="", version=self._version)
+        return getattr(series, aggregate_function)()
+
+    def pivot(
+        self,
+        on: Sequence[str],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        sort_columns: bool,
+        separator: str,
+    ) -> Self:
+        if error := self._check_columns_exist(on):
+            raise error
+        index, values = self._pivot_resolve(on, index, values)
+        if error := self._check_columns_exist([*index, *values]):
+            raise error
+
+        index_cols = [self.native[name] for name in index]
+        on_cols = [self.native[name] for name in on]
+        # Stream one (index-key, on-key) pair per row straight into `cells`.
+        # No intermediate per-row key lists. `cells` maps each pair to its original
+        # row indices in row order, so `first`/`last` see frame order.
+        index_keys: Iterator[tuple[Any, ...]] = (
+            zip(*index_cols, strict=True) if index_cols else repeat((), len(self))
+        )
+        cells: dict[tuple[tuple[Any, ...], tuple[Any, ...]], list[int]] = {}
+        for row, cell in enumerate(
+            zip(index_keys, zip(*on_cols, strict=True), strict=True)
+        ):
+            cells.setdefault(cell, []).append(row)
+        if aggregate_function is None and any(len(rows) > 1 for rows in cells.values()):
+            msg = (
+                "Found multiple elements for some combinations of `on` and `index` "
+                "values. Please pass an `aggregate_function`."
+            )
+            raise ValueError(msg)
+
+        # Distinct index rows in first-appearance order, recovered from the cell
+        # keys (their insertion order already follows row order).
+        index_rows = list(dict.fromkeys(index_key for index_key, _ in cells))
+        # `cells` follows row order, so its `on` keys do too.
+        on_combos = self._pivot_on_combos(
+            (on_key for _, on_key in cells), sort_columns=sort_columns
+        )
+        n_on, n_values = len(on), len(values)
+        result: DictFrame = {
+            name: [row[position] for row in index_rows]
+            for position, name in enumerate(index)
+        }
+        names = list(index)
+        for value in values:
+            column = self.native[value]
+            for combo in on_combos:
+                name = self._pivot_output_name(
+                    value, combo, n_on=n_on, n_values=n_values, separator=separator
+                )
+                names.append(name)
+                result[name] = [
+                    self._pivot_aggregate(column, rows, aggregate_function)
+                    if (rows := cells.get((index_row, combo)))
+                    else None
+                    for index_row in index_rows
+                ]
+        check_column_names_are_unique(names)
+        return self._with_native(result)
+
+    # Not implemented (yet): fill in incrementally.
+    write_parquet = not_implemented()

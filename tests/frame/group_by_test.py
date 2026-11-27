@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -594,6 +596,26 @@ def test_group_by_selector(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("drop_null_keys", [True, False])
+def test_agg_selector_matching_only_keys(
+    constructor: Constructor, request: pytest.FixtureRequest, *, drop_null_keys: bool
+) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, None], "b": ["x", "y", "z"]}))
+    if type(df._compliant_frame).__module__.startswith("narwhals._dask"):
+        # Built-in Dask is frozen: this is fixed in the `narwhals-dask` plugin only.
+        request.applymarker(pytest.mark.xfail)
+    keys = [1] if drop_null_keys else [1, None]
+    group_by = (
+        df.group_by("a", drop_null_keys=True) if drop_null_keys else df.group_by("a")
+    )
+    result = group_by.agg(nw.selectors.numeric().max()).sort("a", nulls_last=True)
+    assert_equal_data(result, {"a": keys})
+    result = group_by.agg(nw.selectors.numeric().max(), nw.len()).sort(
+        "a", nulls_last=True
+    )
+    assert_equal_data(result, {"a": keys, "len": [2, 1][: len(keys)]})
+
+
 def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
     result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
@@ -813,3 +835,32 @@ def test_multi_column_expansion(constructor: Constructor) -> None:
         .sort("a", descending=True)
     )
     assert_equal_data(result, expected)
+
+
+def test_group_by_agg_shared_across_threads(constructor_eager: ConstructorEager) -> None:
+    # `agg` used to stash the native groupby on the shared `GroupBy`, so concurrent
+    # calls could aggregate over another call's (differently sorted) grouping.
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("14"):
+        pytest.skip("https://github.com/apache/arrow/issues/36709")
+    if "modin" in str(constructor_eager):
+        pytest.skip("Modin itself emits a spurious `axis` FutureWarning under threads")
+    data = {"g": [1, 1, 2, 2], "i": [2, 1, 2, 1], "v": [10.0, 20.0, 30.0, 40.0]}
+    grouped = nw.from_native(constructor_eager(data), eager_only=True).group_by("g")
+
+    def worker(n: int) -> None:
+        for _ in range(50):
+            if n % 2:
+                result = grouped.agg(nw.col("v").sum()).sort("g")
+                assert_equal_data(result, {"g": [1, 2], "v": [30.0, 70.0]})
+            else:
+                result = grouped.agg(nw.col("v").first(order_by="i")).sort("g")
+                assert_equal_data(result, {"g": [1, 2], "v": [20.0, 40.0]})
+
+    interval = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)
+    try:
+        with ThreadPoolExecutor(8) as pool:
+            for future in [pool.submit(worker, n) for n in range(8)]:
+                future.result()
+    finally:
+        sys.setswitchinterval(interval)

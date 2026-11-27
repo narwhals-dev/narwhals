@@ -4,7 +4,13 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DASK_VERSION,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -94,6 +100,50 @@ def test_logic_operators_expr_kleene(
     else:
         expected = [False, None, None, None]
     assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize("null", ["literal", "column"])
+@pytest.mark.parametrize(
+    ("operator", "expected", "expected_pandas"),
+    [
+        ("__or__", [True, None, None], [True, False, False]),
+        ("__and__", [None, False, None], [False, False, False]),
+    ],
+)
+def test_logic_operators_kleene_all_null(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    null: str,
+    operator: str,
+    expected: list[bool | None],
+    expected_pandas: list[bool | None],
+) -> None:
+    if "dask" in str(constructor):
+        # Dask infers `[True, False, None]` as `object` dtype, and then `__or__` fails.
+        request.applymarker(pytest.mark.xfail)
+    if null == "literal" and any(
+        x in str(constructor)
+        for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
+    ):
+        # The literal is cast to NumPy `bool`, which turns the null into `False`.
+        request.applymarker(pytest.mark.xfail)
+    data = {"i": [0, 1, 2], "b": [True, False, None]}
+    df = nw.from_native(constructor(data))
+    all_null = (
+        nw.lit(None, nw.Boolean)
+        if null == "literal"
+        else nw.when(nw.col("i") < 0).then(nw.col("b"))
+    )
+    result = df.select("i", b=getattr(all_null, operator)(nw.col("b"))).sort("i")
+    if any(x in str(constructor) for x in ("pandas_constructor", "modin_constructor")):
+        # NumPy booleans can't hold null: the literal is cast to `False`, and the
+        # all-null column is `object` dtype, where before pandas 3.2 a null left
+        # operand gives `False`: https://github.com/pandas-dev/pandas/pull/71998.
+        if null == "literal" or PANDAS_VERSION >= PkgVersion("3.2"):
+            expected = expected_pandas
+        else:
+            expected = [False, False, False]
+    assert_equal_data(result.select("b"), {"b": expected})
 
 
 def test_xor_operator_integers(

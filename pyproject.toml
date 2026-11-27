@@ -242,9 +242,11 @@ conflicts = [
 
 [tool.uv.workspace]
 members = ["packages/*"]
-# NOTE: `narwhals-dask` has its own environment and lock file. Installing it replaces the
-# built-in Dask backend, and its `dask` requirement conflicts with the `extreme-*` groups.
-exclude = ["packages/narwhals-dask"]
+# NOTE: the standalone plugins have their own environment and lock file. Installing
+# `narwhals-dask` replaces the built-in Dask backend, and its `dask` requirement conflicts
+# with the `extreme-*` groups. Installing `pizzlies` makes it claim every plain `dict`,
+# which clashes with `test-plugin`.
+exclude = ["packages/narwhals-dask", "packages/pizzlies"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
@@ -325,6 +327,13 @@ extend-ignore-names = [
 ]
 "src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
+]
+"packages/*/src/**/utils.py" = [
+  "PLR0911", # too-many-return-statements
+]
+"packages/*/tests/*" = [
+  "S101",
+  "INP001", # implicit-namespace-package; an `__init__.py` would clash with the root `tests` module
 ]
 "tests/*" = [
   "S101",
@@ -487,10 +496,16 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
-# NOTE: `narwhals-dask` is resolved from source rather than installed, as installing it
-# replaces the built-in Dask backend.
-mypy_path = "packages/narwhals-dask/src"
+files = [
+  "src",
+  "tests",
+  "packages/test-plugin",
+  "packages/narwhals-dask/src",
+  "packages/pizzlies/src",
+]
+# NOTE: the standalone plugins are resolved from source rather than installed: installing
+# `narwhals-dask` replaces the built-in Dask backend, and `pizzlies` claims plain dicts.
+mypy_path = ["packages/narwhals-dask/src", "packages/pizzlies/src"]
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -523,6 +538,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "pizzlies.*",
 ]
 warn_return_any = false
 
@@ -537,17 +553,23 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin", "packages/narwhals-dask/src"]
+include = [
+  "src",
+  "tests",
+  "packages/test-plugin",
+  "packages/narwhals-dask/src",
+  "packages/pizzlies/src",
+]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
 defineConstant = { "MYPY" = false }
-extraPaths = ["packages/narwhals-dask/src"]
+extraPaths = ["packages/narwhals-dask/src", "packages/pizzlies/src"]
 
 [tool.pyrefly]
-search-path = ["src", ".", "packages/narwhals-dask/src"]
+search-path = ["src", ".", "packages/narwhals-dask/src", "packages/pizzlies/src"]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",

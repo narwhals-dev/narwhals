@@ -1,0 +1,1459 @@
+from __future__ import annotations
+
+import math
+import operator
+import random
+import statistics
+from collections import Counter
+from itertools import accumulate, compress, count, islice, pairwise, repeat
+from typing import TYPE_CHECKING, Any
+
+from narwhals.compliant import EagerSeries
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
+from narwhals.utils import NO_DEFAULT, Implementation
+from pizzlies._plugin._vendored import (
+    assert_never,
+    check_column_names_are_unique,
+    not_implemented,
+)
+from pizzlies._plugin.repr import series_repr
+from pizzlies._plugin.utils import (
+    binary_op,
+    canonical_nans,
+    cast_values,
+    first_non_null,
+    infer_dtype,
+    is_native_column,
+    key_originals,
+    kleene_and,
+    kleene_or,
+    nan_last_column,
+    nan_last_key,
+    skip_nan,
+    sort_with_nulls,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator, Sequence
+    from types import ModuleType
+
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+    from typing_extensions import Self, TypeIs
+
+    from narwhals.dtypes import DType
+    from narwhals.typing import (
+        ClosedInterval,
+        FillNullStrategy,
+        Into1DArray,
+        IntoDType,
+        ModeKeepStrategy,
+        NoDefault,
+        PythonLiteral,
+        RankMethod,
+        RollingInterpolationMethod,
+        SizedMultiIndexSelector,
+        _1DArray,
+        _SliceIndex,
+    )
+    from narwhals.utils import Version
+    from pizzlies._plugin.dataframe import DictDataFrame
+    from pizzlies._plugin.namespace import DictNamespace
+    from pizzlies._plugin.series_cat import DictSeriesCatNamespace
+    from pizzlies._plugin.series_dt import DictSeriesDateTimeNamespace
+    from pizzlies._plugin.series_list import DictSeriesListNamespace
+    from pizzlies._plugin.series_str import DictSeriesStringNamespace
+    from pizzlies._plugin.series_struct import DictSeriesStructNamespace
+    from pizzlies._plugin.typing import Context, DictFrame, NativeSeries
+
+
+class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
+    _implementation = Implementation.UNKNOWN
+
+    def __init__(
+        self, native_series: NativeSeries, *, name: str, version: Version
+    ) -> None:
+        self._name = name
+        self._native_series: list[Any] = (
+            native_series if isinstance(native_series, list) else list(native_series)
+        )
+        self._version = version
+        self._broadcast = False
+
+    @property
+    def native(self) -> list[Any]:
+        return self._native_series
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def dtype(self) -> DType:
+        return infer_dtype(self.native, self._version)
+
+    def native_repr(self) -> str:
+        return series_repr(self.name, self.native, self.dtype)
+
+    def __native_namespace__(self) -> ModuleType:
+        # See `DictDataFrame.__native_namespace__`.
+        import pizzlies
+
+        return pizzlies
+
+    def __narwhals_namespace__(self) -> DictNamespace:
+        from pizzlies._plugin.namespace import DictNamespace
+
+        return DictNamespace(version=self._version)
+
+    # Constructors and internal helpers
+    @staticmethod
+    def _is_native(obj: NativeSeries | Any) -> TypeIs[NativeSeries]:
+        return is_native_column(obj)
+
+    @classmethod
+    def from_native(
+        cls, data: NativeSeries, /, *, context: Context, name: str = ""
+    ) -> Self:
+        return cls(data, name=name, version=context._version)
+
+    @classmethod
+    def from_iterable(
+        cls,
+        data: Iterable[Any],
+        /,
+        *,
+        context: Context,
+        name: str = "",
+        dtype: IntoDType | None = None,
+    ) -> Self:
+        result = cls(list(data), name=name, version=context._version)
+        return result.cast(dtype) if dtype is not None else result
+
+    @classmethod
+    def from_arrow(cls, data: Any, /, *, context: Context) -> Self:
+        import pyarrow as pa  # ignore-banned-import
+
+        if isinstance(data, pa.ChunkedArray) or hasattr(data, "__arrow_c_stream__"):
+            values = pa.chunked_array(data)
+        else:
+            values = pa.array(data)
+        return cls(values.to_pylist(), name="", version=context._version)
+
+    @classmethod
+    def from_numpy(cls, data: Into1DArray, /, *, context: Context) -> Self:
+        values = data.tolist()
+        # `tolist` on a 0-d array or numpy scalar returns a plain scalar.
+        return cls.from_iterable(
+            values if isinstance(values, list) else [values], context=context
+        )
+
+    def _with_version(self, version: Version) -> Self:
+        return self.__class__(self.native, name=self.name, version=version)
+
+    def _with_native(
+        self, series: NativeSeries, *, preserve_broadcast: bool = False
+    ) -> Self:
+        result = self.__class__(series, name=self.name, version=self._version)
+        if preserve_broadcast:
+            result._broadcast = self._broadcast
+        return result
+
+    @classmethod
+    def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
+        lengths = {len(s) for s in series if not s._broadcast}
+        if not lengths:
+            return series
+        if len(lengths) > 1:
+            msg = f"Expected series of equal lengths, got: {sorted(lengths)}."
+            raise ShapeError(msg)
+        target_length = lengths.pop()
+        return [
+            s._with_native([s.native[0]] * target_length)
+            if s._broadcast and len(s) != target_length
+            else s
+            for s in series
+        ]
+
+    def alias(self, name: str) -> Self:
+        result = self.__class__(self.native, name=name, version=self._version)
+        result._broadcast = self._broadcast
+        return result
+
+    def _non_null(self) -> list[Any]:
+        # Defensive check to avoid iterating and copying the list if there is no null
+        if None in (values := self.native):
+            return [value for value in values if value is not None]
+        return values
+
+    def _extract_comparand(self, other: Any) -> tuple[Any, bool]:
+        """Return `(values_or_scalar, is_scalar)` for use in elementwise operations."""
+        if isinstance(other, DictSeries):
+            if other._broadcast:
+                return (other.native[0] if other.native else None), True
+            return other.native, False
+        return other, True
+
+    def _with_binary(
+        self,
+        op: Callable[[Any, Any], Any],
+        other: Any,
+        *,
+        propagate_null: bool = True,
+        reflected: bool = False,
+    ) -> Self:
+        rhs, rhs_is_scalar = self._extract_comparand(other)
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
+        if self._broadcast and not rhs_is_scalar:
+            # e.g. `nw.lit(1) + nw.col("a")`: broadcast the scalar left-hand side.
+            lhs = self.native[0] if self.native else None
+            result = binary_op(
+                op,
+                rhs,
+                lhs,
+                is_scalar=True,
+                propagate_null=propagate_null,
+                reflected=not reflected,
+            )
+        else:
+            result = binary_op(
+                op,
+                self.native,
+                rhs,
+                is_scalar=rhs_is_scalar,
+                propagate_null=propagate_null,
+                reflected=reflected,
+            )
+        return self._with_native(result, preserve_broadcast=preserve_broadcast)
+
+    def _with_logical(
+        self,
+        kleene: Callable[[Any, Any], Any],
+        bitwise: Callable[[Any, Any], Any],
+        other: Any,
+    ) -> Self:
+        # Polars-style: `&`/`|` are Kleene (three-valued) logic on booleans and
+        # null-propagating bitwise ops on integers. Both are commutative, so the
+        # reflected (`__rand__`/`__ror__`) forms reuse this directly. An all-null
+        # receiver infers as `Unknown`; Kleene logic gives null for integer operands
+        # there too, so it's right whichever dtype `other` has.
+        dtypes = self._version.dtypes
+        if isinstance(self.dtype, (dtypes.Boolean, dtypes.Unknown)):
+            return self._with_binary(kleene, other, propagate_null=False)
+        return self._with_binary(bitwise, other)
+
+    def _with_binary_right(self, op: Callable[[Any, Any], Any], other: Any) -> Self:
+        return self._with_binary(op, other, reflected=True)
+
+    def _with_unary(
+        self, fn: Callable[[Any], Any], *, preserve_broadcast: bool = True
+    ) -> Self:
+        native = self.native
+        return self._with_native(
+            list(map(fn, native))
+            if None not in native
+            else [None if value is None else fn(value) for value in native],
+            preserve_broadcast=preserve_broadcast,
+        )
+
+    # Binary operations
+    def __eq__(self, other: object) -> Self:  # type: ignore[override]
+        return self._with_binary(operator.eq, other)
+
+    def __ne__(self, other: object) -> Self:  # type: ignore[override]
+        return self._with_binary(operator.ne, other)
+
+    def __ge__(self, other: Any) -> Self:
+        return self._with_binary(operator.ge, other)
+
+    def __gt__(self, other: Any) -> Self:
+        return self._with_binary(operator.gt, other)
+
+    def __le__(self, other: Any) -> Self:
+        return self._with_binary(operator.le, other)
+
+    def __lt__(self, other: Any) -> Self:
+        return self._with_binary(operator.lt, other)
+
+    def __and__(self, other: Any) -> Self:
+        return self._with_logical(kleene_and, operator.and_, other)
+
+    def __rand__(self, other: Any) -> Self:
+        return self._with_logical(kleene_and, operator.and_, other)
+
+    def __or__(self, other: Any) -> Self:
+        return self._with_logical(kleene_or, operator.or_, other)
+
+    def __ror__(self, other: Any) -> Self:
+        return self._with_logical(kleene_or, operator.or_, other)
+
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
+
+    def __add__(self, other: Any) -> Self:
+        return self._with_binary(operator.add, other)
+
+    def __radd__(self, other: Any) -> Self:
+        return self._with_binary_right(operator.add, other)
+
+    def __sub__(self, other: Any) -> Self:
+        return self._with_binary(operator.sub, other)
+
+    def __rsub__(self, other: Any) -> Self:
+        return self._with_binary_right(operator.sub, other)
+
+    def __mul__(self, other: Any) -> Self:
+        return self._with_binary(operator.mul, other)
+
+    def __rmul__(self, other: Any) -> Self:
+        return self._with_binary_right(operator.mul, other)
+
+    @staticmethod
+    def _truediv(numerator: float, denominator: float) -> float:
+        # Division by zero: match Polars/IEEE-754 (`±inf`, `0/0` and `NaN/0 -> NaN`)
+        # instead of Python's `ZeroDivisionError`.
+        try:
+            return numerator / denominator
+        except ZeroDivisionError:
+            if not numerator or math.isnan(numerator):
+                return float("nan")
+            return math.copysign(math.inf, numerator) * math.copysign(1.0, denominator)
+
+    @staticmethod
+    def _floordiv(numerator: int, denominator: int) -> int | None:
+        # Integer floor division by zero: Polars returns null.
+        try:
+            return numerator // denominator
+        except ZeroDivisionError:
+            return None
+
+    @classmethod
+    def _float_floordiv(cls, numerator: float, denominator: float) -> float:
+        # Polars floors the IEEE-754 quotient: `1.0 // 0.1 == 10.0` (Python gives
+        # 9.0), and dividing by zero gives `±inf`/NaN as in true division.
+        quotient = cls._truediv(numerator, denominator)
+        return float(math.floor(quotient)) if math.isfinite(quotient) else quotient
+
+    @staticmethod
+    def _mod(numerator: int, denominator: int) -> int | None:
+        # Integer modulo by zero: Polars returns null.
+        try:
+            return numerator % denominator
+        except ZeroDivisionError:
+            return None
+
+    @staticmethod
+    def _float_mod(numerator: float, denominator: float) -> float:
+        # Float modulo by zero: Polars gives NaN (Python raises).
+        if not denominator:
+            return float("nan")
+        return numerator % denominator
+
+    def _is_float_operation(self, other: Any) -> bool:
+        rhs, rhs_is_scalar = self._extract_comparand(other)
+        rhs_is_float = (
+            isinstance(rhs, float)
+            if rhs_is_scalar
+            else infer_dtype(rhs, self._version).is_float()
+        )
+        return rhs_is_float or self.dtype.is_float()
+
+    def _floordiv_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        """Pick the float or the integer kernel once, from both operands' dtypes."""
+        return self._float_floordiv if self._is_float_operation(other) else self._floordiv
+
+    def _mod_kernel(self, other: Any) -> Callable[[Any, Any], Any]:
+        return self._float_mod if self._is_float_operation(other) else self._mod
+
+    def __truediv__(self, other: Self) -> Self:
+        return self._with_binary(self._truediv, other)
+
+    def __rtruediv__(self, other: Self) -> Self:
+        return self._with_binary_right(self._truediv, other)
+
+    def __floordiv__(self, other: Self) -> Self:
+        return self._with_binary(self._floordiv_kernel(other), other)
+
+    def __rfloordiv__(self, other: Self) -> Self:
+        return self._with_binary_right(self._floordiv_kernel(other), other)
+
+    @staticmethod
+    def _pow(base: float, exponent: float) -> float:
+        result = base**exponent
+        # Negative base with fractional exponent: match float semantics (Polars
+        # returns NaN), not Python's complex result.
+        return float("nan") if isinstance(result, complex) else result
+
+    def __pow__(self, other: Self) -> Self:
+        return self._with_binary(self._pow, other)
+
+    def __rpow__(self, other: Self) -> Self:
+        return self._with_binary_right(self._pow, other)
+
+    def __mod__(self, other: Self) -> Self:
+        return self._with_binary(self._mod_kernel(other), other)
+
+    def __rmod__(self, other: Self) -> Self:
+        return self._with_binary_right(self._mod_kernel(other), other)
+
+    # Unary operations
+    def __invert__(self) -> Self:
+        return self._with_unary(operator.not_)
+
+    def __neg__(self) -> Self:
+        return self._with_unary(operator.neg)
+
+    def abs(self) -> Self:
+        return self._with_unary(operator.abs)
+
+    def exp(self) -> Self:
+        def _exp(value: float) -> float:
+            try:
+                return math.exp(value)
+            except OverflowError:
+                return float("inf")
+
+        return self._with_unary(_exp)
+
+    def sqrt(self) -> Self:
+        def _sqrt(value: float) -> float:
+            return math.sqrt(value) if value >= 0 else float("nan")
+
+        return self._with_unary(_sqrt)
+
+    def log(self, base: float) -> Self:
+        def _log(value: float) -> float:
+            if value > 0:
+                return math.log(value, base)
+            return float("-inf") if value == 0 else float("nan")
+
+        return self._with_unary(_log)
+
+    def sin(self) -> Self:
+        return self._with_unary(math.sin)
+
+    def cos(self) -> Self:
+        return self._with_unary(math.cos)
+
+    def floor(self) -> Self:
+        return self._with_unary(math.floor)
+
+    def ceil(self) -> Self:
+        return self._with_unary(math.ceil)
+
+    def round(self, decimals: int) -> Self:
+        if None not in self.native:
+            return self._with_native(list(map(round, self.native, repeat(decimals))))
+        return self._with_unary(lambda value: round(value, decimals))
+
+    def cast(self, dtype: IntoDType) -> Self:
+        return self._with_native(
+            cast_values(self.native, dtype, self._version), preserve_broadcast=True
+        )
+
+    @staticmethod
+    def _clip_op(pick: Callable[[Any, Any], Any]) -> Callable[[Any, Any], Any]:
+        """`pick` (`max` or `min`) of a value and a bound, as Polars' `clip`."""
+
+        def op(value: Any, bound: Any) -> Any:
+            if value is None or bound is None:  # a null bound is no bound
+                return value
+            return pick(value, bound)
+
+        return op
+
+    def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
+        return self.clip_lower(lower_bound).clip_upper(upper_bound)
+
+    def clip_lower(self, lower_bound: Any) -> Self:
+        return self._with_binary(self._clip_op(max), lower_bound, propagate_null=False)
+
+    def clip_upper(self, upper_bound: Any) -> Self:
+        return self._with_binary(self._clip_op(min), upper_bound, propagate_null=False)
+
+    # TODO(FBruzzesi): Do not fallback to super implementation
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
+    ) -> Self:
+        lo, lo_is_scalar = self._extract_comparand(lower_bound)
+        hi, hi_is_scalar = self._extract_comparand(upper_bound)
+        if not (lo_is_scalar and hi_is_scalar) or lo is None or hi is None:
+            # Series or null bounds: reuse the operator-based default,
+            # which already handles alignment and null propagation.
+            return super().is_between(lower_bound, upper_bound, closed)
+        values = self.native
+        match closed:
+            case "left":
+                result = [None if v is None else lo <= v < hi for v in values]
+            case "right":
+                result = [None if v is None else lo < v <= hi for v in values]
+            case "none":
+                result = [None if v is None else lo < v < hi for v in values]
+            case "both":
+                result = [None if v is None else lo <= v <= hi for v in values]
+            case _:
+                assert_never(closed)
+        return self._with_native(result, preserve_broadcast=True)
+
+    # Aggregations (return Python scalars, `None` for empty/all-null where applicable)
+    def len(self) -> int:
+        return len(self.native)
+
+    def count(self) -> int:
+        return len(self.native) - self.native.count(None)
+
+    def null_count(self) -> int:
+        return self.native.count(None)
+
+    def n_unique(self) -> int:
+        return len(set(canonical_nans(self.native)))
+
+    def sum(self) -> float:
+        return sum(self._non_null())
+
+    def min(self) -> Any:
+        values = self._non_null()
+        return min(skip_nan(values)) if values else None
+
+    def max(self) -> Any:
+        values = self._non_null()
+        return max(skip_nan(values)) if values else None
+
+    def mean(self) -> float:
+        values = self._non_null()
+        return sum(values) / len(values) if values else None  # type: ignore[return-value]
+
+    def median(self) -> float:
+        if not (values := self._non_null()):
+            return None  # type: ignore[return-value]
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+        return self._quantile(values, 0.5, "linear")
+
+    def std(self, *, ddof: int) -> float:
+        variance = self.var(ddof=ddof)
+        return math.sqrt(variance) if variance is not None else None  # pyright: ignore[reportReturnType]
+
+    def var(self, *, ddof: int) -> float:
+        values = self._non_null()
+        if len(values) - ddof <= 0:
+            return None  # type: ignore[return-value]
+        mean = sum(values) / len(values)
+        return sum((value - mean) ** 2 for value in values) / (len(values) - ddof)
+
+    @staticmethod
+    def _central_moments(values: Sequence[Any]) -> tuple[float, float, float]:
+        """Biased central moments `(m2, m3, m4)`, in a single pass over `values`."""
+        n = len(values)
+        mean = sum(values) / n
+        m2 = m3 = m4 = 0.0
+        for value in values:
+            delta = value - mean
+            delta2 = delta * delta
+            m2 += delta2
+            m3 += delta2 * delta
+            m4 += delta2 * delta2
+        return m2 / n, m3 / n, m4 / n
+
+    def skew(self) -> float | None:
+        if not (values := self._non_null()):
+            return None
+        if len(values) == 1:
+            return float("nan")
+        m2, m3, _ = self._central_moments(values)
+        return m3 / m2**1.5 if m2 else float("nan")
+
+    def kurtosis(self) -> float | None:
+        if not (values := self._non_null()):
+            return None
+        if len(values) == 1:
+            return float("nan")
+        m2, _, m4 = self._central_moments(values)
+        return m4 / m2**2 - 3 if m2 else float("nan")
+
+    def quantile(
+        self, quantile: float, interpolation: RollingInterpolationMethod
+    ) -> float:
+        return self._quantile(self._non_null(), quantile, interpolation)
+
+    @staticmethod
+    def _quantile(
+        values: list[Any], quantile: float, interpolation: RollingInterpolationMethod
+    ) -> float:
+        """`quantile` of the non-null `values`."""
+        if not (values := sorted(values, key=nan_last_key(values))):
+            return None  # type: ignore[return-value]
+        position = (len(values) - 1) * quantile
+        lower = values[math.floor(position)]
+        higher = values[math.ceil(position)]
+        match interpolation:
+            case "lower":
+                result = lower
+            case "higher":
+                result = higher
+            case "midpoint":
+                result = (lower + higher) / 2
+            case "linear" if lower == higher:
+                # Not interpolated: `inf - inf` would give NaN.
+                result = lower
+            case "linear":
+                result = lower + (higher - lower) * (position - math.floor(position))
+            case "nearest":
+                # Polars rounds a tie up, where `round` would round it to even.
+                result = values[math.floor(position + 0.5)]
+            case _:
+                assert_never(interpolation)
+        return float(result)
+
+    def any(self) -> bool:
+        return any(self._non_null())
+
+    def all(self) -> bool:
+        return all(self._non_null())
+
+    def arg_min(self) -> int | None:
+        values = self._non_null()
+        # `index` finds a NaN by identity, which `skip_nan` preserves.
+        return self.native.index(min(skip_nan(values))) if values else None
+
+    def arg_max(self) -> int | None:
+        values = self._non_null()
+        return self.native.index(max(skip_nan(values))) if values else None
+
+    def first(self) -> PythonLiteral:
+        return self.native[0] if self.native else None
+
+    def last(self) -> PythonLiteral:
+        return self.native[-1] if self.native else None
+
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return first_non_null(self.native) if ignore_nulls else self.first()
+
+    def item(self, index: int | None) -> Any:
+        if index is None:
+            if len(self.native) != 1:
+                msg = f"can only call '.item()' if the Series is of length 1, got: {len(self.native)}"
+                raise ValueError(msg)
+            return self.native[0]
+        return self.native[index]
+
+    # Element-wise transformations
+    def is_null(self) -> Self:
+        return self._with_native(
+            [value is None for value in self.native], preserve_broadcast=True
+        )
+
+    def is_nan(self) -> Self:
+        dtype = self.dtype
+        # `Unknown`: no non-null values to infer the dtype from, so all results are null.
+        if not (dtype.is_numeric() or isinstance(dtype, self._version.dtypes.Unknown)):
+            msg = f"`.is_nan` only supported for numeric dtype and not {dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
+        return self._with_unary(
+            lambda value: isinstance(value, float) and math.isnan(value)
+        )
+
+    def is_finite(self) -> Self:
+        return self._with_unary(math.isfinite)
+
+    def is_in(self, other: Any) -> Self:
+        candidates = canonical_nans(list(other))
+        values = canonical_nans(self.native)
+
+        def lookup(contains: Callable[[Any], bool]) -> list[Any]:
+            if None not in values:
+                return list(map(contains, values))
+            return [None if value is None else contains(value) for value in values]
+
+        try:
+            result = lookup(set(candidates).__contains__)
+        except TypeError:  # unhashable elements or values, e.g. a `List` column
+            result = lookup(candidates.__contains__)
+        return self._with_native(result, preserve_broadcast=True)
+
+    def is_unique(self) -> Self:
+        values = canonical_nans(self.native)
+        counts = Counter(values)
+        return self._with_native([counts[value] == 1 for value in values])
+
+    def is_first_distinct(self) -> Self:
+        seen: set[Any] = set()
+        result = []
+        for value in canonical_nans(self.native):
+            result.append(value not in seen)
+            seen.add(value)
+        return self._with_native(result)
+
+    def is_last_distinct(self) -> Self:
+        seen: set[Any] = set()
+        result = []
+        for value in reversed(canonical_nans(self.native)):
+            result.append(value not in seen)
+            seen.add(value)
+        return self._with_native(result[::-1])
+
+    def fill_null(
+        self, value: Any, strategy: FillNullStrategy | None, limit: int | None
+    ) -> Self:
+        if strategy is not None:
+            # `reversed(...)` is a no-copy iterator; only the (in-place) result
+            # is reversed back for the backward pass.
+            values = self.native if strategy == "forward" else reversed(self.native)
+            result: list[Any] = []
+            last: Any = None
+            gap = 0
+            for current in values:
+                if current is not None:
+                    last, gap = current, 0
+                    result.append(current)
+                else:
+                    gap += 1
+                    result.append(last if limit is None or gap <= limit else None)
+            if strategy == "backward":
+                result.reverse()
+            return self._with_native(result, preserve_broadcast=True)
+        fill, is_scalar = self._extract_comparand(value)
+        if is_scalar:
+            result = [fill if current is None else current for current in self.native]
+        elif self._broadcast:
+            # e.g. `lit(None).fill_null(col("a"))`: broadcast the scalar receiver.
+            receiver = self.native[0]
+            result = list(fill) if receiver is None else [receiver] * len(fill)
+            return self._with_native(result, preserve_broadcast=False)
+        else:
+            result = [
+                new if current is None else current
+                for current, new in zip(self.native, fill, strict=True)
+            ]
+        return self._with_native(result, preserve_broadcast=True)
+
+    def fill_nan(self, value: float | None) -> Self:
+        return self._with_native(
+            [
+                value if isinstance(current, float) and math.isnan(current) else current
+                for current in self.native
+            ],
+            preserve_broadcast=True,
+        )
+
+    def replace_strict(
+        self,
+        default: Self | NoDefault,
+        old: Sequence[Any],
+        new: Sequence[Any],
+        *,
+        return_dtype: IntoDType | None,
+    ) -> Self:
+        # Casting the replacements (and default) up front keeps the pass over
+        # the data itself to a single `dict.get` per value.
+        if return_dtype is not None:
+            new = cast_values(new, return_dtype, self._version)
+        mapping = dict(zip(canonical_nans(old), new, strict=True))
+        values = canonical_nans(self.native)
+        if default is NO_DEFAULT:
+            unset = object()
+            unmatched: dict[Any, None] = {}
+            result = []
+            for value in values:
+                replacement = mapping.get(value, unset)
+                if replacement is unset:
+                    if value is not None:
+                        unmatched[value] = None
+                    replacement = None
+                result.append(replacement)
+            if unmatched:
+                msg = (
+                    "replace_strict did not replace all non-null values.\n\n"
+                    f"The following did not get replaced: {list(unmatched)}"
+                )
+                raise InvalidOperationError(msg)
+        else:
+            fill, fill_is_scalar = self._extract_comparand(default)
+            if return_dtype is not None:
+                fill = (
+                    cast_values([fill], return_dtype, self._version)[0]
+                    if fill_is_scalar
+                    else cast_values(fill, return_dtype, self._version)
+                )
+            if fill_is_scalar:
+                # Keys mapped to `None` are still hits, so `dict.get` alone
+                # distinguishes matched from defaulted.
+                result = [mapping.get(value, fill) for value in values]
+            else:
+                unset = object()
+                result = [
+                    fill_value
+                    if (replacement := mapping.get(value, unset)) is unset
+                    else replacement
+                    for value, fill_value in zip(values, fill, strict=True)
+                ]
+        return self._with_native(result)
+
+    def mode(self, *, keep: ModeKeepStrategy) -> Self:
+        values = canonical_nans(self.native)
+        if keep == "all":
+            modes = statistics.multimode(values)
+        else:
+            modes = [statistics.mode(values)] if values else []
+        if values is not self.native:
+            originals = key_originals(self.native, values)
+            modes = [originals[mode] for mode in modes]
+        return self._with_native(list(modes))
+
+    def rank(self, method: RankMethod, *, descending: bool) -> Self:
+        keys = nan_last_column(self.native)
+        # Sort row indices by key (stable, so ties keep their order), in C.
+        order = [index for index, key in enumerate(keys) if key is not None]
+        order.sort(key=keys.__getitem__, reverse=descending)
+        size = len(order)
+        result: list[Any] = [None] * len(keys)
+        start = 0
+        dense_rank = 0
+        while start < size:
+            key = keys[order[start]]
+            end = start + 1
+            while end < size and keys[order[end]] == key:
+                end += 1
+            dense_rank += 1
+            if end - start == 1:  # no tie, the common case: skip the dispatch below
+                result[order[start]] = (
+                    dense_rank
+                    if method == "dense"
+                    else float(end)
+                    if method == "average"
+                    else end
+                )
+                start = end
+                continue
+            ranks: Iterator[float]
+            match method:
+                case "average":
+                    ranks = repeat((start + 1 + end) / 2)
+                case "min":
+                    ranks = repeat(start + 1)
+                case "max":
+                    ranks = repeat(end)
+                case "dense":
+                    ranks = repeat(dense_rank)
+                case "ordinal":
+                    ranks = count(start + 1)
+                case _:
+                    assert_never(method)
+            for index, rank_value in zip(order[start:end], ranks, strict=False):
+                result[index] = rank_value
+            start = end
+        return self._with_native(result)
+
+    def zip_with(self, mask: Self, other: Self) -> Self:
+        return self._with_native(
+            [
+                current if flag else replacement
+                for flag, current, replacement in zip(
+                    mask.native, self.native, other.native, strict=True
+                )
+            ]
+        )
+
+    def shift(self, n: int) -> Self:
+        # Clamp the gap to the length so `shift` stays length-preserving even when
+        # `abs(n)` exceeds it (e.g. `shift(-2)` on one row -> `[None]`, matching Polars).
+        gap = min(abs(n), len(self.native))
+        if n == 0:
+            return self._with_native(list(self.native))
+        if n > 0:
+            return self._with_native(
+                [*repeat(None, gap), *self.native[: len(self.native) - gap]]
+            )
+        return self._with_native([*self.native[gap:], *repeat(None, gap)])
+
+    def diff(self) -> Self:
+        # One pass over adjacent pairs, no `native[1:]`/`native[:-1]` slice copies;
+        # nulls propagate as in `binary_op` (either operand null -> null).
+        result: list[Any] = [None] if self.native else []
+        result.extend(
+            None if (prev is None or curr is None) else curr - prev
+            for prev, curr in pairwise(self.native)
+        )
+        return self._with_native(result)
+
+    def _cum_agg(self, op: Callable[[Any, Any], Any], *, reverse: bool) -> Self:
+        native = self.native
+        if None not in native:
+            # No nulls to skip: `op` (a C builtin) accumulates entirely in C.
+            if not reverse:
+                return self._with_native(list(accumulate(native, op)))
+            result = list(accumulate(reversed(native), op))
+            result.reverse()
+            return self._with_native(result)
+        # Accumulate skipping nulls, then restore nulls at their original positions.
+        accumulated: Iterator[Any] = accumulate(
+            reversed(native) if reverse else native,
+            lambda acc, value: (
+                acc if value is None else value if acc is None else op(acc, value)
+            ),
+        )
+        result = [
+            None if value is None else acc
+            for value, acc in zip(
+                reversed(native) if reverse else native, accumulated, strict=True
+            )
+        ]
+        if reverse:
+            result.reverse()
+        return self._with_native(result)
+
+    def cum_sum(self, *, reverse: bool) -> Self:
+        return self._cum_agg(operator.add, reverse=reverse)
+
+    def cum_prod(self, *, reverse: bool) -> Self:
+        return self._cum_agg(operator.mul, reverse=reverse)
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._cum_agg(max, reverse=reverse)
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._cum_agg(min, reverse=reverse)
+
+    def cum_count(self, *, reverse: bool) -> Self:
+        values = reversed(self.native) if reverse else self.native
+        is_valid = map(operator.is_not, values, repeat(None))
+        result = list(islice(accumulate(is_valid, initial=0), 1, None))
+        if reverse:
+            result.reverse()
+        return self._with_native(result)
+
+    # Rolling and exponentially-weighted windows
+    def _rolling_agg(
+        self,
+        window_size: int,
+        *,
+        min_samples: int,
+        center: bool,
+        exact: Callable[[int, Any, Any, int], Any],
+        local: Callable[[list[Any]], Any],
+        needs_squares: bool = False,
+    ) -> Self:
+        """Aggregate each rolling window.
+
+        Windows are position-based: nulls occupy a slot but are excluded from the
+        window's observations, mirroring `pandas`/Polars semantics. Integers and
+        floats use `exact(count, total, total_of_squares, scale)` on exact prefix
+        sums, see `_rolling_prefix_sums`. Anything else (e.g. `Decimal`) uses
+        `local` on each window's non-null values.
+        """
+        values = self.native
+        n_values = len(values)
+        counts = [0, *accumulate(value is not None for value in values)]
+        prefix = _rolling_prefix_sums(values, needs_squares=needs_squares)
+        if center:
+            # Window [i - window_size // 2, i + (window_size - 1) // 2].
+            offsets = (-(window_size // 2), (window_size - 1) // 2 + 1)
+        else:
+            offsets = (-window_size + 1, 1)
+        result = []
+        for index in range(n_values):
+            start = max(index + offsets[0], 0)
+            end = min(index + offsets[1], n_values)
+            count = counts[end] - counts[start]
+            if count < min_samples:
+                result.append(None)
+            elif prefix is None:
+                result.append(
+                    local([value for value in values[start:end] if value is not None])
+                )
+            elif (total := _non_finite_total(prefix[3], start, end)) is not None:
+                # The total is already a float here: `prefix[0]` would only make
+                # `exact` overflow converting the scale to a float.
+                result.append(exact(count, total, math.inf, 1))
+            else:
+                scale, totals, total_sqs, _ = prefix
+                result.append(
+                    exact(
+                        count,
+                        totals[end] - totals[start],
+                        total_sqs[end] - total_sqs[start],
+                        scale,
+                    )
+                )
+        return self._with_native(result)
+
+    def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._rolling_agg(
+            window_size,
+            min_samples=min_samples,
+            center=center,
+            exact=lambda _count, total, _total_sq, scale: (
+                _divide(total, scale) if scale else total
+            ),
+            local=sum,
+        )
+
+    def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
+        return self._rolling_agg(
+            window_size,
+            min_samples=min_samples,
+            center=center,
+            exact=lambda count, total, _total_sq, scale: _divide(
+                total, count * (scale or 1)
+            ),
+            local=lambda window: sum(window) / len(window),
+        )
+
+    def rolling_var(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        def exact(count: int, total: Any, total_sq: Any, scale: int) -> float | None:
+            if count <= ddof:
+                return None
+            scale = scale or 1
+            return _divide(
+                count * total_sq - total * total, count * (count - ddof) * scale * scale
+            )
+
+        def local(window: list[Any]) -> Any:
+            count = len(window)
+            if count <= ddof:
+                return None
+            mean = sum(window) / count
+            return sum((value - mean) ** 2 for value in window) / (count - ddof)
+
+        return self._rolling_agg(
+            window_size,
+            min_samples=min_samples,
+            center=center,
+            exact=exact,
+            local=local,
+            needs_squares=True,
+        )
+
+    def rolling_std(
+        self, window_size: int, *, min_samples: int, center: bool, ddof: int
+    ) -> Self:
+        return self.rolling_var(
+            window_size, min_samples=min_samples, center=center, ddof=ddof
+        )._with_unary(math.sqrt)
+
+    @staticmethod
+    def _ewm_alpha(
+        com: float | None,
+        span: float | None,
+        half_life: float | None,
+        alpha: float | None,
+    ) -> float:
+        params = [p for p in (com, span, half_life, alpha) if p is not None]
+        if len(params) > 1:
+            msg = "`com`, `span`, `half_life`, and `alpha` are mutually exclusive."
+            raise ValueError(msg)
+        if com is not None:
+            return 1.0 / (1.0 + com)
+        if span is not None:
+            return 2.0 / (span + 1.0)
+        if half_life is not None:
+            return 1.0 - math.exp(-math.log(2.0) / half_life)
+        if alpha is not None:
+            return float(alpha)
+        msg = "One of `com`, `span`, `half_life`, or `alpha` must be provided."
+        raise ValueError(msg)
+
+    def ewm_mean(
+        self,
+        *,
+        com: float | None,
+        span: float | None,
+        half_life: float | None,
+        alpha: float | None,
+        adjust: bool,
+        min_samples: int,
+        ignore_nulls: bool,
+    ) -> Self:
+        alpha_ = self._ewm_alpha(com, span, half_life, alpha)
+        # Weighted running mean, matching the `pandas` EWM algorithm: `old_wt`
+        # decays by `1 - alpha` at every step (`ignore_nulls=False`) or only at
+        # observations (`ignore_nulls=True`).
+        old_wt_factor = 1.0 - alpha_
+        new_wt = 1.0 if adjust else alpha_
+        weighted: float | None = None
+        old_wt = 1.0
+        observations = 0
+        result: list[float | None] = []
+        for value in self.native:
+            is_obs = value is not None
+            observations += is_obs
+            if weighted is None:
+                if is_obs:
+                    weighted = float(value)
+            elif is_obs or not ignore_nulls:
+                old_wt *= old_wt_factor
+                if is_obs:
+                    if weighted != value:
+                        weighted = (old_wt * weighted + new_wt * value) / (
+                            old_wt + new_wt
+                        )
+                    old_wt = old_wt + new_wt if adjust else 1.0
+            result.append(weighted if is_obs and observations >= min_samples else None)
+        return self._with_native(result)
+
+    # Filtering, gathering, sorting
+    def filter(self, predicate: Any) -> Self:
+        mask = predicate.native if isinstance(predicate, DictSeries) else list(predicate)
+        if len(mask) != len(self.native):
+            msg = f"Expected mask of length {len(self.native)}, got: {len(mask)}."
+            raise ShapeError(msg)
+        return self._with_native(list(compress(self.native, mask)))
+
+    def drop_nulls(self) -> Self:
+        return self._with_native(self._non_null())
+
+    def head(self, n: int) -> Self:
+        return self._with_native(self.native[:n])
+
+    def tail(self, n: int) -> Self:
+        if n >= 0:
+            return self._with_native(self.native[max(len(self.native) - n, 0) :])
+        return self._with_native(self.native[-n:])
+
+    def gather_every(self, n: int, offset: int) -> Self:
+        return self._with_native(self.native[offset::n])
+
+    def _gather(self, rows: SizedMultiIndexSelector[NativeSeries]) -> Self:
+        return self._with_native([self.native[i] for i in rows])
+
+    def _gather_slice(self, rows: _SliceIndex | range) -> Self:
+        return self._with_native(self.native[rows.start : rows.stop : rows.step])
+
+    def scatter(self, indices: Self, values: Self) -> Self:
+        n_indices, n_values = len(indices), len(values)
+        if n_values not in {1, n_indices}:
+            msg = f"Expected object of length {n_indices}, got length: {n_values}"
+            raise ShapeError(msg)
+        if None in indices.native:
+            msg = "Index values should not be null"
+            raise ComputeError(msg)
+        native = values.native
+        dtype = self.dtype
+        if not isinstance(dtype, self._version.dtypes.Unknown) and values.dtype != dtype:
+            native = cast_values(native, dtype, self._version)
+        replacements = repeat(native[0], n_indices) if n_values == 1 else native
+        n = len(self)
+        result = list(self.native)
+        # Sequential assignment, so the last of any duplicate indices wins, as in Polars.
+        for index, value in zip(indices.native, replacements, strict=False):
+            if not -n <= index < n:
+                msg = f"Scatter indices are out of bounds for Series of length {n}."
+                raise IndexError(msg)
+            result[index] = value
+        return self._with_native(result)
+
+    def arg_true(self) -> Self:
+        return self._with_native(list(compress(count(), self.native)))
+
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
+        rng = random.Random(seed)  # noqa: S311
+        native = (
+            rng.choices(self.native, k=n)
+            if with_replacement
+            else rng.sample(self.native, k=n)
+        )
+        return self._with_native(native)
+
+    def unique(self, *, maintain_order: bool = False) -> Self:
+        keys = canonical_nans(self.native)
+        if keys is self.native:
+            return self._with_native(list(dict.fromkeys(keys)))
+        return self._with_native(list(key_originals(self.native, keys).values()))
+
+    def sort(self, *, descending: bool, nulls_last: bool) -> Self:
+        return self._with_native(
+            sort_with_nulls(self.native, descending=descending, nulls_last=nulls_last)
+        )
+
+    def is_sorted(self, *, descending: bool) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be a bool, got: {type(descending).__name__}"
+            raise TypeError(msg)
+        op = operator.ge if descending else operator.le
+        return all(op(lhs, rhs) for lhs, rhs in pairwise(self._non_null()))
+
+    # Conversions
+    def __contains__(self, other: Any) -> bool:
+        return other in self.native
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self.native)
+
+    def to_list(self) -> list[Any]:
+        return list(self.native)
+
+    def to_frame(self) -> DictDataFrame:
+        from pizzlies._plugin.dataframe import DictDataFrame
+
+        return DictDataFrame({self.name: self.native}, version=self._version)
+
+    def value_counts(
+        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
+    ) -> DictDataFrame:
+        """`parallel` is unused, exists for compatibility."""
+        from pizzlies._plugin.dataframe import DictDataFrame
+
+        value_name = name or ("proportion" if normalize else "count")
+        check_column_names_are_unique([self.name, value_name])
+        keys = canonical_nans(self.native)
+        counter = Counter(keys)
+        items = counter.most_common() if sort else list(counter.items())
+        if keys is not self.native:
+            originals = key_originals(self.native, keys)
+            items = [(originals[key], count) for key, count in items]
+        total = len(self.native)
+        return DictDataFrame(
+            {
+                self.name: [value for value, _ in items],
+                value_name: [count / total if normalize else count for _, count in items],
+            },
+            version=self._version,
+        )
+
+    def to_dummies(self, *, separator: str, drop_first: bool) -> DictDataFrame:
+        from pizzlies._plugin.dataframe import DictDataFrame
+
+        null_name = f"{self.name}{separator}null"
+        length = len(self.native)
+        columns: dict[Any, list[int]] = {}
+        names: dict[Any, str] = {}
+        for index, value in enumerate(self.native):
+            column = columns.get(value)
+            if column is None:
+                column = columns[value] = [0] * length
+                names[value] = (
+                    null_name if value is None else f"{self.name}{separator}{value}"
+                )
+            column[index] = 1
+        # e.g. `None` and `"null"`, or `1` and `"1"`, would share a column.
+        check_column_names_are_unique(list(names.values()))
+        columns = {names[value]: column for value, column in columns.items()}
+        non_null = sorted(name for name in columns if name != null_name)
+        ordered = ([null_name] if null_name in columns else []) + non_null[
+            int(drop_first) :
+        ]
+        return DictDataFrame(
+            {name: columns[name] for name in ordered}, version=self._version
+        )
+
+    @staticmethod
+    def _hist_data(
+        values: Iterable[Any], bins: Sequence[float], *, include_breakpoint: bool
+    ) -> DictFrame:
+        """Count values per bin: intervals are `(lo, hi]`, the first also includes `lo`."""
+        from bisect import bisect_left
+
+        counts = [0] * (len(bins) - 1)
+        lo, hi = bins[0], bins[-1]
+        for value in values:
+            if (
+                value is None
+                or (isinstance(value, float) and math.isnan(value))
+                or not lo <= value <= hi
+            ):
+                continue
+            counts[0 if value == lo else bisect_left(bins, value) - 1] += 1
+        if include_breakpoint:
+            return {"breakpoint": [float(edge) for edge in bins[1:]], "count": counts}
+        return {"count": counts}
+
+    def hist_from_bins(
+        self, bins: list[float], *, include_breakpoint: bool
+    ) -> DictDataFrame:
+        from pizzlies._plugin.dataframe import DictDataFrame
+
+        data: DictFrame
+        if len(bins) <= 1:
+            data = (
+                {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
+            )
+        else:
+            data = self._hist_data(
+                self.native, bins, include_breakpoint=include_breakpoint
+            )
+        return DictDataFrame(data, version=self._version)
+
+    def hist_from_bin_count(
+        self, bin_count: int, *, include_breakpoint: bool
+    ) -> DictDataFrame:
+        from pizzlies._plugin.dataframe import DictDataFrame
+
+        if bin_count == 0:
+            data: DictFrame = (
+                {"breakpoint": [], "count": []} if include_breakpoint else {"count": []}
+            )
+            return DictDataFrame(data, version=self._version)
+        values = [
+            value
+            for value in self.native
+            if value is not None and not (isinstance(value, float) and math.isnan(value))
+        ]
+        if not values:
+            # Match Polars: an all-null series gets `bin_count` bins spanning [0, 1].
+            lower, upper = 0.0, 1.0
+        else:
+            lower, upper = float(min(values)), float(max(values))
+            if lower == upper:
+                lower -= 0.5
+                upper += 0.5
+        width = (upper - lower) / bin_count
+        bins = [lower + width * index for index in range(bin_count)] + [upper]
+        return DictDataFrame(
+            self._hist_data(values, bins, include_breakpoint=include_breakpoint),
+            version=self._version,
+        )
+
+    def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray:
+        import numpy as np
+
+        values = self.native
+        if dtype is None:
+            nw_dtype = self.dtype
+            if isinstance(nw_dtype, self._version.dtypes.Datetime):
+                # NumPy has no time-zone support: convert to UTC, then drop it.
+                from datetime import timezone
+
+                values = [
+                    value.astimezone(timezone.utc).replace(tzinfo=None)
+                    if value is not None and value.tzinfo is not None
+                    else value
+                    for value in values
+                ]
+                return np.asarray(values, dtype="datetime64[us]")
+            if None in values and nw_dtype.is_numeric():
+                # Match other backends: numeric columns with nulls become
+                # float64 with NaN, not an object array holding `None`.
+                values = [float("nan") if value is None else value for value in values]
+        return np.asarray(values, dtype=dtype)
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
+        return self.__array__(dtype, copy=copy)
+
+    def to_arrow(self) -> pa.Array[Any]:
+        import pyarrow as pa
+
+        return pa.array(self.native)
+
+    def to_pandas(self) -> pd.Series[Any]:
+        import pandas as pd
+
+        return pd.Series(self.native, name=self.name)
+
+    def to_polars(self) -> pl.Series:
+        import polars as pl
+
+        return pl.Series(self.name, self.native)
+
+    # Namespaces
+    @property
+    def str(self) -> DictSeriesStringNamespace:
+        from pizzlies._plugin.series_str import DictSeriesStringNamespace
+
+        return DictSeriesStringNamespace(self)
+
+    @property
+    def dt(self) -> DictSeriesDateTimeNamespace:
+        from pizzlies._plugin.series_dt import DictSeriesDateTimeNamespace
+
+        return DictSeriesDateTimeNamespace(self)
+
+    @property
+    def list(self) -> DictSeriesListNamespace:
+        from pizzlies._plugin.series_list import DictSeriesListNamespace
+
+        return DictSeriesListNamespace(self)
+
+    @property
+    def struct(self) -> DictSeriesStructNamespace:
+        from pizzlies._plugin.series_struct import DictSeriesStructNamespace
+
+        return DictSeriesStructNamespace(self)
+
+    @property
+    def cat(self) -> DictSeriesCatNamespace:
+        from pizzlies._plugin.series_cat import DictSeriesCatNamespace
+
+        return DictSeriesCatNamespace(self)
+
+    map: Any = not_implemented()
+
+
+def _rolling_prefix_sums(
+    values: list[Any], *, needs_squares: bool
+) -> tuple[int, list[int], list[int], list[tuple[int, int, int]]] | None:
+    """Exact prefix sums for rolling aggregations, or `None` for non-numeric values.
+
+    Returns `(scale, totals, total_sqs, non_finite)`. Integers are summed as they
+    are, with `scale=0`. Finite floats are first turned into integers by
+    multiplying them by `scale`, the largest of their (power of two) denominators,
+    so sums can't lose precision and an earlier large value can't leak into later
+    windows. NaNs and infinities are instead counted in `non_finite`, as prefix
+    counts of `(nan, +inf, -inf)`; it is empty if there are none.
+    """
+    scale = 0
+    non_finite: list[tuple[int, int, int]] = []
+    if all(value is None or isinstance(value, int) for value in values):
+        observed = [0 if value is None else value for value in values]
+    elif all(value is None or isinstance(value, (int, float)) for value in values):
+        ratios = [
+            value.as_integer_ratio()
+            if value is not None and math.isfinite(value)
+            else (0, 1)
+            for value in values
+        ]
+        scale = max((denominator for _, denominator in ratios), default=1)
+        observed = [
+            numerator * (scale // denominator) for numerator, denominator in ratios
+        ]
+        if not all(value is None or math.isfinite(value) for value in values):
+            flags = (
+                (0, 0, 0)
+                if value is None or math.isfinite(value)
+                else (int(math.isnan(value)), int(value > 0), int(value < 0))
+                for value in values
+            )
+            non_finite = [
+                (0, 0, 0),
+                *accumulate(flags, lambda a, b: (a[0] + b[0], a[1] + b[1], a[2] + b[2])),
+            ]
+    else:
+        return None
+    totals = [0, *accumulate(observed)]
+    total_sqs = (
+        [0, *accumulate(value * value for value in observed)] if needs_squares else totals
+    )
+    return scale, totals, total_sqs, non_finite
+
+
+def _divide(numerator: Any, denominator: int) -> Any:
+    """`numerator / denominator`, saturating to infinity like float arithmetic does.
+
+    Exact integer sums can exceed the float range, where `int / int` raises.
+    """
+    try:
+        return numerator / denominator
+    except OverflowError:
+        return math.inf if numerator > 0 else -math.inf
+
+
+def _non_finite_total(
+    non_finite: list[tuple[int, int, int]], start: int, end: int
+) -> float | None:
+    """Sum of the window `[start, end)`, if it holds any NaN or infinity."""
+    if not non_finite:
+        return None
+    n_nan, n_pos, n_neg = (
+        a - b for a, b in zip(non_finite[end], non_finite[start], strict=True)
+    )
+    if n_nan or (n_pos and n_neg):
+        return math.nan
+    if n_pos:
+        return math.inf
+    return -math.inf if n_neg else None

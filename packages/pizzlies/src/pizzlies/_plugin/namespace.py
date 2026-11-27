@@ -1,0 +1,427 @@
+from __future__ import annotations
+
+import math
+from itertools import chain, compress, repeat
+from typing import TYPE_CHECKING, Any, cast
+
+from narwhals.compliant import EagerNamespace
+from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.utils import Implementation
+from pizzlies._plugin._vendored import (
+    check_column_names_are_unique,
+    combine_alias_output_names,
+    combine_evaluate_output_names,
+)
+from pizzlies._plugin.dataframe import DictDataFrame
+from pizzlies._plugin.expr import DictExpr
+from pizzlies._plugin.selectors import DictSelectorNamespace
+from pizzlies._plugin.series import DictSeries
+from pizzlies._plugin.utils import (
+    csv_to_native,
+    dtypes_compatible,
+    has_nan,
+    infer_dtype,
+    skip_nan,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    from narwhals.dtypes import DType
+    from narwhals.typing import (
+        CorrelationMethod,
+        IntoDType,
+        NonNestedLiteral,
+        NormalizedSource,
+    )
+    from narwhals.utils import Version
+    from pizzlies._plugin.typing import DictFrame, NativeSeries
+
+
+class DictNamespace(
+    EagerNamespace[DictDataFrame, DictSeries, DictExpr, "DictFrame", "NativeSeries"]  # type: ignore[type-var]
+):
+    _implementation = Implementation.UNKNOWN
+
+    def __init__(self, *, version: Version) -> None:
+        self._version = version
+
+    @property
+    def _dataframe(self) -> type[DictDataFrame]:
+        return DictDataFrame
+
+    @property
+    def _expr(self) -> type[DictExpr]:
+        return DictExpr
+
+    @property
+    def _series(self) -> type[DictSeries]:
+        return DictSeries
+
+    @property
+    def selectors(self) -> DictSelectorNamespace:
+        return DictSelectorNamespace.from_namespace(self)
+
+    # NOTE: `scan_csv` falls back to `read_csv` via `EagerNamespace`.
+    def read_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DictDataFrame:
+        """Read with the stdlib `csv` module.
+
+        `kwds` are `csv.reader` format parameters, except `delimiter`: use `separator`.
+        """
+        import csv
+        from io import StringIO
+        from pathlib import Path
+
+        # Narwhals always passes `separator` (default ","), so an explicit "," can't
+        # be told apart from the default, and a `delimiter` would be ambiguous.
+        if "delimiter" in kwds:
+            msg = "Use `separator` rather than `delimiter`."
+            raise TypeError(msg)
+        kwds["delimiter"] = separator
+        if isinstance(source, str):
+            with Path(source).open(newline="", encoding="utf-8") as stream:
+                native = csv_to_native(csv.reader(stream, **kwds))
+        else:
+            content = source.read()
+            text = content.decode("utf-8") if isinstance(content, bytes) else content
+            native = csv_to_native(csv.reader(StringIO(text, newline=""), **kwds))
+        return self._dataframe.from_native(native, context=self)
+
+    # NOTE: `scan_parquet` falls back to `read_parquet` via `EagerNamespace`.
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> DictDataFrame:
+        """Read with `pizzlies`' own pure-Python reader, see `pizzlies._plugin.parquet`.
+
+        The only supported keyword argument is `columns`, to read a subset of columns.
+        """
+        from pizzlies._plugin.parquet import read_parquet
+
+        columns = kwds.pop("columns", None)
+        if kwds:
+            msg = f"Unsupported keyword arguments for `read_parquet`: {sorted(kwds)}."
+            raise TypeError(msg)
+        native = cast("DictFrame", read_parquet(source, columns))  # type: ignore[arg-type]
+        return self._dataframe.from_native(native, context=self)
+
+    def len(self) -> DictExpr:
+        return self._expr(
+            lambda df: [DictSeries([len(df)], name="len", version=self._version)],
+            evaluate_output_names=lambda _df: ["len"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DictExpr:
+        # Tuples are normalized to lists so nested literals round-trip as `List`.
+        scalar = list(value) if isinstance(value, tuple) else value
+
+        def func(_df: DictDataFrame) -> list[DictSeries]:
+            series = DictSeries([scalar], name="literal", version=self._version)
+            return [series.cast(dtype) if dtype is not None else series]
+
+        return self._expr(
+            func,
+            evaluate_output_names=lambda _df: ["literal"],
+            alias_output_names=None,
+            version=self._version,
+        )
+
+    # Horizontal functions: evaluate all exprs, align lengths, then reduce row-wise.
+    def _horizontal(
+        self,
+        exprs: Sequence[DictExpr],
+        reducer: Callable[[tuple[Any, ...]], Any],
+        fast_reducer: Callable[[tuple[Any, ...]], Any] | None = None,
+        *,
+        fast_reducer_needs_no_nan: bool = False,
+    ) -> DictExpr:
+        # `fast_reducer` must agree with `reducer` on null-free rows; it is applied
+        # via `map` when no input column contains nulls, so C-level builtins
+        # (`all`, `sum`, ...) skip the per-row Python frame entirely.
+        def func(df: DictDataFrame) -> list[DictSeries]:
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            aligned = self._series._align_full_broadcast(*series)
+            columns = [s.native for s in aligned]
+            func = (
+                fast_reducer
+                if fast_reducer is not None
+                and not any(None in column for column in columns)
+                and not (fast_reducer_needs_no_nan and any(map(has_nan, columns)))
+                else reducer
+            )
+            result = list(map(func, zip(*columns, strict=True)))
+            return [aligned[0]._with_native(result)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def all_horizontal(self, *exprs: DictExpr, ignore_nulls: bool) -> DictExpr:
+        def reducer(row: tuple[Any, ...]) -> Any:
+            has_null = False
+            for value in row:
+                if value is None:
+                    has_null = True
+                elif not value:
+                    return False
+            return None if has_null and not ignore_nulls else True
+
+        return self._horizontal(exprs, reducer, fast_reducer=all)
+
+    def any_horizontal(self, *exprs: DictExpr, ignore_nulls: bool) -> DictExpr:
+        def reducer(row: tuple[Any, ...]) -> Any:
+            has_null = False
+            for value in row:
+                if value is None:
+                    has_null = True
+                elif value:
+                    return True
+            return None if has_null and not ignore_nulls else False
+
+        return self._horizontal(exprs, reducer, fast_reducer=any)
+
+    def sum_horizontal(self, *exprs: DictExpr) -> DictExpr:
+        return self._horizontal(
+            exprs,
+            lambda row: sum(value for value in row if value is not None),
+            fast_reducer=sum,
+        )
+
+    def mean_horizontal(self, *exprs: DictExpr) -> DictExpr:
+        def reducer(row: tuple[Any, ...]) -> Any:
+            values = [value for value in row if value is not None]
+            return sum(values) / len(values) if values else None
+
+        return self._horizontal(exprs, reducer)
+
+    def min_horizontal(self, *exprs: DictExpr) -> DictExpr:
+        return self._horizontal(
+            exprs,
+            lambda row: min(skip_nan([v for v in row if v is not None]), default=None),
+            fast_reducer=min,
+            fast_reducer_needs_no_nan=True,
+        )
+
+    def max_horizontal(self, *exprs: DictExpr) -> DictExpr:
+        return self._horizontal(
+            exprs,
+            lambda row: max(skip_nan([v for v in row if v is not None]), default=None),
+            fast_reducer=max,
+            fast_reducer_needs_no_nan=True,
+        )
+
+    def coalesce(self, *exprs: DictExpr) -> DictExpr:
+        return self._horizontal(
+            exprs, lambda row: next((value for value in row if value is not None), None)
+        )
+
+    def concat_str(
+        self, *exprs: DictExpr, separator: str, ignore_nulls: bool
+    ) -> DictExpr:
+        def reducer(row: tuple[Any, ...]) -> Any:
+            if ignore_nulls:
+                return separator.join(value for value in row if value is not None)
+            return None if None in row else separator.join(row)
+
+        # Cast first (Polars' rendering, e.g. `true` for bools), so a row without
+        # nulls joins in C via `separator.join`.
+        string = self._version.dtypes.String()
+        strings = [expr.cast(string) for expr in exprs]
+        return self._horizontal(strings, reducer, separator.join)
+
+    # `when`/`then`/`otherwise` chains are desugared into nested `when_then` calls,
+    # which `EagerNamespace` implements on top of the `_if_then_else` hook.
+    def _if_then_else(
+        self,
+        when: NativeSeries,
+        then: NativeSeries,
+        otherwise: NativeSeries | None = None,
+    ) -> NativeSeries:
+        if otherwise is None:
+            return [t if w else None for w, t in zip(when, then, strict=True)]
+        return [t if w else o for w, t, o in zip(when, then, otherwise, strict=True)]
+
+    # Concatenation of native frames
+    def _concat_horizontal(self, dfs: Sequence[DictFrame | Any], /) -> DictFrame:
+        names = list(chain.from_iterable(df.keys() for df in dfs))
+        check_column_names_are_unique(names)
+        # Match Polars: shorter frames are padded with nulls.
+        height = max((len(column) for df in dfs for column in df.values()), default=0)
+        return {
+            name: list(column) + [None] * (height - len(column))
+            if len(column) < height
+            else column
+            for df in dfs
+            for name, column in df.items()
+        }
+
+    def _check_dtypes(self, dfs: Sequence[DictFrame]) -> None:
+        """Raise if a column's dtypes differ between `dfs`, as Polars does."""
+        # Every distinct dtype seen per column: compatibility isn't transitive, e.g.
+        # `List(Unknown)` is compatible with both `List(Int64)` and `List(String)`.
+        dtypes: dict[str, list[DType]] = {}
+        for df in dfs:
+            for name, values in df.items():
+                dtype = infer_dtype(values, self._version)
+                seen = dtypes.setdefault(name, [])
+                if dtype in seen:
+                    continue
+                for other in seen:
+                    if not dtypes_compatible(other, dtype, self._version):
+                        msg = (
+                            f"unable to vstack, column {name!r} has dtypes {other} and "
+                            f"{dtype}: inputs should all have the same schema."
+                        )
+                        raise InvalidOperationError(msg)
+                seen.append(dtype)
+
+    def _concat_vertical(self, dfs: Sequence[DictFrame], /) -> DictFrame:
+        columns_0 = list(dfs[0])
+        for i, df in enumerate(dfs[1:], start=1):
+            if (columns_current := list(df)) != columns_0:
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {columns_0}\n"
+                    f"   - dataframe {i}: {columns_current}\n"
+                )
+                raise ShapeError(msg)
+        self._check_dtypes(dfs)
+        return {
+            name: list(chain.from_iterable(df[name] for df in dfs)) for name in columns_0
+        }
+
+    def _concat_diagonal(self, dfs: Sequence[DictFrame], /) -> DictFrame:
+        self._check_dtypes(dfs)
+        names = list(dict.fromkeys(chain.from_iterable(df.keys() for df in dfs)))
+        lengths = [len(next(iter(df.values()), [])) for df in dfs]
+        return {
+            name: list(
+                chain.from_iterable(
+                    df[name] if name in df else repeat(None, length)
+                    for df, length in zip(dfs, lengths, strict=True)
+                )
+            )
+            for name in names
+        }
+
+    @staticmethod
+    def _shift_ints(values: Sequence[Any]) -> Sequence[Any]:
+        # Integers beyond 2**53 lose their differences when centred on a float mean,
+        # so shift them (exactly) towards zero first: (co)variance is shift-invariant.
+        if values and all(isinstance(value, int) for value in values):
+            ref = values[0]
+            return [value - ref for value in values]
+        return values
+
+    def _pairwise_not_null(
+        self, a: DictSeries, b: DictSeries
+    ) -> tuple[Sequence[Any], Sequence[Any]]:
+        xs, ys = (s.native for s in self._series._align_full_broadcast(a, b))
+        if None in xs or None in ys:
+            mask = [x is not None and y is not None for x, y in zip(xs, ys, strict=True)]
+            xs, ys = list(compress(xs, mask)), list(compress(ys, mask))
+        return self._shift_ints(xs), self._shift_ints(ys)
+
+    def _binary_scalar_expr(
+        self, a: DictExpr, b: DictExpr, func: Callable[[DictSeries, DictSeries], Any]
+    ) -> DictExpr:
+        def call(df: DictDataFrame) -> list[DictSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            b_series = df._evaluate_single_output_expr(b)
+            return [
+                DictSeries(
+                    [func(a_series, b_series)], name=a_series.name, version=self._version
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=call,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )
+
+    def corr(self, a: DictExpr, b: DictExpr, *, method: CorrelationMethod) -> DictExpr:
+        if method != "pearson":
+            msg = (
+                f"`corr` with `method={method!r}` is not supported for the dict backend."
+            )
+            raise NotImplementedError(msg)
+
+        def pearson(a_series: DictSeries, b_series: DictSeries) -> float:
+            xs, ys = self._pairwise_not_null(a_series, b_series)
+            n = len(xs)
+            if n < 2:
+                return float("nan")
+            mean_x, mean_y = sum(xs) / n, sum(ys) / n
+            cov = var_x = var_y = 0.0
+            for x, y in zip(xs, ys, strict=True):
+                dx, dy = x - mean_x, y - mean_y
+                cov += dx * dy
+                var_x += dx * dx
+                var_y += dy * dy
+            if var_x == 0 or var_y == 0:
+                return float("nan")
+            denominator = var_x * var_y
+            if denominator == 0 or math.isinf(denominator):
+                # Splitting the square root avoids under/overflow, but is less exact.
+                denominator = math.sqrt(var_x) * math.sqrt(var_y)
+            else:
+                denominator = math.sqrt(denominator)
+            return min(max(cov / denominator, -1.0), 1.0)
+
+        return self._binary_scalar_expr(a, b, pearson)
+
+    def cov(self, a: DictExpr, b: DictExpr, *, ddof: int) -> DictExpr:
+        def covariance(a_series: DictSeries, b_series: DictSeries) -> float | None:
+            xs, ys = self._pairwise_not_null(a_series, b_series)
+            n = len(xs)
+            if ddof == 0 and n == 1:
+                return 0.0
+            if n - ddof <= 0:
+                return None
+            mean_x, mean_y = sum(xs) / n, sum(ys) / n
+            total = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys, strict=True))
+            return total / (n - ddof)
+
+        return self._binary_scalar_expr(a, b, covariance)
+
+    def list(self, *exprs: DictExpr) -> DictExpr:
+        def func(df: DictDataFrame) -> list[DictSeries]:
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            aligned = self._series._align_full_broadcast(*series)
+            columns = [s.native for s in aligned]
+            result = [list(row) for row in zip(*columns, strict=True)]
+            return [aligned[0]._with_native(result)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def struct(self, *exprs: DictExpr) -> DictExpr:
+        def func(df: DictDataFrame) -> list[DictSeries]:
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            aligned = self._series._align_full_broadcast(*series)
+            field_names = [s.name for s in aligned]
+            # A `dict` row would silently keep only the last of duplicate fields.
+            check_column_names_are_unique(field_names)
+            columns = [s.native for s in aligned]
+            result = [
+                dict(zip(field_names, row, strict=True))
+                for row in zip(*columns, strict=True)
+            ]
+            return [aligned[0]._with_native(result)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )

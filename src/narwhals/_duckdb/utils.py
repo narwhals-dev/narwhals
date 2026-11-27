@@ -386,9 +386,10 @@ def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
     """Unique name for `rel.query`'s `virtual_table_name`.
 
     `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
-    `rel`'s own connection (see [relational api]). We prefer it to `duckdb.sql(statement)`,
-    which uses the global default connection and cannot see relations from other
-    connections (see [using connections in parallel pythonprograms]).
+    `rel`'s own connection (see [relational api]). We only use it when `duckdb.sql(statement)`
+    fails: that runs on the global default connection, which cannot see relations from
+    other connections (see [using connections in parallel python programs]), but leaves
+    no view behind.
 
     The name must be unique per call: views persist and the lazy result re-binds by
     name on execution, so a reused name shadows earlier views and corrupts their plans.
@@ -408,7 +409,7 @@ def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
       [thread safety] for the user-facing note.
 
     [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
-    [using connections in parallel pythonprograms]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
+    [using connections in parallel python programs]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
     [replacement scans]: https://duckdb.org/docs/current/clients/c/replacement_scans
     [#471]: https://github.com/duckdb/duckdb-python/pull/471
     [thread safety]: https://narwhals-dev.github.io/narwhals/concepts/thread_safety/

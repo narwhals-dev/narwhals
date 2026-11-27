@@ -50,9 +50,12 @@ if TYPE_CHECKING:
 
     from typing_extensions import assert_type
 
-    from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import FrameT as StableFrameT, IntoDataFrameT
+    from narwhals.stable.v1.typing import (
+        EagerAllowed,
+        FrameT as StableFrameT,
+        IntoDataFrameT,
+    )
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
 
@@ -1372,3 +1375,7 @@ def test_series_from_arrow(eager_backend: EagerAllowed) -> None:
     assert result._version is Version.V1
     assert isinstance(result, nw_v1.Series)
     assert_equal_data(result.to_frame(), {name: [5, 2, 0, 1]})
+
+
+def test_typing_imports() -> None:
+    from narwhals.stable.v1.typing import EagerAllowed, IntoBackend  # noqa: F401
