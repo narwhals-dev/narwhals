@@ -60,6 +60,27 @@ and importing them with `DataFrame.from_arrow` and `Series.from_arrow`. See
 [Universal dataframe support with the Arrow PyCapsule Interface + Narwhals](https://labs.quansight.org/blog/narwhals-pycapsule)
 for how you can use them together.
 
+#### chDB
+
+In [chDB](https://github.com/chdb-io/chdb) 4.3.0 and later, `DataStore` implements the Arrow
+PyCapsule Interface, so you can pass a lazy query directly to `DataFrame.from_arrow`.
+This example requires PyArrow 14.0.0 or later.
+
+```python
+from chdb.datastore import DataStore
+
+import narwhals as nw
+
+numbers = DataStore.from_numbers(3).sort_values("number", ascending=False)
+df = nw.DataFrame.from_arrow(numbers, backend="pyarrow")
+```
+
+Calling `from_arrow` runs the sort in chDB and materialises the result as a PyArrow table.
+Subsequent operations on `df` run in PyArrow.
+
+If you already have a SQL query, `chdb.query(sql, "Arrow")` executes it immediately.
+You can pass its result to `DataFrame.from_arrow` too.
+
 ### Ibis
 
 Pitched as "The portable Dataframe library", Ibis provides a Pythonic frontend

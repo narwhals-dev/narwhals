@@ -17,6 +17,9 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
     from narwhals.typing import IntoDataFrame, IntoLazyFrameT, JoinStrategy
 
 
@@ -647,6 +650,85 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
     }
     assert_equal_data(result.sort(by="antananarivo"), expected)
     assert_equal_data(result_by.sort(by="antananarivo"), expected)
+
+
+def test_joinasof_duckdb_own_connection() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    lhs = nw.from_native(con.sql("select * from (values (1, 'x'), (5, 'y')) v(a, b)"))
+    rhs = nw.from_native(con.sql("select * from (values (0, 10), (4, 40)) v(a, c)"))
+    result = lhs.join_asof(rhs, on="a").sort("a")
+    assert_equal_data(result, {"a": [1, 5], "b": ["x", "y"], "c": [10, 40]})
+
+
+@pytest.mark.parametrize("read_only", [False, True])
+@pytest.mark.parametrize(
+    "method",
+    [lambda lf: lf.join_asof(lf, on="a"), lambda lf: lf.unpivot(index="a")],
+    ids=["join_asof", "unpivot"],
+)
+def test_duckdb_file_backed_keeps_no_view(
+    tmp_path: Path,
+    method: Callable[[nw.LazyFrame[Any]], nw.LazyFrame[Any]],
+    *,
+    read_only: bool,
+) -> None:
+    # Both run through a temporary view, which must never be written to the database.
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    path = str(tmp_path / "file.db")
+    with duckdb.connect(path) as con:
+        con.sql("create table t as select 1 as a, 2 as b")
+    with duckdb.connect(path, read_only=read_only) as con:
+        lf = nw.from_native(con.table("t"))
+        if DUCKDB_VERSION < PkgVersion("1.5.4"):  # pragma: no cover
+            with pytest.raises(NotImplementedError, match=r"'duckdb>=1\.5\.4'"):
+                method(lf)
+        else:
+            assert method(lf).collect().shape == (1, 3)
+    with duckdb.connect(path) as con:
+        assert con.sql("select * from duckdb_views() where not internal").fetchall() == []
+
+
+@pytest.mark.parametrize(
+    "method",
+    [lambda lf: lf.join_asof(lf, on="a"), lambda lf: lf.unpivot(index="a")],
+    ids=["join_asof", "unpivot"],
+)
+def test_duckdb_default_connection_keeps_no_view(
+    method: Callable[[nw.LazyFrame[Any]], nw.LazyFrame[Any]],
+) -> None:
+    # Views from `rel.query` live until the connection closes on duckdb<2.0, so frames
+    # on the default connection must keep going through `duckdb.sql`.
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    def n_views() -> int:
+        rel = duckdb.sql("select count(*) from duckdb_views() where not internal")
+        assert rel is not None
+        return int(rel.fetchall()[0][0])
+
+    before = n_views()
+    rel = duckdb.sql("select 1 as a, 2 as b")
+    assert rel is not None
+    assert method(nw.from_native(rel)).collect().shape == (1, 3)
+    assert n_views() == before
+
+
+def test_joinasof_duckdb_table_named_rhs() -> None:
+    # The right frame is found by replacement scan, which a same-named table would shadow.
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    con.sql("create table rhs as select 1 as a, -1 as c")
+    lhs = nw.from_native(con.sql("select * from (values (1, 'x'), (5, 'y')) v(a, b)"))
+    rhs = nw.from_native(con.sql("select * from (values (1, 10), (4, 40)) v(a, c)"))
+    result = lhs.join_asof(rhs, on="a").sort("a")
+    assert_equal_data(result, {"a": [1, 5], "b": ["x", "y"], "c": [10, 40]})
 
 
 def test_joinasof_suffix(
