@@ -386,10 +386,10 @@ def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
     """Unique name for `rel.query`'s `virtual_table_name`.
 
     `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
-    `rel`'s own connection (see [relational api]). We only use it when `duckdb.sql(statement)`
-    fails: that runs on the global default connection, which cannot see relations from
-    other connections (see [using connections in parallel python programs]), but leaves
-    no view behind.
+    `rel`'s own connection (see [relational api]). On duckdb<2.0 we only use it when
+    `duckdb.sql(statement)` fails: that runs on the global default connection, which
+    cannot see relations from other connections (see
+    [using connections in parallel python programs]), but leaves no view behind.
 
     The name must be unique per call: views persist and the lazy result re-binds by
     name on execution, so a reused name shadows earlier views and corrupts their plans.

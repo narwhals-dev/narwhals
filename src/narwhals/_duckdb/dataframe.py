@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from functools import reduce
 from operator import and_
 from typing import TYPE_CHECKING, Any, Literal
@@ -8,6 +9,7 @@ import duckdb
 from duckdb import StarExpression
 
 from narwhals._duckdb.utils import (
+    BACKEND_VERSION,
     DeferredTimeZone,
     F,
     catch_duckdb_exception,
@@ -410,12 +412,15 @@ class DuckDBLazyFrame(
                 ON {condition}
                 """  # noqa: S608
 
-        try:
-            joined = duckdb.sql(query("_narwhals_asof_lhs"))
-        except duckdb.InvalidInputException:
-            # Not on the default connection. `rel.query` runs on the relation's own,
-            # at the cost of a view, see `temporary_view_name`. Unavoidable until the
-            # relational API gains ASOF LEFT JOIN support.
+        joined = None
+        if BACKEND_VERSION < (2,):
+            # `rel.query`'s view would outlive the frame on the default connection.
+            with suppress(duckdb.InvalidInputException):
+                joined = duckdb.sql(query("_narwhals_asof_lhs"))
+        if joined is None:
+            # `rel.query` runs on the relation's own connection, at the cost of a view,
+            # see `temporary_view_name`. Unavoidable until the relational API gains
+            # ASOF LEFT JOIN support.
             view = temporary_view_name(lhs)
             joined = lhs.query(view, query(view))
         assert joined is not None  # noqa: S101
@@ -578,11 +583,14 @@ class DuckDBLazyFrame(
                     value {col(value_name)}
                 """
 
-        try:
-            unpivoted = duckdb.sql(query("_rel"))
-        except duckdb.InvalidInputException:
-            # Not on the default connection. `rel.query` runs on the relation's own,
-            # at the cost of a view, see `temporary_view_name`.
+        unpivoted = None
+        if BACKEND_VERSION < (2,):
+            # `rel.query`'s view would outlive the frame on the default connection.
+            with suppress(duckdb.InvalidInputException):
+                unpivoted = duckdb.sql(query("_rel"))
+        if unpivoted is None:
+            # `rel.query` runs on the relation's own connection, at the cost of a view,
+            # see `temporary_view_name`.
             view = temporary_view_name(_rel)
             unpivoted = _rel.query(view, query(view))
         assert unpivoted is not None  # noqa: S101
