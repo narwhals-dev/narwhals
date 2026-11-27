@@ -7,6 +7,8 @@
         - __arrow_c_array__
         - __arrow_c_stream__
         - __contains__
+        - __dlpack__
+        - __dlpack_device__
         - __getitem__
         - __iter__
         - abs

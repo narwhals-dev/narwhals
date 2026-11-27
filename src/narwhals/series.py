@@ -12,6 +12,7 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     _validate_rolling_arguments,
+    dlpack_device,
     eager_namespace,
     ensure_type,
     generate_repr,
@@ -21,6 +22,7 @@ from narwhals._utils import (
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
+    to_dlpack,
     unstable,
 )
 from narwhals.dependencies import (
@@ -50,7 +52,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import CapsuleType, Self
 
     from narwhals._compliant import CompliantSeries
     from narwhals._translate import IntoArrowSeries
@@ -422,6 +424,79 @@ class Series(Generic[IntoSeriesT]):
 
         ca = chunked_array(self.to_arrow())
         return ca.__arrow_c_stream__(requested_schema=requested_schema)
+
+    def __dlpack__(
+        self,
+        *,
+        stream: int | Any | None = None,
+        max_version: tuple[int, int] | None = None,
+        dl_device: tuple[int, int] | None = None,
+        copy: bool | None = None,
+    ) -> CapsuleType:
+        """Export a Series via the DLPack protocol.
+
+        This lets the consumer pick the array library, e.g. with `numpy.from_dlpack`,
+        `torch.from_dlpack`, `cupy.from_dlpack`, or any Array API `xp.from_dlpack`.
+
+        Narwhals doesn't implement anything itself here:
+
+        - if the underlying series implements the protocol, it'll return that
+        - for cuDF, it'll call `to_cupy` and defer to CuPy's implementation, so the
+          data stays on the GPU
+        - else, it'll call `to_numpy` and then defer to NumPy's implementation, copying
+          read-only arrays for consumers on unversioned DLPack (`max_version` < 1.0),
+          which can't flag a buffer as read-only
+
+        DLPack can only represent fixed-width numeric and boolean data: other dtypes
+        (e.g. strings, datetimes) raise. In the NumPy fallback, nulls follow the
+        `to_numpy` rules (e.g. integers with nulls become floats with `NaN`), and
+        `copy=False` only applies to the exported NumPy array, not to the conversion
+        that produced it.
+
+        See [DLPack Python specification](https://dmlc.github.io/dlpack/latest/python_spec.html)
+        for more.
+
+        Arguments:
+            stream: Stream on which the consumer will use the data, forwarded as is.
+            max_version: Maximum DLPack version supported by the consumer.
+            dl_device: Device the consumer requests the data on.
+            copy: Whether the exported buffer must (`True`) or must not (`False`) be copied.
+
+        Returns:
+            A DLPack capsule.
+
+        Examples:
+            >>> import numpy as np
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s = nw.from_native(pd.Series([1, 2, 3]), series_only=True)
+            >>> np.from_dlpack(s)
+            array([1, 2, 3])
+        """
+        return to_dlpack(
+            self._compliant_series,
+            stream=stream,
+            max_version=max_version,
+            dl_device=dl_device,
+            copy=copy,
+        )
+
+    def __dlpack_device__(self) -> tuple[int, int]:
+        """Return the DLPack `(device_type, device_id)` of the data `__dlpack__` exports.
+
+        Returns:
+            The underlying series' device if it implements the DLPack protocol,
+            `(2, device_id)` (CUDA, on the current device) for cuDF, else `(1, 0)`
+            (CPU) for the NumPy fallback.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> s = nw.from_native(pd.Series([1, 2, 3]), series_only=True)
+            >>> s.__dlpack_device__()
+            (1, 0)
+        """
+        return dlpack_device(self._compliant_series)
 
     def __arrow_c_array__(
         self, requested_schema: object | None = None
