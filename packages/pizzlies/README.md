@@ -54,7 +54,9 @@ number after that.
 
 Inputs keep every column whenever it's unclear which ones an expression reads (for
 selectors, `all()`, `nth` and `exclude`), and also for `unique()` and `drop_nulls()`
-without a subset, diagonal and horizontal `concat`, and `unpivot` without `on`.
+without a subset, diagonal and horizontal `concat`, and `unpivot` without `on`. Vertical
+`concat` does prune its inputs, so it only checks that the dtypes of the columns which
+the query reads match: unlike in eager mode, other columns may differ.
 
 ## As a Narwhals plugin
 
