@@ -64,6 +64,7 @@ for how you can use them together.
 
 In [chDB](https://github.com/chdb-io/chdb) 4.3.0 and later, `DataStore` implements the Arrow
 PyCapsule Interface, so you can pass a lazy query directly to `DataFrame.from_arrow`.
+This example requires PyArrow 14.0.0 or later.
 
 ```python
 from chdb.datastore import DataStore
