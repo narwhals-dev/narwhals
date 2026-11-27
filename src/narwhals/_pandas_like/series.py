@@ -5,7 +5,6 @@ import warnings
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerSeries, EagerSeriesHist
-from narwhals._compliant.series import bin_interval_search_bounds
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -35,6 +34,7 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     _into_arrow_chunked_array,
+    bin_interval_search_bounds,
     is_list_of,
 )
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
@@ -1234,9 +1234,19 @@ class PandasLikeSeries(EagerSeries[Any]):
             indices += offset
         if labels is False:
             data = indices
-            result_dtype = "uint32" if self._implementation.is_cudf() else "UInt32"
+            result_dtype = narwhals_to_native_dtype(
+                self._version.dtypes.UInt32(),
+                get_dtype_backend(native.dtype, self._implementation),
+                self._implementation,
+                self._version,
+            )
         else:
-            result_dtype = ns.CategoricalDtype(labels, ordered=True)
+            result_dtype = narwhals_to_native_dtype(
+                self._version.dtypes.Enum(labels),
+                None,
+                self._implementation,
+                self._version,
+            )
             data = ns.CategoricalIndex(labels, dtype=result_dtype).take(indices)
         result = ns.Series(data, dtype=result_dtype, index=native.index, name=self.name)
         return self._with_native(result.where(~null_mask), preserve_broadcast=True)

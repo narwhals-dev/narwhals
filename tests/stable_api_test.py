@@ -85,7 +85,7 @@ def test_series_docstrings() -> None:
 
     ser_v2 = nw_v2.from_native(pl.Series(), series_only=True)
     ser = nw.from_native(pl.Series(), series_only=True)
-    # These experimental methods are available on the main Series.
+    # Unstable, so not in stable.v2.
     for method_name, doc in _iter_api_method_docs(ser, "bin_intervals", "hist"):
         doc_v2 = getdoc(getattr(ser_v2, method_name))
         assert doc_v2

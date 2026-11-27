@@ -1716,28 +1716,30 @@ class Expr:
         Arguments:
             intervals: Strictly increasing, finite breakpoints. Pass `[]` for a single bin.
             labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
-                Labels have dtype `Enum` on Polars and pandas-like backends and
-                `Categorical` on PyArrow.
-            right_closed: Use right-closed bins `(a, b]`. Defaults to left-closed bins `[a, b)`.
-
-        Raises:
-            DuplicateError: If breakpoints or labels contain duplicates.
-            ComputeError: If breakpoints are out of order or contain NaN or infinity.
-            ShapeError: If the number of labels differs from `len(intervals) + 1`.
+            right_closed: Use right-closed bins `(a, b]` instead of left-closed `[a, b)`.
 
         Notes:
-            Nulls stay null. NaN goes in the last bin, including missing values stored as
-            NaN in NumPy-backed pandas float columns.
+            - Labelled output is `Categorical` on PyArrow and `Enum` elsewhere.
+            - Nulls stay null. NaN goes in the last bin, including missing values
+              stored as NaN in NumPy-backed pandas float columns.
 
         Examples:
-            >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df = nw.from_native(pl.LazyFrame({"x": [0, 1, 2, 3]}))
-            >>> bins = nw.col("x").bin_intervals(
-            ...     [1, 2], labels=["low", "mid", "high"], right_closed=True
+            >>> df_native = pd.DataFrame({"a": [0, 1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     bin=nw.col("a").bin_intervals([1, 2], labels=["lo", "mid", "hi"])
             ... )
-            >>> df.select(bins).collect()["x"].to_list()
-            ['low', 'low', 'mid', 'high']
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a  bin     |
+            |    0  0   lo     |
+            |    1  1  mid     |
+            |    2  2   hi     |
+            |    3  3   hi     |
+            └──────────────────┘
         """
         intervals, labels = _validate_bin_intervals(intervals, labels)
         return self._append_node(

@@ -602,6 +602,15 @@ def test_any_value_series(constructor_eager: ConstructorEager) -> None:
         df["a"].any_value()
 
 
+def test_bin_intervals_not_in_stable() -> None:
+    with pytest.raises(NotImplementedError, match="'bin_intervals' is not implemented"):
+        nw_v2.col("a").bin_intervals([0], labels=False)
+    pa = pytest.importorskip("pyarrow")
+    series = nw_v2.from_native(pa.chunked_array([[1.0]]), series_only=True)
+    with pytest.raises(NotImplementedError, match="'bin_intervals' is not implemented"):
+        series.bin_intervals([0], labels=False)
+
+
 def test_first_last() -> None:
     pytest.importorskip("pandas")
     import pandas as pd

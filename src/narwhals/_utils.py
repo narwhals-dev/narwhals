@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from bisect import bisect_left
 from collections.abc import (
     Callable,
     Collection,
@@ -17,7 +18,10 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from io import IOBase
-from operator import attrgetter
+from itertools import pairwise
+from math import ceil, floor, inf, isfinite, nextafter
+from numbers import Integral
+from operator import attrgetter, gt, lt
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -124,6 +128,7 @@ if TYPE_CHECKING:
         CompliantSeries,
         DTypes,
         FileSource,
+        IntoDType,
         IntoSeriesT,
         MultiIndexSelector,
         NestedLiteral,
@@ -1439,6 +1444,45 @@ def deprecate_native_namespace(
     return decorate
 
 
+# narwhals-canary: delete this line to confirm you have read the full diff
+def _validate_bin_intervals(
+    intervals: Sequence[float], labels: Sequence[str] | Literal[False]
+) -> tuple[list[float], list[str] | Literal[False]]:
+    if not isinstance(intervals, Sequence) or isinstance(intervals, (str, bytes)):
+        msg = "intervals must be a sequence of numeric breakpoints"
+        raise TypeError(msg)
+    # Rounding NumPy integers with math.ceil or math.floor can lose precision.
+    breaks: list[float] = [
+        int(value) if isinstance(value, Integral) else value for value in intervals
+    ]
+    if not all(isinstance(value, int) or isfinite(value) for value in breaks):
+        msg = "intervals must not contain NaN or infinity"
+        raise ComputeError(msg)
+    if len(set(breaks)) != len(breaks):
+        msg = "intervals are not unique"
+        raise DuplicateError(msg)
+    if any(left > right for left, right in pairwise(breaks)):
+        msg = "intervals must increase monotonically"
+        raise ComputeError(msg)
+    if labels is False:
+        return breaks, False
+    if (
+        not isinstance(labels, Sequence)
+        or isinstance(labels, str)
+        or not all(isinstance(label, str) for label in labels)
+    ):
+        msg = "labels must be a sequence of strings or False"
+        raise TypeError(msg)
+    n_bins = len(breaks) + 1
+    if len(labels) != n_bins:
+        msg = f"expected {n_bins} labels (len(intervals) + 1), got {len(labels)}"
+        raise ShapeError(msg)
+    if len(set(labels)) != len(labels):
+        msg = "labels are not unique"
+        raise DuplicateError(msg)
+    return breaks, list(labels)
+
+
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
@@ -1553,50 +1597,6 @@ def check_column_names_are_unique(columns: Collection[str]) -> None:
         msg = "".join(f"\n- '{k}' {v} times" for k, v in duplicates.items())
         msg = f"Expected unique column names, got:{msg}"
         raise DuplicateError(msg)
-
-
-# narwhals-canary: delete this line to confirm you have read the full diff
-def _validate_bin_intervals(
-    intervals: Sequence[float], labels: Sequence[str] | Literal[False]
-) -> tuple[list[float], list[str] | Literal[False]]:
-    """Validate and copy the bin definitions before building the expression."""
-    from itertools import pairwise
-    from math import isfinite
-    from numbers import Integral
-
-    if not isinstance(intervals, Sequence) or isinstance(intervals, (str, bytes)):
-        msg = "intervals must be a sequence of numeric breakpoints"
-        raise TypeError(msg)
-    # Rounding NumPy integers with math.ceil or math.floor can lose precision.
-    breaks: list[float] = [
-        int(value) if isinstance(value, Integral) else value for value in intervals
-    ]
-    if not all(isinstance(value, int) or isfinite(value) for value in breaks):
-        msg = "intervals must not contain NaN or infinity"
-        raise ComputeError(msg)
-    if len(set(breaks)) != len(breaks):
-        msg = "intervals are not unique"
-        raise DuplicateError(msg)
-    if any(left > right for left, right in pairwise(breaks)):
-        msg = "intervals must increase monotonically"
-        raise ComputeError(msg)
-    if labels is False:
-        return breaks, False
-    if (
-        not isinstance(labels, Sequence)
-        or isinstance(labels, str)
-        or not all(isinstance(label, str) for label in labels)
-    ):
-        msg = "labels must be a sequence of strings or False"
-        raise TypeError(msg)
-    n_bins = len(breaks) + 1
-    if len(labels) != n_bins:
-        msg = f"expected {n_bins} labels (len(intervals) + 1), got {len(labels)}"
-        raise ShapeError(msg)
-    if len(set(labels)) != len(labels):
-        msg = "labels are not unique"
-        raise DuplicateError(msg)
-    return breaks, list(labels)
 
 
 def _parse_time_unit_and_time_zone(
@@ -1955,11 +1955,6 @@ def _is_naive_format(format: str) -> bool:
     return not any(x in format for x in ("%s", "%z", "Z"))
 
 
-_UNSTABLE_METHOD_HINT: Final = (
-    "This unstable method is only available in the main `narwhals` namespace."
-)
-
-
 class not_implemented:  # noqa: N801
     """Mark some functionality as unsupported.
 
@@ -2198,6 +2193,46 @@ def floor_mod(expr: _SupportsFloorModT, other: _SupportsFloorModT) -> _SupportsF
     divisor) with the double-modulus identity `((a % b) + b) % b`.
     """
     return ((expr % other) + other) % other
+
+
+def bin_interval_search_bounds(
+    dtype: DType, version: Version, intervals: Sequence[float], *, right_closed: bool
+) -> tuple[Sequence[float], int, IntoDType]:
+    """Return searchable breakpoints, the index offset and the comparison dtype.
+
+    Round each edge up for left-closed bins and down for right-closed bins to a
+    value representable in the comparison dtype. The offset counts edges below
+    the integer range so the retained edges keep their original bin numbers.
+    """
+    dtypes = version.dtypes
+    if dtype.is_float():
+        direction = -inf if right_closed else inf
+        needs_adjustment = gt if right_closed else lt
+        float_bounds = []
+        for edge in intervals:
+            try:
+                rounded = float(edge)
+            except OverflowError:
+                rounded = inf if edge > 0 else -inf
+            # A wide integer can round to a Float64 on the wrong side of the edge.
+            if needs_adjustment(rounded, edge):
+                rounded = nextafter(rounded, direction)
+            float_bounds.append(rounded)
+        return float_bounds, 0, dtypes.Float64
+    if not dtype.is_integer():
+        msg = f"`bin_intervals` operation not supported for dtype `{dtype}`"
+        raise InvalidOperationError(msg)
+    round_edge = floor if right_closed else ceil
+    bounds = [round_edge(edge) for edge in intervals]
+    unsigned = dtype.is_unsigned_integer()
+    if dtype in {dtypes.Int128, dtypes.UInt128}:
+        bits, comparison_dtype = 128, dtype
+    else:
+        bits, comparison_dtype = 64, dtypes.UInt64 if unsigned else dtypes.Int64
+    lower = 0 if unsigned else -(2 ** (bits - 1))
+    start = bisect_left(bounds, lower)
+    stop = bisect_left(bounds, lower + 2**bits)
+    return bounds[start:stop], start, comparison_dtype
 
 
 def inherit_doc(

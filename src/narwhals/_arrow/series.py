@@ -30,11 +30,11 @@ from narwhals._arrow.utils import (
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
-from narwhals._compliant.series import bin_interval_search_bounds
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
+    bin_interval_search_bounds,
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
@@ -1139,7 +1139,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         labels: Sequence[str] | Literal[False],
         right_closed: bool,
     ) -> Self:
-        """Use the bin indices directly as Arrow dictionary codes for labelled output."""
         bounds, offset, dtype = bin_interval_search_bounds(
             self.dtype, self._version, intervals, right_closed=right_closed
         )

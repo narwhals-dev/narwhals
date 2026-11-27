@@ -9,7 +9,6 @@ from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
-    _UNSTABLE_METHOD_HINT,
     Implementation,
     Version,
     deprecate_native_namespace,
@@ -415,13 +414,15 @@ class Series(NwSeries[IntoSeriesT]):
         issue_warning(msg, NarwhalsUnstableWarning)
         return super().any_value(ignore_nulls=ignore_nulls)
 
-    bin_intervals: Any = not_implemented(hint=_UNSTABLE_METHOD_HINT)
+    # Too unstable to consider including here.
+    bin_intervals: Any = not_implemented()
 
 
 class Expr(NwExpr):
     _version = Version.V1
 
-    bin_intervals: Any = not_implemented(hint=_UNSTABLE_METHOD_HINT)
+    # Too unstable to consider including here.
+    bin_intervals: Any = not_implemented()
 
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()

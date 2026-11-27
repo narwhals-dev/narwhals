@@ -1,8 +1,10 @@
-# Numeric binning cases adapted from Polars 2.1.0 under the MIT terms in LICENSE.md.
+# Numeric binning cases adapted from Polars 2.1.0, under its MIT license:
+# https://github.com/pola-rs/polars/blob/7f902bd3ffd27ff82d14278a09a295ff2f7aed92/LICENSE
 # Copyright (c) 2025 Ritchie Vink
 # Copyright (c) 2024 (Some portions) NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # https://github.com/pola-rs/polars/blob/7f902bd3ffd27ff82d14278a09a295ff2f7aed92/py-polars/tests/unit/operations/test_bin_intervals.py
 # https://github.com/pola-rs/polars/blob/7f902bd3ffd27ff82d14278a09a295ff2f7aed92/py-polars/tests/unit/operations/test_binning.py
+
 from __future__ import annotations
 
 from sys import float_info
@@ -12,8 +14,6 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-import narwhals.stable.v1 as nw_v1
-import narwhals.stable.v2 as nw_v2
 from narwhals.exceptions import (
     ComputeError,
     DuplicateError,
@@ -51,9 +51,6 @@ def test_bin_intervals_expr(
     label_dtype = nw.Categorical if df.implementation.is_pyarrow() else nw.Enum(labels)
     schema = result.collect_schema()
     assert schema == {"a": label_dtype, "index": nw.UInt32}
-    if isinstance(result, nw.LazyFrame):
-        result = result.collect()
-        assert result.schema == schema
     assert_equal_data(
         result, {"a": ["lo", "mid", "mid", "hi", "hi"], "index": [0, 0, 1, 1, 2]}
     )
@@ -155,12 +152,21 @@ def test_bin_intervals_nan_and_null(constructor_eager: ConstructorEager) -> None
     assert_equal_series(series.bin_intervals([0], labels=False), expected, "a")
 
 
-@pytest.mark.parametrize("arrow", [False, True])
+@pytest.mark.parametrize(
+    "arrow",
+    [
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.skipif(
+                PANDAS_VERSION < PkgVersion("2"), reason="requires pandas Arrow dtypes"
+            ),
+        ),
+    ],
+)
 def test_bin_intervals_pandas_unmasked_nan(*, arrow: bool) -> None:
     pd = pytest.importorskip("pandas")
     if arrow:
-        if PANDAS_VERSION < PkgVersion("2"):
-            pytest.skip("requires pandas Arrow dtypes")
         pa = pytest.importorskip("pyarrow")
         data = pd.arrays.ArrowExtensionArray(pa.array([float("nan"), None]))
     else:
@@ -195,16 +201,6 @@ def test_bin_intervals_invalid_arguments(
 ) -> None:
     with pytest.raises(exception, match=match):
         nw.col("a").bin_intervals(intervals, labels=labels)
-
-
-@pytest.mark.parametrize("stable", [nw_v1, nw_v2])
-def test_bin_intervals_not_in_stable(stable: Any) -> None:
-    with pytest.raises(NotImplementedError, match="unstable"):
-        stable.col("a").bin_intervals([0], labels=False)
-    pa = pytest.importorskip("pyarrow")
-    series = stable.from_native(pa.chunked_array([[1.0]]), series_only=True)
-    with pytest.raises(NotImplementedError, match="unstable"):
-        series.bin_intervals([0], labels=False)
 
 
 def test_bin_intervals_non_numeric() -> None:

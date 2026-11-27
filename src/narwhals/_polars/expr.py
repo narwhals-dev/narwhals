@@ -21,7 +21,13 @@ from narwhals._polars.utils import (
     native_get_categories,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    bin_interval_search_bounds,
+    floor_mod,
+    requires,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -256,8 +262,6 @@ class PolarsExpr:
                     breaks, labels=labels, right_closed=right_closed
                 )
             )
-
-        from narwhals._compliant.series import bin_interval_search_bounds
 
         categories = None if labels is False else pl.Series(labels, dtype=pl.Enum(labels))
         result_dtype = pl.UInt32 if categories is None else categories.dtype

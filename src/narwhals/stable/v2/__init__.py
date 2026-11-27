@@ -9,7 +9,6 @@ from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
-    _UNSTABLE_METHOD_HINT,
     Implementation,
     Version,
     generate_temporary_column_name,
@@ -340,7 +339,7 @@ class Series(NwSeries[IntoSeriesT]):
 
     # Too unstable to consider including here.
     hist: Any = not_implemented()
-    bin_intervals: Any = not_implemented(hint=_UNSTABLE_METHOD_HINT)
+    bin_intervals: Any = not_implemented()
 
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
         msg = (
@@ -354,7 +353,8 @@ class Series(NwSeries[IntoSeriesT]):
 class Expr(NwExpr):
     _version = Version.V2
 
-    bin_intervals: Any = not_implemented(hint=_UNSTABLE_METHOD_HINT)
+    # Too unstable to consider including here.
+    bin_intervals: Any = not_implemented()
 
     def any_value(self, *, ignore_nulls: bool = False) -> Self:
         msg = (

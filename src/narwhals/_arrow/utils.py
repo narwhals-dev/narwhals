@@ -708,13 +708,25 @@ def sortable_table(table: pa.Table, keys: Iterable[str], /) -> pa.Table:
     return table
 
 
+def sort_indices(
+    table: pa.Table, sorting: Sequence[tuple[str, Order]], null_placement: NullPlacement
+) -> pa.UInt64Array:
+    """`pc.sort_indices`, hiding how `null_placement` must be passed per version."""
+    if BACKEND_VERSION < (25,):  # pragma: no cover
+        return pc.sort_indices(table, sort_keys=sorting, null_placement=null_placement)
+    # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+    # it must be specified per sort key instead.
+    keyed = [(name, order, null_placement) for name, order in sorting]
+    return pc.sort_indices(table, sort_keys=keyed)  # type: ignore[arg-type]
+
+
 def bin_interval_indices(
     values: ChunkedArrayAny, edges: ArrayAny, /, *, offset: int, right_closed: bool
 ) -> ArrayOrChunkedArray:
     """Return zero-based UInt32 bin indices, preserving nulls and placing NaN last."""
     index_type = pa.uint32()
     if BACKEND_VERSION < (26,):  # pragma: no cover
-        # search_sorted was added in Arrow 26. NaN compares below no edge.
+        # `pc.search_sorted` requires pyarrow 26.
         last = lit(offset + len(edges), index_type)
         indices = pc.if_else(values.is_null(), lit(None, index_type), last)
         below = pc.less_equal if right_closed else pc.less
@@ -726,18 +738,6 @@ def bin_interval_indices(
     )
     indices = found.cast(index_type)
     return pc.add(indices, lit(offset, index_type)) if offset else indices
-
-
-def sort_indices(
-    table: pa.Table, sorting: Sequence[tuple[str, Order]], null_placement: NullPlacement
-) -> pa.UInt64Array:
-    """`pc.sort_indices`, hiding how `null_placement` must be passed per version."""
-    if BACKEND_VERSION < (25,):  # pragma: no cover
-        return pc.sort_indices(table, sort_keys=sorting, null_placement=null_placement)
-    # `null_placement` in `SortOptions` is deprecated since 25.0.0;
-    # it must be specified per sort key instead.
-    keyed = [(name, order, null_placement) for name, order in sorting]
-    return pc.sort_indices(table, sort_keys=keyed)  # type: ignore[arg-type]
 
 
 def list_sort(

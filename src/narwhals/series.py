@@ -1055,26 +1055,26 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             intervals: Strictly increasing, finite breakpoints. Pass `[]` for a single bin.
             labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
-                Labels have dtype `Enum` on Polars and pandas-like backends and
-                `Categorical` on PyArrow.
-            right_closed: Use right-closed bins `(a, b]`. Defaults to left-closed bins `[a, b)`.
-
-        Raises:
-            DuplicateError: If breakpoints or labels contain duplicates.
-            ComputeError: If breakpoints are out of order or contain NaN or infinity.
-            ShapeError: If the number of labels differs from `len(intervals) + 1`.
+            right_closed: Use right-closed bins `(a, b]` instead of left-closed `[a, b)`.
 
         Notes:
-            Nulls stay null. NaN goes in the last bin, including missing values stored as
-            NaN in NumPy-backed pandas float columns.
+            - Labelled output is `Categorical` on PyArrow and `Enum` elsewhere.
+            - Nulls stay null. NaN goes in the last bin, including missing values
+              stored as NaN in NumPy-backed pandas float columns.
 
         Examples:
-            >>> import pyarrow as pa
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> values = pa.chunked_array([[0.0, 1.0, None, float("nan")]])
-            >>> s = nw.from_native(values, series_only=True)
-            >>> s.bin_intervals([1, 2], labels=False).to_list()
-            [0, 1, None, 2]
+            >>>
+            >>> s_native = pd.Series([0, 1, 2, 3])
+            >>> nw.from_native(s_native, series_only=True).bin_intervals(
+            ...     [1, 2], labels=False
+            ... ).to_native()
+            0    0
+            1    1
+            2    2
+            3    2
+            dtype: uint32
         """
         intervals, labels = _validate_bin_intervals(intervals, labels)
         return self._with_compliant(
