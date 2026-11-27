@@ -13,7 +13,13 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    xfail_if_builtin_dask,
+)
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -129,6 +135,31 @@ def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
         expected = {"a": [False, False, None, False]}
 
     assert_equal_data(result, expected)
+
+
+def test_arrow_is_in_with_null(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, None, 3]}))
+    xfail_if_builtin_dask(df, request)
+    result = df.select(nw.col("a").is_in([1, None]))
+    assert_equal_data(result, {"a": [True, None, False]})
+
+
+def test_dask_is_in_nullable_pandas_dtypes(request: pytest.FixtureRequest) -> None:
+    dd = pytest.importorskip("dask.dataframe")
+    import pandas as pd
+
+    data = pd.DataFrame(
+        {
+            "s": pd.array(["a", None, "b"], dtype="string[pyarrow]"),
+            "i": pd.array([1, None, 2], dtype="Int64"),
+        }
+    )
+    df = nw.from_native(dd.from_pandas(data, npartitions=2))
+    xfail_if_builtin_dask(df, request)
+    result = df.select(nw.col("s").is_in(["a", None]), nw.col("i").is_in([1, None]))
+    assert_equal_data(result, {"s": [True, None, False], "i": [True, None, False]})
 
 
 def test_is_in_incompatible_dtype(

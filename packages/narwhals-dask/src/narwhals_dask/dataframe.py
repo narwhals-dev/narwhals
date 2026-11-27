@@ -19,6 +19,7 @@ from narwhals_dask._vendored import (
 from narwhals_dask.utils import (
     add_row_index,
     evaluate_exprs,
+    is_arrow_backed,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
@@ -215,7 +216,11 @@ class DaskLazyFrame(
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
         native_dtypes = {
-            name: narwhals_to_native_dtype(dtype, self._version)
+            name: narwhals_to_native_dtype(
+                dtype,
+                self._version,
+                use_pyarrow=is_arrow_backed(self.native.dtypes[name]),
+            )
             for name, dtype in dtypes.items()
         }
         return self._with_native(self.native.astype(native_dtypes))

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
 from narwhals.compliant import DateTimeNamespace
+from narwhals.utils import parse_version
 from narwhals_dask._vendored import (
     ALIAS_DICT,
     MS_PER_SECOND,
@@ -12,6 +15,7 @@ from narwhals_dask._vendored import (
     Interval,
     calculate_timestamp_date,
     calculate_timestamp_datetime,
+    is_dtype_pyarrow,
 )
 from narwhals_dask.utils import native_to_narwhals_dtype
 
@@ -20,6 +24,14 @@ if TYPE_CHECKING:
 
     from narwhals.typing import TimeUnit
     from narwhals_dask.expr import DaskExpr
+
+
+def _microsecond(expr: dx.Series) -> dx.Series:
+    if is_dtype_pyarrow(expr.dtype) and parse_version(pd) < (3,):
+        # pandas-dev/pandas#59154: Arrow's microsecond field omits the milliseconds.
+        local = expr.dt.tz_localize(None)
+        return (local - local.dt.floor("s")).dt.microseconds
+    return expr.dt.microsecond
 
 
 class DaskExprDateTimeNamespace(ExprNamespace["DaskExpr"], DateTimeNamespace["DaskExpr"]):
@@ -45,14 +57,16 @@ class DaskExprDateTimeNamespace(ExprNamespace["DaskExpr"], DateTimeNamespace["Da
         return self.compliant._with_callable(lambda expr: expr.dt.second)
 
     def millisecond(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.microsecond // 1000)
+        return self.compliant._with_callable(
+            lambda expr: _microsecond(expr).floordiv(1000)
+        )
 
     def microsecond(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.microsecond)
+        return self.compliant._with_callable(_microsecond)
 
     def nanosecond(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.microsecond * 1000 + expr.dt.nanosecond
+            lambda expr: _microsecond(expr).mul(1000) + expr.dt.nanosecond
         )
 
     def ordinal_day(self) -> DaskExpr:
@@ -64,9 +78,16 @@ class DaskExprDateTimeNamespace(ExprNamespace["DaskExpr"], DateTimeNamespace["Da
         )
 
     def to_string(self, format: str) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.dt.strftime(format.replace("%.f", ".%f"))
-        )
+        def func(expr: dx.Series) -> dx.Series:
+            if is_dtype_pyarrow(expr.dtype) and parse_version(pd) < (3, 2):
+                # PyArrow interprets `'%S'` as "seconds, plus fractional seconds"
+                # and doesn't support `%f`, until pandas 3.2 (pandas-dev/pandas#55001)
+                fmt = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
+            else:
+                fmt = format.replace("%.f", ".%f")
+            return expr.dt.strftime(fmt)
+
+        return self.compliant._with_callable(func)
 
     def replace_time_zone(self, time_zone: str | None) -> DaskExpr:
         return self.compliant._with_callable(

@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    xfail_if_builtin_dask,
+)
 
 
 @pytest.mark.parametrize(
@@ -53,3 +58,11 @@ def test_kurtosis_expr(
 
     result = nw.from_native(constructor({"a": data})).select(nw.col("a").kurtosis())
     assert_equal_data(result, {"a": [expected]})
+
+
+def test_arrow_kurtosis_ignores_nulls(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, None, 2]}))
+    xfail_if_builtin_dask(df, request)
+    assert_equal_data(df.select(nw.col("a").kurtosis()), {"a": [-2.0]})

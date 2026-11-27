@@ -4,7 +4,11 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Version
-from narwhals_dask._vendored import isinstance_or_issubclass, select_columns_by_name
+from narwhals_dask._vendored import (
+    is_dtype_pyarrow,
+    isinstance_or_issubclass,
+    select_columns_by_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -102,9 +106,19 @@ UNSUPPORTED_DTYPES = (
 )
 
 
-def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
+def is_arrow_backed(dtype: Any) -> bool:
+    return is_dtype_pyarrow(dtype) or getattr(dtype, "storage", None) == "pyarrow"
+
+
+def narwhals_to_native_dtype(
+    dtype: IntoDType, version: Version, *, use_pyarrow: bool = False
+) -> Any:
     dtypes = version.dtypes
     base_type = dtype.base_type()
+    if use_pyarrow and (
+        base_type in NW_TO_DASK_DTYPES or issubclass(base_type, dtypes.String)
+    ):
+        return _schema_class(version)({"": dtype}).to_pandas("pyarrow")[""]
     if dask_type := NW_TO_DASK_DTYPES.get(base_type):
         return dask_type
     if isinstance_or_issubclass(dtype, dtypes.String):

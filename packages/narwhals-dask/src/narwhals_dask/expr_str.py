@@ -117,6 +117,8 @@ class DaskExprStringNamespace(ExprNamespace["DaskExpr"], StringNamespace["DaskEx
         return self.compliant._with_callable(lambda expr: expr.str.title())
 
     def zfill(self, width: int) -> DaskExpr:
+        if width == 0:
+            return self.compliant
         return self.compliant._with_callable(lambda expr: expr.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> DaskExpr:

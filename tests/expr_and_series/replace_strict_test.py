@@ -7,11 +7,13 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
+from tests.conftest import dask_pyarrow_constructor
 from tests.utils import (
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    xfail_if_builtin_dask,
     xfail_if_pyspark_connect,
 )
 
@@ -148,6 +150,70 @@ def test_replace_strict_expr_with_default(
         )
     )
     assert_equal_data(result, {"a": ["one", "two", "other", "other"]})
+
+
+@pytest.mark.parametrize(
+    ("mapping", "default", "dtype", "expected"),
+    [
+        ({1: 10}, 0, nw.Int64(), [10, 0, 0]),
+        ({1: 10}, None, nw.Int64(), [10, None, None]),
+        ({None: 99}, -1, nw.Int64(), [-1, -1, 99]),
+        ({1.1: 10, 1.9: 20, 2: 30}, -1, nw.Int64(), [-1, 30, -1]),
+        ({1: None}, None, nw.Unknown(), [None, None, None]),
+        ({1: "one", 2: None}, "other", nw.String(), ["one", None, "other"]),
+        ({1: 10}, nw.col("b"), nw.Float64(), [10.0, 2.5, 3.5]),
+        ({1: 10}, "other", nw.String(), ["10", "other", "other"]),
+        ({1: "one"}, 3, nw.String(), ["one", "3", "3"]),
+    ],
+    ids=[
+        "integer",
+        "null-default",
+        "null-key",
+        "unmatched-fractional-keys",
+        "all-null",
+        "string",
+        "float-default",
+        "string-default",
+        "integer-default",
+    ],
+)
+def test_replace_strict_dask_arrow_inferred_dtype(
+    mapping: dict[float | None, Any],
+    default: int | str | nw.Expr | None,
+    dtype: DType,
+    expected: list[Any],
+    request: pytest.FixtureRequest,
+) -> None:
+    df = nw.from_native(
+        dask_pyarrow_constructor({"a": [0, 1, 2, None], "b": [0.0, 1.5, 2.5, 3.5]})
+    ).filter(nw.col("b") > 0)
+    if dtype != nw.Int64:
+        xfail_if_builtin_dask(df, request)
+
+    result = df.select(nw.col("a").replace_strict(mapping, default=default))
+    assert result.collect_schema() == {"a": dtype}
+    collected = result.collect()
+    assert collected.schema == {"a": dtype}
+    assert_equal_data(collected, {"a": expected})
+
+
+def test_replace_strict_dask_arrow_casts_only_used_defaults() -> None:
+    df = nw.from_native(
+        dask_pyarrow_constructor({"a": [1, 1, 2], "b": ["bad", "bad", "7"]})
+    )
+    result = df.select(
+        nw.col("a").replace_strict({1: 9}, default=nw.col("b"), return_dtype=nw.Int64)
+    )
+    assert_equal_data(result, {"a": [9, 9, 7]})
+
+
+def test_replace_strict_arrow_large_integer_keys(arrow_constructor: Constructor) -> None:
+    key = 2**53
+    df = nw.from_native(arrow_constructor({"a": [key, key + 1, None, key + 2]}))
+    result = df.select(
+        nw.col("a").replace_strict({key: 10, key + 1: 20, None: 30}, default=-1)
+    )
+    assert_equal_data(result, {"a": [10, 20, 30, -1]})
 
 
 @pytest.mark.parametrize("return_dtype", [nw.String(), None])

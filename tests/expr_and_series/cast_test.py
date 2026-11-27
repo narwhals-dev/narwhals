@@ -18,6 +18,7 @@ from tests.utils import (
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     time_unit_compat,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -66,6 +67,52 @@ SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 MODIN_XFAIL_COLUMNS = {"o", "k"}
+
+
+@pytest.mark.parametrize("frame_cast", [True, False], ids=["frame", "expr"])
+def test_cast_arrow_nulls(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest, *, frame_cast: bool
+) -> None:
+    df = nw.from_native(
+        arrow_constructor({"i": [1, None, 0], "f": [float("nan"), None, 2.0]})
+    )
+    xfail_if_builtin_dask(df, request)
+    dtypes = {"i": nw.Int16(), "f": nw.Float32()}
+    result = (
+        df.cast(dtypes)
+        if frame_cast
+        else df.select(nw.col(name).cast(dtype) for name, dtype in dtypes.items())
+    )
+    assert result.collect_schema() == dtypes
+    assert_equal_data(
+        result.select("i", null=nw.col("f").is_null(), nan=nw.col("f").is_nan()),
+        {"i": [1, None, 0], "null": [False, True, False], "nan": [True, None, False]},
+    )
+
+
+def test_dask_mixed_cast_backends(request: pytest.FixtureRequest) -> None:
+    dd = pytest.importorskip("dask.dataframe")
+    pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    native = pd.DataFrame(
+        {"numpy": [1, 2, 3], "arrow": pd.array(["1", "2", "3"], dtype="string[pyarrow]")},
+        index=pd.Index([61, 13, 42], name="i"),
+    )
+    df = nw.from_native(dd.from_pandas(native, npartitions=2, sort=False))
+    xfail_if_builtin_dask(df, request)
+    expected = pd.DataFrame(
+        {
+            "numpy": pd.array([1, 2, 3], dtype="int16"),
+            "arrow": pd.array([1, 2, 3], dtype="int16[pyarrow]"),
+            "literal": pd.array([2**64 - 1] * 3, dtype="uint64[pyarrow]"),
+        },
+        index=native.index,
+    )
+    result = df.with_columns(literal=nw.lit(2**64 - 1, nw.UInt64)).cast(
+        {"numpy": nw.Int16, "arrow": nw.Int16}
+    )
+    pd.testing.assert_frame_equal(result.to_native().compute(), expected)
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")

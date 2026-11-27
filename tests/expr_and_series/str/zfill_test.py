@@ -10,6 +10,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     uses_pyarrow_backend,
+    xfail_if_builtin_dask,
 )
 
 zfill_cases = [
@@ -80,6 +81,16 @@ def test_str_zfill(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(width))
     assert_equal_data(result, expected)
+
+
+def test_arrow_zfill_zero(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    data = {"a": ["", "-1", None]}
+    df = nw.from_native(arrow_constructor(data))
+    if PANDAS_VERSION < PkgVersion("3"):
+        xfail_if_builtin_dask(df, request)
+    assert_equal_data(df.select(nw.col("a").str.zfill(0)), data)
 
 
 @pytest.mark.parametrize(("data", "width", "expected"), zfill_cases)
