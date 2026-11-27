@@ -126,3 +126,14 @@ def test_unpivot_mixed_types(
     result = df.unpivot(on=["a", "b"], index="idx")
 
     assert result.collect_schema().dtypes() == expected_dtypes
+
+
+def test_unpivot_duckdb_own_connection() -> None:
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    lf = nw.from_native(con.sql("select * from (values (1, 10, 100)) v(a, b, c)"))
+    result = lf.unpivot(on=["b", "c"], index="a").sort("variable")
+    expected = {"a": [1, 1], "variable": ["b", "c"], "value": [10, 100]}
+    assert_equal_data(result, expected)

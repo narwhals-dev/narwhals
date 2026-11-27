@@ -186,7 +186,9 @@ def test_concat_diagonal_invalid(
     impl = df_1.implementation
     request.applymarker(
         pytest.mark.xfail(
-            impl not in {Implementation.IBIS, Implementation.POLARS},
+            # `UNKNOWN`: plugins, such as pizzlies, which validate them.
+            impl
+            not in {Implementation.IBIS, Implementation.POLARS, Implementation.UNKNOWN},
             reason=f"{impl!r} does not validate schemas for `concat(how='diagonal')",
         )
     )

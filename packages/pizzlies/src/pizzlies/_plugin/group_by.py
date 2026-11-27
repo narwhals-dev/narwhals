@@ -114,7 +114,8 @@ class _GroupedRows:
 
     def __init__(self, frame: DictDataFrame, keys: Sequence[str]) -> None:
         self._frame = frame
-        self._key_columns = [canonical_nans(frame.native[key]) for key in keys]
+        self._key_sources = [frame.native[key] for key in keys]
+        self._key_columns = [canonical_nans(column) for column in self._key_sources]
         # Keys are raw values for a single key, value tuples for several -- see
         # `_bucket_by_keys`. `row_keys` uses the matching representation so the
         # `order_by` re-bucketing below looks them up consistently.
@@ -143,6 +144,10 @@ class _GroupedRows:
 
     def key_column(self, position: int) -> list[Any]:
         """The distinct key values for key-column `position`, in group order."""
+        if (source := self._key_sources[position]) is not self._key_columns[position]:
+            # Hash keys differ from the values (e.g. lists became tuples): output the
+            # values of each group's first row.
+            return [source[rows[0]] for rows in self._indices[()]]
         if len(self._key_columns) == 1:
             return self.keys
         return [key[position] for key in self.keys]
@@ -234,6 +239,8 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
     ) -> tuple[DictDataFrame, list[str], list[str]]:
         if is_sequence_of(keys, str):
             keys_str = list(keys)
+            if error := frame._check_columns_exist(keys_str):
+                raise error
             return frame, keys_str, keys_str.copy()
         return self._parse_expr_keys(frame, keys=keys)
 
@@ -380,6 +387,11 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             for position, key_name in enumerate(self._output_key_names)
         }
         exclude = (*self._keys, *self._output_key_names)
+        # Like pandas' `apply(..., include_groups=False)`: a non-elementary aggregation
+        # can't see the keys, so e.g. a selector in it isn't evaluated on them.
+        without_keys = frame.simple_select(
+            *(name for name in frame.columns if name not in self._keys)
+        )
         names = list(self._output_key_names)
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
@@ -388,6 +400,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
             names.extend(aliases)
             check_column_names_are_unique(names)
             op_nodes = list(expr._metadata.op_nodes_reversed())
+            inputs = frame if expr._is_elementary() else without_keys
             order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1 and op_nodes[0].name == "len":
                 # `agg(nw.len())`: no input column, just count rows per group. Other
@@ -403,7 +416,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                 result.update(
                     self._agg_elementwise(
                         expr,
-                        frame,
+                        inputs,
                         groups=groups,
                         order_by=order_by,
                         output_names=output_names,
@@ -411,7 +424,7 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
                     )
                 )
             else:
-                columns = tuple(expr._pruned(frame).columns)
+                columns = tuple(expr._pruned(inputs).columns)
                 result.update(
                     self._agg_complex(expr, groups.frames(order_by, columns), aliases)
                 )
@@ -420,8 +433,9 @@ class DictGroupBy(CompliantGroupBy["DictDataFrame", "DictExpr"]):
 
     def __iter__(self) -> Iterator[tuple[tuple[Any, ...], DictDataFrame]]:
         frame = self.compliant
-        single_key = len(self._keys) == 1
         selected = frame.simple_select(*self._df.columns)
-        for key, indices in self._group_indices(frame).items():
-            # Keys are always yielded as tuples, so wrap the single-key raw value.
-            yield ((key,) if single_key else key), selected._gather_positions(indices)
+        key_columns = [frame.native[key] for key in self._keys]
+        for indices in self._group_indices(frame).values():
+            # The first row's values, not the hash keys (e.g. tuples for lists).
+            key = tuple(column[indices[0]] for column in key_columns)
+            yield key, selected._gather_positions(indices)

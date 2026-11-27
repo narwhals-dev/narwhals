@@ -307,7 +307,11 @@ def _stream_decompress(
 
 def _zstd() -> Any:
     if sys.version_info >= (3, 14):
-        from compression import zstd
+        try:  # missing when Python was built without zstd
+            from compression import zstd
+        except ImportError:
+            msg = "Reading zstd-compressed Parquet needs Python built with zstd support."
+            raise NotImplementedError(msg) from None
     else:
         try:  # optional: `pip install pizzlies[zstd]`
             from backports import zstd  # type: ignore[import-not-found,unused-ignore]  # pyright: ignore[reportMissingImports]
@@ -1296,6 +1300,8 @@ def _read_parquet(
     schema = _Schema(metadata[2])
     names = [name for name, _ in schema.fields]
     check_column_names_are_unique(names)
+    if columns is not None:
+        check_column_names_are_unique(columns)
     if columns is not None and (missing := set(columns).difference(names)):
         msg = f"Columns not found in the Parquet file: {sorted(missing)}."
         raise ValueError(msg)

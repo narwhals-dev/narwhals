@@ -88,14 +88,14 @@ def evaluate_output_names_and_aliases(
     )
     if exclude and expr._metadata.expansion_kind.is_multi_unnamed():
         exclude_set = frozenset(exclude)
-        output_names, aliases = zip(
-            *[
-                (x, alias)
-                for x, alias in zip(output_names, aliases, strict=True)
-                if x not in exclude_set
-            ],
-            strict=True,
-        )
+        # Not `zip(*...)`: excluding every column must give no names, not an error.
+        kept = [
+            (x, alias)
+            for x, alias in zip(output_names, aliases, strict=True)
+            if x not in exclude_set
+        ]
+        output_names = [x for x, _ in kept]
+        aliases = [alias for _, alias in kept]
     return output_names, aliases
 
 
