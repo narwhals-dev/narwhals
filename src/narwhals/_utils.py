@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 import re
 import sys
-
-# narwhals-canary: delete this line to confirm you have read the full diff
 from bisect import bisect_left
 from collections.abc import (
     Callable,
