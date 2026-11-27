@@ -62,23 +62,23 @@ for how you can use them together.
 
 #### chDB
 
-[chDB](https://github.com/chdb-io/chdb) is an in-process SQL OLAP engine powered by ClickHouse.
-Query results in chDB's `"Arrow"` output format implement the PyCapsule Interface, so they can
-be passed straight to `DataFrame.from_arrow`:
+A [chDB](https://github.com/chdb-io/chdb) `DataStore` implements the Arrow PyCapsule Interface,
+so you can pass a lazy query directly to `DataFrame.from_arrow`.
 
 ```python
-import chdb
+from chdb.datastore import DataStore
+
 import narwhals as nw
 
-result = chdb.query(
-    "SELECT number AS n, toString(number) AS s FROM numbers(3) ORDER BY n", "Arrow"
-)
-df = nw.DataFrame.from_arrow(result, backend="pyarrow")
+numbers = DataStore.from_numbers(3).sort_values("number", ascending=False)
+df = nw.DataFrame.from_arrow(numbers, backend="pyarrow")
 ```
 
-`chdb.query` runs the query and materialises the whole result. Any Narwhals operation on `df`
-then runs on the backend passed to `backend` and is not pushed down to chDB. As with any SQL
-engine, add an `ORDER BY` to the query if row order matters.
+Calling `from_arrow` runs the sort in chDB and materialises the result as a PyArrow table.
+Subsequent operations on `df` run in PyArrow.
+
+If you already have a SQL query, `chdb.query(sql, "Arrow")` executes it immediately.
+You can pass its result to `DataFrame.from_arrow` too.
 
 ### Ibis
 
