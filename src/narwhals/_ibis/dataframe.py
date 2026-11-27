@@ -166,8 +166,7 @@ class IbisLazyFrame(
     def select(self, *exprs: IbisExpr) -> Self:
         selection = [val.name(name) for name, val in evaluate_exprs(self, *exprs)]
         if not selection:
-            msg = "At least one expression must be provided to `select` with the Ibis backend."
-            raise ValueError(msg)
+            raise self._zero_column_select_error()
 
         t = self.native.select(*selection)
         return self._with_native(t)

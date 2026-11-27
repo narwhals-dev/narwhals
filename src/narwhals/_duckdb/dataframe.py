@@ -186,9 +186,10 @@ class DuckDBLazyFrame(
             raise catch_duckdb_exception(e, self) from None
 
     def select(self, *exprs: DuckDBExpr) -> Self:
-        selection = (
-            val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
-        )
+        columns = evaluate_exprs_and_aliases(self, *exprs)
+        if not columns:
+            raise self._zero_column_select_error()
+        selection = (val.alias(name) for name, val in columns)
         try:
             return self._with_native(self.native.select(*selection))
         except Exception as e:  # noqa: BLE001

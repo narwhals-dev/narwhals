@@ -53,6 +53,14 @@ class SQLLazyFrame(
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
         return check_columns_exist(subset, available=self.columns)
 
+    # narwhals-canary: delete this line to confirm you have read the full diff
+    def _zero_column_select_error(self) -> InvalidOperationError:
+        msg = (
+            "At least one column must be selected: `LazyFrame.select` resolved to "
+            f"zero columns, which the {self._implementation} backend does not support."
+        )
+        return InvalidOperationError(msg)
+
     def _validate_explode_columns(self, columns: Sequence[str]) -> str:
         """Validate `explode` inputs and return the single column to explode.
 

@@ -266,6 +266,9 @@ class SparkLikeLazyFrame(
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
         new_columns = evaluate_exprs(self, *exprs)
+        if not new_columns and self._implementation.is_sqlframe():
+            # PySpark handles zero-column selects; SQLFrame silently returns every column.
+            raise self._zero_column_select_error()
         new_columns_list = [col.alias(col_name) for (col_name, col) in new_columns]
         if self._implementation.is_pyspark():  # pragma: no cover
             try:
