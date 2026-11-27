@@ -180,7 +180,7 @@ class DuckDBLazyFrame(
         selection = [
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
         ]
-        if error := self._check_select_columns(selection):
+        if error := self._check_empty_selection_supported(selection):
             raise error
         try:
             return self._with_native(self.native.aggregate(selection))
@@ -191,7 +191,7 @@ class DuckDBLazyFrame(
         selection = [
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
         ]
-        if error := self._check_select_columns(selection):
+        if error := self._check_empty_selection_supported(selection):
             raise error
         try:
             return self._with_native(self.native.select(*selection))

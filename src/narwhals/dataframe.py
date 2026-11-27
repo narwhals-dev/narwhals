@@ -2804,6 +2804,12 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             of just passing the column name. For example, to select a column named
             `0` use `df.select(nw.col(0))`, not `df.select(0)`.
 
+        Warning:
+            If the expressions resolve to zero columns, DuckDB, Ibis, and SQLFrame
+            raise `InvalidOperationError`. Polars, PySpark, and the `narwhals-dask`
+            plugin return a frame with no columns. The built-in Dask backend raises
+            `ValueError` when aggregating an empty selection, for example with `.count()`.
+
         Examples:
             >>> import duckdb
             >>> import narwhals as nw

@@ -296,9 +296,11 @@ def test_set_ops(
     constructor: Constructor, selector: nw.selectors.Selector, expected: list[str]
 ) -> None:
     df = nw.from_native(constructor(data))
-    if not expected and any(
-        x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")
-    ):
+    if not expected and df.implementation in {
+        nw.Implementation.DUCKDB,
+        nw.Implementation.IBIS,
+        nw.Implementation.SQLFRAME,
+    }:
         with pytest.raises(InvalidOperationError, match="zero columns"):
             df.select(selector)
         return
