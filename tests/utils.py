@@ -305,22 +305,16 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
 
     The backend is read from the test id (`request.node.callspec.id`), which only
     contains a backend name if the test is parametrized by a `constructor*` fixture.
-    Matching on the id by hand is error-prone (`"pyarrow"` also matches `"pandas[pyarrow]"`),
-    so this function does it once.
+    Matching on the id by hand is error-prone (`"pyarrow"` also matches
+    `"pandas[pyarrow]"`), so this function does it once.
 
-    The test itself does not need to use the constructor. It only has to list a
-    fixture from `_CONSTRUCTOR_FIXTURE_NAMES` as a parameter, alongside `request`:
-
-        def test_array_dunder(
-            request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-        ) -> None:
-            time_unit = time_unit_compat("us", request)
+    The test does not have to call the constructor, only to request one of
+    `_CONSTRUCTOR_FIXTURE_NAMES` next to `request`.
     """
     if _CONSTRUCTOR_FIXTURE_NAMES.isdisjoint(request.fixturenames):  # pragma: no cover
         msg = (
-            "`time_unit_compat` reads the backend from the test id, which is only set "
-            "when the test is parametrized by a constructor fixture.\n"
-            f"Add one of these to the test function's parameters: {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
+            "`time_unit_compat` reads the backend from the test id, so the test must "
+            f"request one of these fixtures: {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
         )
         raise NotImplementedError(msg)
     request_id = request.node.callspec.id
