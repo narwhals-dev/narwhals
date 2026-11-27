@@ -268,6 +268,39 @@ def test_hist_no_data(
     assert result["count"].dtype.is_integer()
 
 
+@pytest.mark.skipif(
+    POLARS_VERSION < PkgVersion("1.15"),
+    reason="native hist handles empty input from Polars 1.15",
+)
+@pytest.mark.parametrize(
+    ("values", "kwargs"),
+    [
+        ([], {"bin_count": 2}),
+        ([], {"bin_count": 0}),
+        ([], {"bins": [1, 5, 10]}),
+        ([], {"bins": [1]}),
+        ([], {"bins": []}),
+        ([None, None], {"bin_count": 2}),
+        ([1.0, 6.0], {"bin_count": 2}),
+    ],
+)
+@param_include_breakpoint
+def test_hist_polars_dtypes(
+    values: list[float | None], kwargs: dict[str, Any], *, include_breakpoint: bool
+) -> None:
+    pl = pytest.importorskip("polars")
+    native = pl.Series(values, dtype=pl.Float64)
+    result = nw.from_native(native, series_only=True).hist(
+        **kwargs, include_breakpoint=include_breakpoint
+    )
+    expected_count_dtype = nw.from_native(
+        pl.Series([], dtype=pl.get_index_type()), series_only=True
+    ).dtype
+    assert result["count"].dtype == expected_count_dtype
+    if include_breakpoint:
+        assert result["breakpoint"].dtype == nw.Float64
+
+
 @param_library
 def test_hist_small_bins(library: str) -> None:
     if library == "pandas":

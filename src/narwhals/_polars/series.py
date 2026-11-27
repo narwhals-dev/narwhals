@@ -157,9 +157,11 @@ class PolarsSeries:
     _native_series: pl.Series
     _version: Version
 
-    _HIST_EMPTY_SCHEMA: ClassVar[Mapping[IncludeBreakpoint, Sequence[str]]] = {
-        True: ["breakpoint", "count"],
-        False: ["count"],
+    _HIST_EMPTY_SCHEMA: ClassVar[
+        Mapping[IncludeBreakpoint, dict[str, pl.DataType | type[pl.DataType]]]
+    ] = {
+        True: {"breakpoint": pl.Float64, "count": pl.get_index_type()},
+        False: {"count": pl.get_index_type()},
     }
 
     def __init__(self, series: pl.Series, *, version: Version) -> None:
@@ -592,50 +594,55 @@ class PolarsSeries:
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> PolarsDataFrame:
-        if len(bins) <= 1:
-            native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
-        elif self.native.is_empty():
-            if include_breakpoint:
-                native = (
-                    pl.Series(bins[1:])
-                    .to_frame("breakpoint")
-                    .with_columns(count=pl.lit(0, pl.Int64))
-                )
+        if BACKEND_VERSION < (1, 15):  # pragma: no cover - polars<1.15 only
+            if len(bins) <= 1:
+                native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
+            elif self.native.is_empty():
+                if include_breakpoint:
+                    native = (
+                        pl.Series(bins[1:], dtype=pl.Float64)
+                        .to_frame("breakpoint")
+                        .with_columns(count=pl.lit(0, pl.get_index_type()))
+                    )
+                else:
+                    native = pl.select(count=pl.zeros(len(bins) - 1, pl.get_index_type()))
             else:
-                native = pl.select(count=pl.zeros(len(bins) - 1, pl.Int64))
-        else:
-            return self._hist_from_data(
-                bins=bins, bin_count=None, include_breakpoint=include_breakpoint
+                return self._hist_from_data(
+                    bins=bins, bin_count=None, include_breakpoint=include_breakpoint
+                )
+            return self.__narwhals_namespace__()._dataframe.from_native(
+                native, context=self
             )
-        return self.__narwhals_namespace__()._dataframe.from_native(native, context=self)
+        return self._hist_from_data(
+            bins=bins, bin_count=None, include_breakpoint=include_breakpoint
+        )
 
     def hist_from_bin_count(
         self, bin_count: int, *, include_breakpoint: bool
     ) -> PolarsDataFrame:
-        if bin_count == 0:
-            native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
-        elif self.native.is_empty():
-            if include_breakpoint:
-                native = pl.select(
-                    breakpoint=pl.int_range(1, bin_count + 1) / bin_count,
-                    count=pl.lit(0, pl.Int64),
+        if BACKEND_VERSION < (1, 15):  # pragma: no cover - polars<1.15 only
+            if bin_count == 0:
+                native = pl.DataFrame(schema=self._HIST_EMPTY_SCHEMA[include_breakpoint])
+            elif self.native.is_empty():
+                if include_breakpoint:
+                    native = pl.select(
+                        breakpoint=pl.int_range(1, bin_count + 1) / bin_count,
+                        count=pl.lit(0, pl.get_index_type()),
+                    )
+                else:
+                    native = pl.select(count=pl.zeros(bin_count, pl.get_index_type()))
+            else:
+                return self._hist_from_data(
+                    bins=self._bins_from_bin_count(bin_count=bin_count),  # type: ignore[arg-type]
+                    bin_count=None,
+                    include_breakpoint=include_breakpoint,
                 )
-            else:
-                native = pl.select(count=pl.zeros(bin_count, pl.Int64))
-        else:
-            count: int | None
-            if BACKEND_VERSION < (1, 15):  # pragma: no cover
-                count = None
-                bins = self._bins_from_bin_count(bin_count=bin_count)
-            else:
-                count = bin_count
-                bins = None
-            return self._hist_from_data(
-                bins=bins,  # type: ignore[arg-type]
-                bin_count=count,
-                include_breakpoint=include_breakpoint,
+            return self.__narwhals_namespace__()._dataframe.from_native(
+                native, context=self
             )
-        return self.__narwhals_namespace__()._dataframe.from_native(native, context=self)
+        return self._hist_from_data(
+            bins=None, bin_count=bin_count, include_breakpoint=include_breakpoint
+        )
 
     def _bins_from_bin_count(self, bin_count: int) -> pl.Series:  # pragma: no cover
         """Prepare bins based on backend version compatibility.
@@ -693,7 +700,7 @@ class PolarsSeries:
                 r = pl.int_range(0, len(df))
                 df = df.filter((r > 0) & (r < len(df) - 1))
             # polars<1.27 makes the lowest bin a left/right closed interval
-            if BACKEND_VERSION < (1, 27):
+            if BACKEND_VERSION < (1, 27) and bins:
                 df = (
                     df.slice(0, 1)
                     .with_columns(pl.col("count") + ((pl.lit(series) == bins[0]).sum()))
