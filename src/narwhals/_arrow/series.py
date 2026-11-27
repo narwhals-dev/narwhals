@@ -1149,12 +1149,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
         if labels is not False:
             dictionary = pa.array(labels, pa.string())
+            index_type = pa.int64()
             result = chunked_array(
                 [
-                    pa.DictionaryArray.from_arrays(chunk, dictionary)
+                    pa.DictionaryArray.from_arrays(chunk.cast(index_type), dictionary)
                     for chunk in chunked_array(result).chunks
                 ],
-                pa.dictionary(pa.uint32(), dictionary.type),
+                pa.dictionary(index_type, dictionary.type),
             )
         return self._with_native(result, preserve_broadcast=True)
 

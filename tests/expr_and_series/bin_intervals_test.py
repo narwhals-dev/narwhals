@@ -221,6 +221,16 @@ def test_bin_intervals_arrow_dictionary() -> None:
         assert chunk.dictionary.to_pylist() == labels
 
 
+def test_bin_intervals_arrow_to_pandas() -> None:
+    pa = pytest.importorskip("pyarrow")
+    pd = pytest.importorskip("pandas")
+    df = nw.from_native(pa.table({"a": [0, 2, None]}))
+    labels = ["low", "unused", "high"]
+    result = df.select(nw.col("a").bin_intervals([1, 2], labels=labels)).to_pandas()
+    expected = pd.Categorical(["low", "high", None], categories=labels)
+    pd.testing.assert_series_equal(result["a"], pd.Series(expected, name="a"))
+
+
 def test_bin_intervals_signed_breaks_on_uint64() -> None:
     pl = pytest.importorskip("polars")
     edge = 2**63 + 1
