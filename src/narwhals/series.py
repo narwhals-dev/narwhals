@@ -18,7 +18,7 @@ from narwhals._utils import (
     is_compliant_series,
     is_index_selector,
     native_repr,
-    prepare_cut_arguments,
+    prepare_bin_intervals,
     qualified_type_name,
     supports_arrow_c_array,
     supports_arrow_c_stream,
@@ -1039,43 +1039,46 @@ class Series(Generic[IntoSeriesT]):
         )
 
     @unstable
-    def cut(
+    def bin_intervals(
         self,
-        breaks: Sequence[float],
+        intervals: Sequence[float],
         *,
-        labels: Sequence[str] | None = None,
-        left_closed: bool = False,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool = False,
     ) -> Self:
-        r"""Bin continuous values into discrete categories.
+        """Bin the values of an integer or floating-point column using explicit breakpoints.
 
         Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 
         Arguments:
-            breaks: Unique cut points, in increasing order.
-            labels: Names of the categories, one more than the number of `breaks`.
-                If not given, they are built from the bin edges like in Polars,
-                for example `"(-inf, 1]"`.
-            left_closed: Whether to close the bins on the left (`[a, b)`) instead of on
-                the right (`(a, b]`).
+            intervals: Finite numeric breakpoints in strictly increasing order.
+                An empty sequence gives a single bin.
+            labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
+                Labelled bins have dtype `Enum` on Polars and pandas-like backends
+                and `Categorical` on PyArrow.
+            right_closed: By default, a value equal to a breakpoint goes in the bin
+                on its right. Set to `True` to put it in the bin on its left.
 
         Notes:
-            - The result is an `Enum` of the labels, except for PyArrow which returns a
-              `Categorical`.
-            - NaN values are mapped to null.
+            Nulls remain null. NaN goes in the last bin. A NumPy-backed pandas float
+            column also puts missing values in the last bin because it stores them as NaN.
 
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series([-1.0, 0.5, 2.0, 3.5])
-            >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.cut([0, 2], labels=["low", "mid", "high"]).to_list()
-            ['low', 'mid', 'mid', 'high']
+            >>> s = nw.from_native(pl.Series("x", [0, 1, 2, 3]), series_only=True)
+            >>> s.bin_intervals([1, 2], labels=False).to_list()
+            [0, 1, 2, 2]
+            >>> s.bin_intervals([1, 2], labels=False, right_closed=True).to_list()
+            [0, 0, 1, 2]
         """
-        breaks_, labels_ = prepare_cut_arguments(breaks, labels, left_closed=left_closed)
+        intervals_, labels_ = prepare_bin_intervals(intervals, labels)
         return self._with_compliant(
-            self._compliant_series.cut(breaks_, labels=labels_, left_closed=left_closed)
+            self._compliant_series.bin_intervals(
+                intervals_, labels=labels_, right_closed=right_closed
+            )
         )
 
     def first(self) -> PythonLiteral:

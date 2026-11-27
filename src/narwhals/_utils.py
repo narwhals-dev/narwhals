@@ -1556,56 +1556,41 @@ def check_column_names_are_unique(columns: Collection[str]) -> None:
 
 
 # narwhals-canary: delete this line to confirm you have read the full diff
-def _format_cut_break(value: float, /) -> str:
-    # Polars formats breaks with Rust's float `Display`: shortest round-trip digits and
-    # never an exponent, e.g. `1e20` -> "100000000000000000000" and `2.0` -> "2".
-    from decimal import Decimal
-
-    formatted = format(Decimal(repr(value)), "f")
-    return formatted.removesuffix(".0")
-
-
-def prepare_cut_arguments(
-    breaks: Sequence[float], labels: Sequence[str] | None, *, left_closed: bool
-) -> tuple[list[float], list[str]]:
-    """Validate the arguments of `cut`, generating Polars-style labels if none are given.
-
-    Arguments:
-        breaks: Cut points between bins.
-        labels: Names of the bins, one more than the number of breaks.
-        left_closed: Whether bins are closed on the left instead of on the right.
-
-    Returns:
-        The breaks as floats, and the label of every bin.
-    """
+def prepare_bin_intervals(
+    intervals: Sequence[float], labels: Sequence[str] | Literal[False]
+) -> tuple[list[float], list[str] | Literal[False]]:
+    """Validate and copy the bin definitions for eager or deferred evaluation."""
     from itertools import pairwise
     from math import isfinite
 
-    breaks_ = [float(value) for value in breaks]
-    if not all(isfinite(value) for value in breaks_):
-        msg = "breaks must not contain NaN or infinity"
+    if not isinstance(intervals, Sequence) or isinstance(intervals, (str, bytes)):
+        msg = "intervals must be a sequence of numeric breakpoints"
+        raise TypeError(msg)
+    if not all(isfinite(value) for value in intervals):
+        msg = "intervals must not contain NaN or infinity"
         raise ComputeError(msg)
-    if len(set(breaks_)) != len(breaks_):
-        msg = "breaks are not unique"
+    if len(set(intervals)) != len(intervals):
+        msg = "intervals are not unique"
         raise DuplicateError(msg)
-    if any(lower > upper for lower, upper in pairwise(breaks_)):
-        msg = "breaks must increase monotonically"
+    if any(lower > upper for lower, upper in pairwise(intervals)):
+        msg = "intervals must increase monotonically"
         raise ComputeError(msg)
-    if labels is not None:
-        if len(labels) != len(breaks_) + 1:
-            msg = (
-                f"expected {len(breaks_) + 1} labels (len(breaks) + 1), got {len(labels)}"
-            )
-            raise ShapeError(msg)
-        if len(set(labels)) != len(labels):
-            msg = "labels are not unique"
-            raise DuplicateError(msg)
-        return breaks_, list(labels)
-    edges = ["-inf", *(_format_cut_break(value) for value in breaks_), "inf"]
-    opening, closing = ("[", ")") if left_closed else ("(", "]")
-    return breaks_, [
-        f"{opening}{lower}, {upper}{closing}" for lower, upper in pairwise(edges)
-    ]
+    if labels is False:
+        return list(intervals), False
+    if (
+        not isinstance(labels, Sequence)
+        or isinstance(labels, str)
+        or not all(isinstance(label, str) for label in labels)
+    ):
+        msg = "labels must be a sequence of strings or False"
+        raise TypeError(msg)
+    if len(labels) != len(intervals) + 1:
+        msg = f"expected {len(intervals) + 1} labels (len(intervals) + 1), got {len(labels)}"
+        raise ShapeError(msg)
+    if len(set(labels)) != len(labels):
+        msg = "labels are not unique"
+        raise DuplicateError(msg)
+    return list(intervals), list(labels)
 
 
 def _parse_time_unit_and_time_zone(

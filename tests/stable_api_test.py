@@ -86,7 +86,7 @@ def test_series_docstrings() -> None:
     ser_v2 = nw_v2.from_native(pl.Series(), series_only=True)
     ser = nw.from_native(pl.Series(), series_only=True)
     for method_name, doc in _iter_api_method_docs(ser):
-        if method_name in {"hist", "cut"}:
+        if method_name in {"bin_intervals", "hist"}:
             # This is still very unstable in Polars so we don't have it in stable.v2 yet.
             continue
         doc_v2 = getdoc(getattr(ser_v2, method_name))

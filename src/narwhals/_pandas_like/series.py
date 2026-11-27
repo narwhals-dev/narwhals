@@ -5,6 +5,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerSeries, EagerSeriesHist
+from narwhals._compliant.series import bin_interval_search_bounds
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
 from narwhals._pandas_like.series_dt import PandasLikeSeriesDateTimeNamespace
 from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
@@ -1304,25 +1305,39 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return self._with_native(result_native)
 
-    def cut(
-        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
     ) -> Self:
-        inf = float("inf")
         native = self.native
-        # `include_lowest` keeps `-inf` in the first bin, like Polars.
-        result = self.__native_namespace__().cut(
-            native,
-            bins=[-inf, *breaks, inf],
-            right=not left_closed,
-            labels=list(labels),
-            ordered=True,
-            include_lowest=True,
+        ns = self.__native_namespace__()
+        bounds, offset, dtype = bin_interval_search_bounds(
+            self.dtype, intervals, right_closed=right_closed
         )
-        if left_closed:
-            # The last bin can't be closed on the right, so `cut` turns `inf` into null.
-            is_inf = native.eq(inf).fillna(value=False)
-            result = result.where(~is_inf, labels[-1])
-        return self._with_native(result)
+        # A comparison propagates masked nulls while a stored IEEE NaN compares false.
+        null_mask = native.eq(native).isna()
+        values = native.where(~null_mask, 0).astype(dtype)
+        indices = (
+            ns.Series(bounds, dtype=dtype).searchsorted(
+                values, side="left" if right_closed else "right"
+            )
+            + offset
+        )
+        if labels is False:
+            index_type = "uint32" if self._implementation.is_cudf() else "UInt32"
+            result = ns.Series(
+                indices, dtype=index_type, index=native.index, name=self.name
+            )
+        else:
+            categories = ns.CategoricalDtype(list(labels), ordered=True)
+            bins = ns.Series(labels, dtype=categories, name=self.name)
+            result = set_index(
+                bins.iloc[indices], native.index, implementation=self._implementation
+            )
+        return self._with_native(result.where(~null_mask), preserve_broadcast=True)
 
     def is_native_dtype_pyarrow(self, native_dtype: Any) -> bool:
         impl = self._implementation

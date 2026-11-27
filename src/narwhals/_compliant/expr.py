@@ -854,11 +854,15 @@ class EagerExpr(
     def cos(self) -> Self:
         return self._reuse_series("cos")
 
-    def cut(
-        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
     ) -> Self:
         return self._reuse_series(
-            "cut", breaks=breaks, labels=labels, left_closed=left_closed
+            "bin_intervals", intervals=intervals, labels=labels, right_closed=right_closed
         )
 
     def sqrt(self) -> Self:

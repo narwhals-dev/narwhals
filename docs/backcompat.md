@@ -123,6 +123,9 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v2` differences
 
+- The experimental `Expr.bin_intervals` and `Series.bin_intervals` methods are available
+  in the main namespace only. Both stable namespaces raise `NotImplementedError`.
+
 - Since Narwhals 2.26:
 
     - `Expr.cat.get_categories` and `Series.cat.get_categories` are deprecated in the main

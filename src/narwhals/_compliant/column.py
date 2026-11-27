@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from typing_extensions import Self
 
@@ -139,8 +140,12 @@ class CompliantColumn(Protocol):
     def ceil(self) -> Self: ...
     def shift(self, n: int) -> Self: ...
     def cos(self) -> Self: ...
-    def cut(
-        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
     ) -> Self: ...
     def sin(self) -> Self: ...
     def unique(self) -> Self: ...

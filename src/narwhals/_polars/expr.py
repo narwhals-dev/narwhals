@@ -24,6 +24,7 @@ from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from typing import Literal
 
     from typing_extensions import Self
 
@@ -240,20 +241,63 @@ class PolarsExpr:
         native = self.native.map_batches(function, return_dtype_pl, **kwargs)
         return self._with_native(native)
 
-    def cut(
-        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
     ) -> Self:
-        if BACKEND_VERSION < (2,):  # pragma: no cover
-            # Polars 1 returns `Categorical` rather than `Enum`.
-            native = self.native.cut(
-                list(breaks), labels=list(labels), left_closed=left_closed
+        native = self.native
+        if BACKEND_VERSION < (2,):
+            if any(abs(edge) >= 2**53 for edge in intervals):
+                # A shared Float64 breakpoint array can round large integer boundaries.
+                indices = pl.when(native.is_not_null()).then(
+                    native.is_null().cast(pl.UInt32)
+                )
+                for edge in intervals:
+                    boundary = (
+                        pl.lit(edge, dtype=pl.Float64)
+                        if isinstance(edge, float)
+                        else edge
+                    )
+                    crossed = native > boundary if right_closed else native >= boundary
+                    indices = indices + crossed.cast(pl.UInt32)
+            else:
+                breaks = pl.Series(intervals, dtype=pl.Float64)
+                position = pl.lit(breaks).search_sorted(
+                    native, side="left" if right_closed else "right"
+                )
+                # search_sorted assigns null an index. The first branch also keeps the name.
+                indices = (
+                    pl.when(native.is_null())
+                    .then(native.cast(pl.UInt32, strict=False))
+                    .otherwise(position)
+                    .cast(pl.UInt32)
+                )
+            return self._with_native(
+                indices if labels is False else indices.cast(pl.Enum(labels))
             )
-            return self._with_native(native.cast(pl.Enum(list(labels))))
-        # `cut` is deprecated in favour of `bin_intervals`, which puts NaN in the last bin.
-        native = self.native.fill_nan(None).bin_intervals(
-            list(breaks), labels=list(labels), right_closed=not left_closed
+
+        # A Polars breakpoint Series has one dtype. Counting the two types separately
+        # preserves integer precision when the user also supplied fractional breakpoints.
+        floats = [edge for edge in intervals if isinstance(edge, float)]
+        if not floats or len(floats) == len(intervals):
+            return self._with_native(
+                native.bin_intervals(
+                    pl.Series(intervals, strict=False),
+                    labels=labels,
+                    right_closed=right_closed,
+                )
+            )
+        integers = [edge for edge in intervals if not isinstance(edge, float)]
+        indices = native.bin_intervals(
+            pl.Series(integers, strict=False), labels=False, right_closed=right_closed
         )
-        return self._with_native(native)
+        indices += native.bin_intervals(floats, labels=False, right_closed=right_closed)
+        return self._with_native(
+            indices if labels is False else indices.cat.to(pl.Enum(labels))
+        )
 
     @requires.backend_version((1,))
     def replace_strict(

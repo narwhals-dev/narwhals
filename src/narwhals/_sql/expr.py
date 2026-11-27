@@ -988,7 +988,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     @property
     def dt(self) -> SQLExprDateTimeNamesSpace[Self]: ...
 
-    cut = not_implemented()  # type: ignore[misc]
+    bin_intervals = not_implemented()  # type: ignore[misc]
 
     # Length-changing expressions can't be expressed in SQL, but the equivalent
     # frame-level methods can, so point users at those.

@@ -76,6 +76,37 @@ __all__ = [
 ]
 
 
+def bin_interval_search_bounds(
+    dtype: DType, intervals: Sequence[float], *, right_closed: bool
+) -> tuple[Sequence[float], int, Literal["int64", "uint64", "float64"]]:
+    """Choose a common numeric type and avoid rounding integer breakpoints to float."""
+    from bisect import bisect_left, bisect_right
+    from math import ceil, floor
+    from numbers import Integral
+
+    from narwhals.exceptions import InvalidOperationError
+
+    if not (dtype.is_integer() or dtype.is_float()):
+        msg = f"bin_intervals requires an integer or floating-point column, got {dtype}"
+        raise InvalidOperationError(msg)
+    if dtype.is_integer():
+        # On an integer column, n >= x iff n >= ceil(x), and n > x iff n > floor(x).
+        round_bound = floor if right_closed else ceil
+        bounds = [
+            int(x) if isinstance(x, Integral) else round_bound(x) for x in intervals
+        ]
+        unsigned = dtype.is_unsigned_integer()
+        lower = 0 if unsigned else -(2**63)
+        upper = lower + 2**64 - 1
+        start = bisect_left(bounds, lower)
+        return (
+            bounds[start : bisect_right(bounds, upper)],
+            start,
+            "uint64" if unsigned else "int64",
+        )
+    return [float(value) for value in intervals], 0, "float64"
+
+
 class CompliantSeries(
     NumpyConvertible["_1DArray", "Into1DArray"],
     FromIterable,

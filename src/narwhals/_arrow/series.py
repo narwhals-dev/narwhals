@@ -29,6 +29,7 @@ from narwhals._arrow.utils import (
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
+from narwhals._compliant.series import bin_interval_search_bounds
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
@@ -1183,28 +1184,42 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def cos(self) -> Self:
         return self._with_native(pc.cos(self.native))
 
-    def cut(
-        self, breaks: Sequence[float], *, labels: Sequence[str], left_closed: bool
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
     ) -> Self:
-        native = self.native
+        bounds, offset, dtype = bin_interval_search_bounds(
+            self.dtype, intervals, right_closed=right_closed
+        )
+        values = self.native.cast(pa.type_for_alias(dtype), safe=False)
+        edges = pa.array(bounds, type=values.type)
         index_type = pa.uint32()
-        null_index = lit(None, index_type)
-        # The bin of a value is the number of breaks below it.
-        is_above = pc.greater_equal if left_closed else pc.greater
-        indices = pc.if_else(pc.is_null(native), null_index, lit(0, index_type))
-        for value in breaks:
-            indices = pc.add(indices, pc.cast(is_above(native, lit(value)), index_type))
-        if pa.types.is_floating(native.type):
-            indices = pc.if_else(pc.is_nan(native), null_index, indices)
+        if BACKEND_VERSION < (26,):  # pragma: no cover
+            # search_sorted was added in Arrow 26. NaN compares below no edge.
+            last = lit(offset + len(bounds), index_type)
+            indices = pc.if_else(pc.is_null(values), lit(None, index_type), last)
+            below = pc.less_equal if right_closed else pc.less
+            for edge in edges:
+                indices = pc.subtract(indices, pc.cast(below(values, edge), index_type))
+        else:
+            found = pc.search_sorted(  # type: ignore[attr-defined]
+                edges, values, side="left" if right_closed else "right"
+            )
+            indices = pc.add(pc.cast(found, index_type), lit(offset, index_type))
+        if labels is False:
+            return self._with_native(indices, preserve_broadcast=True)
         dictionary = pa.array(labels, pa.string())
         result = chunked_array(
             [
                 pa.DictionaryArray.from_arrays(chunk, dictionary)
-                for chunk in indices.chunks
+                for chunk in chunked_array(indices).chunks
             ],
             pa.dictionary(index_type, pa.string()),
         )
-        return self._with_native(result)
+        return self._with_native(result, preserve_broadcast=True)
 
     def any_value(
         self, *, ignore_nulls: bool, _return_py_scalar: bool = True

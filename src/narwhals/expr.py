@@ -12,7 +12,7 @@ from narwhals._utils import (
     _validate_rolling_arguments,
     ensure_type,
     flatten,
-    prepare_cut_arguments,
+    prepare_bin_intervals,
     unstable,
 )
 from narwhals.dtypes import _validate_dtype
@@ -27,7 +27,7 @@ from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from typing import Concatenate, NoReturn, TypeVar
+    from typing import Concatenate, Literal, NoReturn, TypeVar
 
     from typing_extensions import ParamSpec, Self
 
@@ -1700,57 +1700,48 @@ class Expr:
         )
 
     @unstable
-    def cut(
+    def bin_intervals(
         self,
-        breaks: Sequence[float],
+        intervals: Sequence[float],
         *,
-        labels: Sequence[str] | None = None,
-        left_closed: bool = False,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool = False,
     ) -> Self:
-        r"""Bin continuous values into discrete categories.
+        """Bin the values of an integer or floating-point column using explicit breakpoints.
 
         Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 
         Arguments:
-            breaks: Unique cut points, in increasing order.
-            labels: Names of the categories, one more than the number of `breaks`.
-                If not given, they are built from the bin edges like in Polars,
-                for example `"(-inf, 1]"`.
-            left_closed: Whether to close the bins on the left (`[a, b)`) instead of on
-                the right (`(a, b]`).
+            intervals: Finite numeric breakpoints in strictly increasing order.
+                An empty sequence gives a single bin.
+            labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
+                Labelled bins have dtype `Enum` on Polars and pandas-like backends
+                and `Categorical` on PyArrow.
+            right_closed: By default, a value equal to a breakpoint goes in the bin
+                on its right. Set to `True` to put it in the bin on its left.
 
         Notes:
-            - The result is an `Enum` of the labels, except for PyArrow which returns a
-              `Categorical`.
-            - NaN values are mapped to null.
-            - Not yet supported for Dask, DuckDB, Ibis, PySpark and SQLFrame.
+            Nulls remain null. NaN goes in the last bin. A NumPy-backed pandas float
+            column also puts missing values in the last bin because it stores them as NaN.
 
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [-1.0, 0.5, 2.0, 3.5]})
-            >>> df = nw.from_native(df_native)
-            >>> df.with_columns(a_bin=nw.col("a").cut([0, 2]))
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |     a      a_bin |
-            |0 -1.0  (-inf, 0] |
-            |1  0.5     (0, 2] |
-            |2  2.0     (0, 2] |
-            |3  3.5   (2, inf] |
-            └──────────────────┘
+            >>> df = nw.from_native(pd.DataFrame({"x": [0, 1, 2, 3]}))
+            >>> expr = nw.col("x").bin_intervals([1, 2], labels=["low", "mid", "high"])
+            >>> df.select(expr)["x"].to_list()
+            ['low', 'mid', 'high', 'high']
         """
-        breaks_, labels_ = prepare_cut_arguments(breaks, labels, left_closed=left_closed)
+        intervals_, labels_ = prepare_bin_intervals(intervals, labels)
         return self._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE,
-                "cut",
-                breaks=breaks_,
+                "bin_intervals",
+                intervals=intervals_,
                 labels=labels_,
-                left_closed=left_closed,
+                right_closed=right_closed,
             )
         )
 

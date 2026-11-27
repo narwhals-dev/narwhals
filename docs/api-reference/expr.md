@@ -9,6 +9,7 @@
         - all
         - any
         - any_value
+        - bin_intervals
         - cast
         - ceil
         - clip
@@ -19,7 +20,6 @@
         - cum_min
         - cum_prod
         - cum_sum
-        - cut
         - diff
         - drop_nulls
         - ewm_mean

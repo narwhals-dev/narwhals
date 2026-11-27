@@ -339,8 +339,8 @@ class Series(NwSeries[IntoSeriesT]):
 
     # Too unstable to consider including here.
     hist: Any = not_implemented()
-    cut: Any = not_implemented(
-        hint="`cut` is unstable and only available in the main `narwhals` namespace."
+    bin_intervals: Any = not_implemented(
+        hint="`bin_intervals` is unstable and only available in the main `narwhals` namespace."
     )
 
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
@@ -355,8 +355,8 @@ class Series(NwSeries[IntoSeriesT]):
 class Expr(NwExpr):
     _version = Version.V2
 
-    cut: Any = not_implemented(
-        hint="`cut` is unstable and only available in the main `narwhals` namespace."
+    bin_intervals: Any = not_implemented(
+        hint="`bin_intervals` is unstable and only available in the main `narwhals` namespace."
     )
 
     def any_value(self, *, ignore_nulls: bool = False) -> Self:

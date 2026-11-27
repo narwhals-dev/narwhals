@@ -17,6 +17,7 @@
         - arg_max
         - arg_min
         - arg_true
+        - bin_intervals
         - cast
         - ceil
         - clip
@@ -27,7 +28,6 @@
         - cum_min
         - cum_prod
         - cum_sum
-        - cut
         - diff
         - drop_nulls
         - dtype

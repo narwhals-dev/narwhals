@@ -414,16 +414,16 @@ class Series(NwSeries[IntoSeriesT]):
         issue_warning(msg, NarwhalsUnstableWarning)
         return super().any_value(ignore_nulls=ignore_nulls)
 
-    cut: Any = not_implemented(
-        hint="`cut` is unstable and only available in the main `narwhals` namespace."
+    bin_intervals: Any = not_implemented(
+        hint="`bin_intervals` is unstable and only available in the main `narwhals` namespace."
     )
 
 
 class Expr(NwExpr):
     _version = Version.V1
 
-    cut: Any = not_implemented(
-        hint="`cut` is unstable and only available in the main `narwhals` namespace."
+    bin_intervals: Any = not_implemented(
+        hint="`bin_intervals` is unstable and only available in the main `narwhals` namespace."
     )
 
     def _l1_norm(self) -> Self:
