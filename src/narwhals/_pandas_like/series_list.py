@@ -9,7 +9,6 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -100,4 +99,12 @@ class PandasLikeSeriesListNamespace(
         )
         return self.with_native(result_native)
 
-    unique = not_implemented()
+    def unique(self, *, maintain_order: bool) -> PandasLikeSeries:
+        self._raise_if_not_pyarrow_backend()
+
+        from narwhals._arrow.utils import list_unique
+
+        result_native = self.compliant._apply_pyarrow_compute_func(
+            self.native, list_unique
+        )
+        return self.with_native(result_native)
