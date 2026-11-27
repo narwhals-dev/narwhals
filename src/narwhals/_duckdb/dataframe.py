@@ -399,21 +399,25 @@ class DuckDBLazyFrame(
             for name in keep_cols
         )
         # Found by replacement scan, which a table or view of the same name on the
-        # connection would shadow: hence a name no user table should have.
-        _narwhals_asof_rhs = rhs
-        # `rel.query` registers a view on the relation's connection, with the caveats
-        # described in `temporary_view_name`. Unavoidable until the relational API
-        # gains ASOF join support.
-        view = temporary_view_name(lhs)
-        joined = lhs.query(
-            view,
-            f"""
-            SELECT {",".join(rhs_select)}
-            FROM {view} AS lhs
-            ASOF LEFT JOIN _narwhals_asof_rhs AS rhs
-            ON {condition}
-            """,  # noqa: S608
-        )
+        # connection would shadow: hence names no user table should have.
+        _narwhals_asof_lhs, _narwhals_asof_rhs = lhs, rhs
+
+        def query(source: str) -> str:
+            return f"""
+                SELECT {",".join(rhs_select)}
+                FROM {source} AS lhs
+                ASOF LEFT JOIN _narwhals_asof_rhs AS rhs
+                ON {condition}
+                """  # noqa: S608
+
+        try:
+            joined = duckdb.sql(query("_narwhals_asof_lhs"))
+        except duckdb.InvalidInputException:
+            # Not on the default connection. `rel.query` runs on the relation's own,
+            # at the cost of a view, see `temporary_view_name`. Unavoidable until the
+            # relational API gains ASOF LEFT JOIN support.
+            view = temporary_view_name(lhs)
+            joined = lhs.query(view, query(view))
         assert joined is not None  # noqa: S101
 
         select = [col(name) for name in lhs.columns]
@@ -561,20 +565,26 @@ class DuckDBLazyFrame(
             raise NotImplementedError(msg)
 
         unpivot_on = join_column_names(*on_)
-        # `rel.query` registers a view on the relation's connection, with the caveats
-        # described in `temporary_view_name`. Replace with the Python API once
+        _rel = self.native
+        # Replace with the Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
-        view = temporary_view_name(self.native)
-        unpivoted = self.native.query(
-            view,
-            f"""
-            unpivot {view}
-            on {unpivot_on}
-            into
-                name {col(variable_name)}
-                value {col(value_name)}
-            """,
-        )
+
+        def query(source: str) -> str:
+            return f"""
+                unpivot {source}
+                on {unpivot_on}
+                into
+                    name {col(variable_name)}
+                    value {col(value_name)}
+                """
+
+        try:
+            unpivoted = duckdb.sql(query("_rel"))
+        except duckdb.InvalidInputException:
+            # Not on the default connection. `rel.query` runs on the relation's own,
+            # at the cost of a view, see `temporary_view_name`.
+            view = temporary_view_name(_rel)
+            unpivoted = _rel.query(view, query(view))
         assert unpivoted is not None  # noqa: S101
         return self._with_native(unpivoted.select(*index_, variable_name, value_name))
 

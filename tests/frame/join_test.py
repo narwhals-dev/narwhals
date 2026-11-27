@@ -693,6 +693,31 @@ def test_duckdb_file_backed_keeps_no_view(
         assert con.sql("select * from duckdb_views() where not internal").fetchall() == []
 
 
+@pytest.mark.parametrize(
+    "method",
+    [lambda lf: lf.join_asof(lf, on="a"), lambda lf: lf.unpivot(index="a")],
+    ids=["join_asof", "unpivot"],
+)
+def test_duckdb_default_connection_keeps_no_view(
+    method: Callable[[nw.LazyFrame[Any]], nw.LazyFrame[Any]],
+) -> None:
+    # Views from `rel.query` live until the connection closes on duckdb<2.0, so frames
+    # on the default connection must keep going through `duckdb.sql`.
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    def n_views() -> int:
+        rel = duckdb.sql("select count(*) from duckdb_views() where not internal")
+        assert rel is not None
+        return int(rel.fetchall()[0][0])
+
+    before = n_views()
+    rel = duckdb.sql("select 1 as a, 2 as b")
+    assert rel is not None
+    assert method(nw.from_native(rel)).collect().shape == (1, 3)
+    assert n_views() == before
+
+
 def test_joinasof_duckdb_table_named_rhs() -> None:
     # The right frame is found by replacement scan, which a same-named table would shadow.
     pytest.importorskip("duckdb")
