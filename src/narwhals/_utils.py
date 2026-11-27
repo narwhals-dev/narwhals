@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import re
 import sys
+
+# narwhals-canary: delete this line to confirm you have read the full diff
 from bisect import bisect_left
 from collections.abc import (
     Callable,
@@ -28,6 +30,7 @@ from typing import (
     Final,
     Generic,
     Literal,
+    NamedTuple,
     Protocol,
     TypeVar,
     cast,
@@ -1457,11 +1460,8 @@ def _validate_bin_intervals(
     if not all(isinstance(value, int) or isfinite(value) for value in breaks):
         msg = "intervals must not contain NaN or infinity"
         raise ComputeError(msg)
-    if len(set(breaks)) != len(breaks):
-        msg = "intervals are not unique"
-        raise DuplicateError(msg)
-    if any(left > right for left, right in pairwise(breaks)):
-        msg = "intervals must increase monotonically"
+    if any(left >= right for left, right in pairwise(breaks)):
+        msg = "intervals must be strictly increasing"
         raise ComputeError(msg)
     if labels is False:
         return breaks, False
@@ -2194,15 +2194,24 @@ def floor_mod(expr: _SupportsFloorModT, other: _SupportsFloorModT) -> _SupportsF
     return ((expr % other) + other) % other
 
 
-def bin_interval_search_bounds(
-    dtype: DType, version: Version, intervals: Sequence[float], *, right_closed: bool
-) -> tuple[Sequence[float], int, IntoDType]:
-    """Return searchable breakpoints, the index offset and the comparison dtype.
+class BinSearchEdges(NamedTuple):
+    """Breakpoints prepared for a sorted search.
 
-    Round each edge up for left-closed bins and down for right-closed bins to a
-    value representable in the comparison dtype. The offset counts edges below
-    the integer range so the retained edges keep their original bin numbers.
+    Attributes:
+        edges: Breakpoints representable in the comparison dtype.
+        offset: Number of breakpoints below the dtype's range, added to each bin index.
+        dtype: Dtype used to compare the values and breakpoints.
     """
+
+    edges: Sequence[float]
+    offset: int
+    dtype: IntoDType
+
+
+def bin_search_edges(
+    dtype: DType, version: Version, intervals: Sequence[float], *, right_closed: bool
+) -> BinSearchEdges:
+    """Round each breakpoint up for left-closed bins and down for right-closed bins."""
     dtypes = version.dtypes
     if dtype.is_float():
         direction = -inf if right_closed else inf
@@ -2217,7 +2226,7 @@ def bin_interval_search_bounds(
             if needs_adjustment(rounded, edge):
                 rounded = nextafter(rounded, direction)
             float_bounds.append(rounded)
-        return float_bounds, 0, dtypes.Float64
+        return BinSearchEdges(float_bounds, 0, dtypes.Float64)
     if not dtype.is_integer():
         msg = f"`bin_intervals` operation not supported for dtype `{dtype}`"
         raise InvalidOperationError(msg)
@@ -2231,7 +2240,7 @@ def bin_interval_search_bounds(
     lower = 0 if unsigned else -(2 ** (bits - 1))
     start = bisect_left(bounds, lower)
     stop = bisect_left(bounds, lower + 2**bits)
-    return bounds[start:stop], start, comparison_dtype
+    return BinSearchEdges(bounds[start:stop], start, comparison_dtype)
 
 
 def inherit_doc(

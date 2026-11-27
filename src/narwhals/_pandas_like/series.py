@@ -34,7 +34,7 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     _into_arrow_chunked_array,
-    bin_interval_search_bounds,
+    bin_search_edges,
     is_list_of,
 )
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
@@ -1219,19 +1219,18 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> Self:
         native = self.native
         ns = self.__native_namespace__()
-        bounds, offset, dtype = bin_interval_search_bounds(
+        search = bin_search_edges(
             self.dtype, self._version, intervals, right_closed=right_closed
         )
         native_dtype = narwhals_to_native_dtype(
-            dtype, None, self._implementation, self._version
+            search.dtype, None, self._implementation, self._version
         )
-        # A comparison propagates masked nulls while a stored IEEE NaN compares false.
-        null_mask = native.eq(native).isna()
+        null_mask = native.isna()
         values = native.where(~null_mask, 0).astype(native_dtype)
-        edges = ns.Series(bounds, dtype=native_dtype)
+        edges = ns.Series(search.edges, dtype=native_dtype)
         indices = edges.searchsorted(values, side="left" if right_closed else "right")
-        if offset:
-            indices += offset
+        if search.offset:
+            indices += search.offset
         if labels is False:
             data = indices
             result_dtype = narwhals_to_native_dtype(

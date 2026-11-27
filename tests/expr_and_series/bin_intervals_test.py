@@ -20,7 +20,6 @@ from narwhals.exceptions import (
     InvalidOperationError,
     ShapeError,
 )
-from tests.conftest import modin_constructor, pandas_constructor
 from tests.utils import (
     PANDAS_VERSION,
     Constructor,
@@ -143,13 +142,16 @@ def test_bin_intervals_breaks_outside_float64(
 def test_bin_intervals_nan_and_null(constructor_eager: ConstructorEager) -> None:
     data = {"a": [float("nan"), None, -1.0]}
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    if constructor_eager in {pandas_constructor, modin_constructor}:
-        expected = [1, 1, 0]  # NumPy-backed float arrays store both inputs as NaN.
-    elif series.implementation.is_pandas_like():
-        expected = [None, None, 0]  # Nullable constructors mask both inputs.
-    else:
-        expected = [1, None, 0]
+    expected = [None, None, 0] if series.implementation.is_pandas_like() else [1, None, 0]
     assert_equal_series(series.bin_intervals([0], labels=False), expected, "a")
+
+
+def test_bin_intervals_pandas_missing_dtype() -> None:
+    pd = pytest.importorskip("pandas")
+    series = nw.from_native(
+        pd.Series([1.0, float("nan")], dtype="float64"), series_only=True
+    )
+    assert series.bin_intervals([0], labels=False).dtype == nw.Float64
 
 
 @pytest.mark.parametrize(
@@ -183,8 +185,8 @@ def test_bin_intervals_pandas_unmasked_nan(*, arrow: bool) -> None:
 @pytest.mark.parametrize(
     ("intervals", "labels", "exception", "match"),
     [
-        ([1, 1], False, DuplicateError, "intervals are not unique"),
-        ([2, 1], False, ComputeError, "intervals must increase monotonically"),
+        ([1, 1], False, ComputeError, "intervals must be strictly increasing"),
+        ([2, 1], False, ComputeError, "intervals must be strictly increasing"),
         ([float("nan")], False, ComputeError, "NaN or infinity"),
         ([inf], False, ComputeError, "NaN or infinity"),
         ([1], ["a"], ShapeError, "expected 2 labels"),

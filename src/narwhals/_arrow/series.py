@@ -34,7 +34,7 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
-    bin_interval_search_bounds,
+    bin_search_edges,
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
@@ -1139,13 +1139,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         labels: Sequence[str] | Literal[False],
         right_closed: bool,
     ) -> Self:
-        bounds, offset, dtype = bin_interval_search_bounds(
+        search = bin_search_edges(
             self.dtype, self._version, intervals, right_closed=right_closed
         )
-        values = self.native.cast(narwhals_to_native_dtype(dtype, self._version))
-        edges = pa.array(bounds, type=values.type)
+        values = self.native.cast(narwhals_to_native_dtype(search.dtype, self._version))
+        edges = pa.array(search.edges, type=values.type)
         result = bin_interval_indices(
-            values, edges, offset=offset, right_closed=right_closed
+            values, edges, offset=search.offset, right_closed=right_closed
         )
         if labels is not False:
             dictionary = pa.array(labels, pa.string())

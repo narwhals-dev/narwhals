@@ -725,18 +725,21 @@ def bin_interval_indices(
 ) -> ArrayOrChunkedArray:
     """Return zero-based UInt32 bin indices, preserving nulls and placing NaN last."""
     index_type = pa.uint32()
+    side: Literal["left", "right"] = "left" if right_closed else "right"
+    indices: ArrayOrChunkedArray
     if BACKEND_VERSION < (26,):  # pragma: no cover
         # `pc.search_sorted` requires pyarrow 26.
-        last = lit(offset + len(edges), index_type)
-        indices = pc.if_else(values.is_null(), lit(None, index_type), last)
-        below = pc.less_equal if right_closed else pc.less
-        for edge in edges:
-            indices = pc.subtract(indices, pc.cast(below(values, edge), index_type))
-        return indices
-    found: ArrayOrChunkedArray = pc.search_sorted(  # type: ignore[attr-defined]
-        edges, values, side="left" if right_closed else "right"
-    )
-    indices = found.cast(index_type)
+        import numpy as np  # ignore-banned-import
+
+        needles = values.fill_null(lit(0, values.type)).to_numpy()
+        found = np.searchsorted(edges.to_numpy(), needles, side=side)
+        indices = pc.if_else(
+            values.is_null(),
+            lit(None, index_type),
+            pa.array(np.asarray(found, dtype=np.uint32)),
+        )
+    else:
+        indices = pc.search_sorted(edges, values, side=side).cast(index_type)  # type: ignore[attr-defined]
     return pc.add(indices, lit(offset, index_type)) if offset else indices
 
 

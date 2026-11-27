@@ -24,7 +24,7 @@ from narwhals._polars.utils import (
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
-    bin_interval_search_bounds,
+    bin_search_edges,
     floor_mod,
     requires,
 )
@@ -272,15 +272,15 @@ class PolarsExpr:
             if batch.dtype == pl.Null:
                 return batch.cast(result_dtype)
             dtype = native_to_narwhals_dtype(batch.dtype, self._version)
-            bounds, offset, comparison_dtype = bin_interval_search_bounds(
+            search = bin_search_edges(
                 dtype, self._version, intervals, right_closed=right_closed
             )
-            values = batch.cast(narwhals_to_native_dtype(comparison_dtype, self._version))
-            breaks = pl.Series(bounds, dtype=values.dtype)
+            values = batch.cast(narwhals_to_native_dtype(search.dtype, self._version))
+            breaks = pl.Series(search.edges, dtype=values.dtype)
             indices = breaks.search_sorted(
                 values, side="left" if right_closed else "right"
             ).cast(pl.UInt32)
-            indices = (indices + offset).set(values.is_null(), None)
+            indices = (indices + search.offset).set(values.is_null(), None)
             return indices if categories is None else categories.gather(indices)
 
         return self._with_native(

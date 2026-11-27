@@ -1059,8 +1059,8 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             - Labelled output is `Categorical` on PyArrow and `Enum` elsewhere.
-            - Nulls stay null. NaN goes in the last bin, including missing values
-              stored as NaN in NumPy-backed pandas float columns.
+            - Nulls stay null and NaN goes in the last bin. NumPy-backed pandas treats
+              NaN as null, so `labels=False` returns `Float64` when a value is missing.
 
         Examples:
             >>> import pandas as pd
