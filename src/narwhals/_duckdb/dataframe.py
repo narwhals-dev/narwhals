@@ -10,6 +10,7 @@ from duckdb import StarExpression
 
 from narwhals._duckdb.utils import (
     BACKEND_VERSION,
+    DEFAULT_CONNECTION_LOCK,
     DeferredTimeZone,
     F,
     catch_duckdb_exception,
@@ -415,7 +416,7 @@ class DuckDBLazyFrame(
         joined = None
         if BACKEND_VERSION < (2,):
             # `rel.query`'s view would outlive the frame on the default connection.
-            with suppress(duckdb.InvalidInputException):
+            with DEFAULT_CONNECTION_LOCK, suppress(duckdb.InvalidInputException):
                 joined = duckdb.sql(query("_narwhals_asof_lhs"))
         if joined is None:  # pragma: no branch  # only False on duckdb<2
             # `rel.query` runs on the relation's own connection, at the cost of a view,
@@ -586,7 +587,7 @@ class DuckDBLazyFrame(
         unpivoted = None
         if BACKEND_VERSION < (2,):
             # `rel.query`'s view would outlive the frame on the default connection.
-            with suppress(duckdb.InvalidInputException):
+            with DEFAULT_CONNECTION_LOCK, suppress(duckdb.InvalidInputException):
                 unpivoted = duckdb.sql(query("_rel"))
         if unpivoted is None:  # pragma: no branch  # only False on duckdb<2
             # `rel.query` runs on the relation's own connection, at the cost of a view,

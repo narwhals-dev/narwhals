@@ -237,6 +237,13 @@ prevent that.
 [multiple threads]: https://duckdb.org/docs/stable/guides/python/multiple_threads
 """
 
+DEFAULT_CONNECTION_LOCK = threading.Lock()
+"""Serializes Narwhals' `duckdb.sql` calls on the default connection (duckdb<2.0 only).
+
+On duckdb<2.0, concurrent `duckdb.sql` calls that replacement-scan a relation from
+another connection deadlock; on duckdb>=2.0 they raise `ResourceInUseException`.
+"""
+
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
     # Not `rel.query`: on DuckDB>=2.0 its temporary catalog entry makes every relation
