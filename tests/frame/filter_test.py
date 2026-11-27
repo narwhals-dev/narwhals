@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data, maybe_collect
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -116,12 +116,9 @@ def test_filter_missing_column(
             r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
         )
 
-    if "polars_lazy" in str(constructor) and isinstance(df, nw.LazyFrame):
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.filter(c=5).collect()
-    else:
-        with pytest.raises(ColumnNotFoundError, match=msg):
-            df.filter(c=5)
+    # Lazy backends may raise when the query is defined, or only on `collect`.
+    with pytest.raises(ColumnNotFoundError, match=msg):
+        maybe_collect(df.filter(c=5))
 
 
 def test_filter_with_predicates_and_constraints(

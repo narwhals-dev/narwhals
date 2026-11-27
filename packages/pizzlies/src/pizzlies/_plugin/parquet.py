@@ -1267,6 +1267,23 @@ def _corruption_as_value_error() -> Iterator[None]:
         raise ValueError(_CORRUPT_MESSAGE) from exc
 
 
+def read_parquet_columns(source: str | bytes) -> list[str]:
+    """The (top-level) column names of a Parquet file, reading only its footer."""
+    with _corruption_as_value_error():
+        if isinstance(source, str):
+            with open(source, "rb") as stream:  # noqa: PTH123
+                metadata = _read_footer(stream)
+        else:
+            metadata = _buffer_footer(source)
+        # Only the names: building `_Schema` would also check every column's type.
+        root, end = _Schema._tree(metadata[2], 0)
+        if end != len(metadata[2]):
+            _raise_corrupt()
+        names = [element[4].decode() for element, _ in root[1]]
+    check_column_names_are_unique(names)
+    return names
+
+
 def read_parquet(
     source: str | bytes | BinaryIO, columns: Sequence[str] | None = None
 ) -> dict[str, list[Any]]:

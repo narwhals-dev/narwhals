@@ -4,6 +4,7 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from narwhals._utils import _is_eager_namespace
 from narwhals.exceptions import ColumnNotFoundError, ShapeError
 from tests.utils import (
     PANDAS_VERSION,
@@ -122,8 +123,14 @@ def test_with_columns_numpy_array(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     arr = np.array([4, 5, 6])
-    # Eager backends (plugins included) and Polars lazy frames can build a Series.
-    if df.implementation.is_polars() or isinstance(df, nw.DataFrame):
+    # Eager backends, Polars lazy frames, and lazy frames of plugins with an eager
+    # namespace can build a Series.
+    namespace = df._compliant_frame.__narwhals_namespace__()
+    if (
+        df.implementation.is_polars()
+        or isinstance(df, nw.DataFrame)
+        or _is_eager_namespace(namespace)
+    ):
         assert_equal_data(df.with_columns(b=arr), {"a": [1, 2, 3], "b": [4, 5, 6]})
     else:
         with pytest.raises(ValueError, match="lazy-only, but `new_series`"):
