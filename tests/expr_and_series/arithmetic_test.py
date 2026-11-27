@@ -204,7 +204,7 @@ def test_floordiv_floats(
     if (
         left // right != expected
         and "pyarrow" not in str(constructor)
-        and any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask"))
+        and any(x in str(constructor) for x in ("pandas", "modin", "dask"))
     ):
         request.applymarker(
             pytest.mark.xfail(reason="pandas follows Python, where 1.0 // 0.1 is 9.0")

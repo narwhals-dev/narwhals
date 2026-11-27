@@ -91,7 +91,15 @@ def test_std_ddof_group_by(constructor: Constructor, ddof: int) -> None:
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
-def test_std_ddof_over(constructor: Constructor, ddof: int) -> None:
+def test_std_ddof_over(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        reason = (
+            "cuDF `groupby.transform` takes no kwargs: "
+            "https://github.com/NVIDIA/cudf/issues/18159"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="`over` requires DuckDB 1.3.0")
     df = nw.from_native(constructor(data_ddof))
@@ -103,7 +111,12 @@ def test_std_ddof_over(constructor: Constructor, ddof: int) -> None:
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2])
-def test_std_constant_group_by(constructor: Constructor, ddof: int) -> None:
+def test_std_constant_group_by(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        reason = "cuDF's `groupby.std` returns NaN instead of 0 for a constant group"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     # 3.3 makes the sum-of-squares formula round the variance below zero on Dask.
     df = nw.from_native(constructor({"g": [1] * 5, "a": [3.3] * 5}))
     result = df.group_by("g").agg(nw.col("a").std(ddof=ddof))

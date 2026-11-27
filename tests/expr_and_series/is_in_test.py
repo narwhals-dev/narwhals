@@ -13,7 +13,14 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    is_polars_gpu,
+)
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -84,6 +91,24 @@ def test_expr_is_in_with_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_expr_is_in_with_nan(constructor: Constructor) -> None:
+    # A NaN is a value, not a null: it must not match, and must not become null.
+    data_with_nan = {"a": [0.0, 4.0, None], "b": [0.0, 2.0, 1.0]}
+    df = nw.from_native(constructor(data_with_nan))
+    result = df.select((nw.col("a") / nw.col("b")).is_in([2.0]))
+
+    expected: dict[str, list[Any]]
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+        expected = {"a": [False, True, False]}
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= PkgVersion("3"):
+        # NaN values are coerced into NA for nullable datatypes by default
+        expected = {"a": [None, True, None]}
+    else:
+        expected = {"a": [False, True, None]}
+
+    assert_equal_data(result, expected)
+
+
 def test_filter_is_in_with_null(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}
@@ -116,7 +141,15 @@ def test_expr_is_in_with_null_in_other(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
+def test_expr_is_in_with_only_null_in_other(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if is_polars_gpu(constructor):
+        reason = (
+            "cudf-polars raises `Invalid type_id` for a null-only list: "
+            "https://github.com/NVIDIA/cudf/issues/24863"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     # https://github.com/narwhals-dev/narwhals/issues/3851
     data_with_null = {"a": [1, 2, None, 4]}
     df = nw.from_native(constructor(data_with_null))
