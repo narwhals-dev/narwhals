@@ -137,3 +137,11 @@ def test_to_date(request: pytest.FixtureRequest, constructor: Constructor) -> No
         df = nw.from_native(constructor(dates))
     result = df.select(nw.col("a").dt.date())
     assert result.collect_schema() == {"a": nw.Date}
+
+
+def test_weekday_whole_week(constructor: Constructor) -> None:
+    # Monday 2024-01-01 to Sunday 2024-01-07: Monday is 1 and Sunday is 7
+    week = {"a": [datetime(2024, 1, day) for day in range(1, 8)]}
+    df = nw.from_native(constructor(week))
+    result = df.select(nw.col("a").dt.weekday())
+    assert_equal_data(result, {"a": [1, 2, 3, 4, 5, 6, 7]})
