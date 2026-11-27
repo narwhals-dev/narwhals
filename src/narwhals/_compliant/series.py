@@ -77,20 +77,26 @@ __all__ = [
 
 
 def bin_interval_search_bounds(
-    dtype: DType, intervals: Sequence[float], *, right_closed: bool
-) -> tuple[Sequence[float], int, Literal["int64", "uint64", "float64"]]:
-    """Choose a common numeric type and avoid rounding integer breakpoints to float."""
+    series: EagerSeries[Any], intervals: Sequence[float], *, right_closed: bool
+) -> tuple[Sequence[float], int, IntoDType]:
+    """Return searchable breakpoints, the index offset and the comparison dtype.
+
+    For integer columns, round fractional edges up for left-closed bins and down for
+    right-closed bins. The offset counts edges below the 64-bit range so the retained
+    edges keep their original bin numbers.
+    """
     from bisect import bisect_left, bisect_right
     from math import ceil, floor
     from numbers import Integral
 
     from narwhals.exceptions import InvalidOperationError
 
+    dtype = series.dtype
+    dtypes = series._version.dtypes
     if not (dtype.is_integer() or dtype.is_float()):
         msg = f"bin_intervals requires an integer or floating-point column, got {dtype}"
         raise InvalidOperationError(msg)
     if dtype.is_integer():
-        # On an integer column, n >= x iff n >= ceil(x), and n > x iff n > floor(x).
         round_bound = floor if right_closed else ceil
         bounds = [
             int(x) if isinstance(x, Integral) else round_bound(x) for x in intervals
@@ -102,9 +108,9 @@ def bin_interval_search_bounds(
         return (
             bounds[start : bisect_right(bounds, upper)],
             start,
-            "uint64" if unsigned else "int64",
+            dtypes.UInt64 if unsigned else dtypes.Int64,
         )
-    return [float(value) for value in intervals], 0, "float64"
+    return [float(value) for value in intervals], 0, dtypes.Float64
 
 
 class CompliantSeries(

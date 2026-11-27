@@ -1559,7 +1559,16 @@ def check_column_names_are_unique(columns: Collection[str]) -> None:
 def prepare_bin_intervals(
     intervals: Sequence[float], labels: Sequence[str] | Literal[False]
 ) -> tuple[list[float], list[str] | Literal[False]]:
-    """Validate and copy the bin definitions for eager or deferred evaluation."""
+    """Validate the breakpoints and labels shared by `Expr` and `Series`.
+
+    Arguments:
+        intervals: Numeric breakpoints in increasing order.
+        labels: A sequence of bin labels or `False` for integer indices.
+
+    Returns:
+        A copy of the breakpoints and labels so a lazy expression keeps the values
+        supplied when it was built. The `False` sentinel is passed through.
+    """
     from itertools import pairwise
     from math import isfinite
 

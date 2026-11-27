@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
+        ArrayOrChunkedArray,
         ArrayOrScalar,
         ArrayOrScalarT1,
         ArrayOrScalarT2,
@@ -705,6 +706,26 @@ def sortable_table(table: pa.Table, keys: Iterable[str], /) -> pa.Table:
         if is_dictionary(table.field(index).type):
             table = table.set_column(index, name, sortable(table.column(index)))
     return table
+
+
+def bin_interval_indices(
+    values: ChunkedArrayAny, edges: ArrayAny, /, *, offset: int, right_closed: bool
+) -> ArrayOrChunkedArray:
+    """Return zero-based UInt32 bin indices, preserving nulls and placing NaN last."""
+    index_type = pa.uint32()
+    if BACKEND_VERSION < (26,):  # pragma: no cover
+        # search_sorted was added in Arrow 26. NaN compares below no edge.
+        last = lit(offset + len(edges), index_type)
+        indices = pc.if_else(values.is_null(), lit(None, index_type), last)
+        below = pc.less_equal if right_closed else pc.less
+        for edge in edges:
+            indices = pc.subtract(indices, pc.cast(below(values, edge), index_type))
+        return indices
+    found: ArrayOrChunkedArray = pc.search_sorted(  # type: ignore[attr-defined]
+        edges, values, side="left" if right_closed else "right"
+    )
+    indices = found.cast(index_type)
+    return pc.add(indices, lit(offset, index_type)) if offset else indices
 
 
 def sort_indices(

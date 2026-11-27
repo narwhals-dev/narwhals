@@ -14,6 +14,7 @@ from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
     BACKEND_VERSION,
     arange,
+    bin_interval_indices,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -1131,6 +1132,29 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
 
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> Self:
+        """Return bin indices or gather the corresponding Arrow dictionary labels."""
+        bounds, offset, dtype = bin_interval_search_bounds(
+            self, intervals, right_closed=right_closed
+        )
+        values = self.native.cast(narwhals_to_native_dtype(dtype, self._version))
+        edges = pa.array(bounds, type=values.type)
+        result = bin_interval_indices(
+            values, edges, offset=offset, right_closed=right_closed
+        )
+        if labels is not False:
+            bins = pa.DictionaryArray.from_arrays(
+                pa.array(range(len(labels)), pa.uint32()), pa.array(labels, pa.string())
+            )
+            result = pc.take(bins, result)
+        return self._with_native(result, preserve_broadcast=True)
+
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
@@ -1183,43 +1207,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cos(self) -> Self:
         return self._with_native(pc.cos(self.native))
-
-    def bin_intervals(
-        self,
-        intervals: Sequence[float],
-        *,
-        labels: Sequence[str] | Literal[False],
-        right_closed: bool,
-    ) -> Self:
-        bounds, offset, dtype = bin_interval_search_bounds(
-            self.dtype, intervals, right_closed=right_closed
-        )
-        values = self.native.cast(pa.type_for_alias(dtype), safe=False)
-        edges = pa.array(bounds, type=values.type)
-        index_type = pa.uint32()
-        if BACKEND_VERSION < (26,):  # pragma: no cover
-            # search_sorted was added in Arrow 26. NaN compares below no edge.
-            last = lit(offset + len(bounds), index_type)
-            indices = pc.if_else(pc.is_null(values), lit(None, index_type), last)
-            below = pc.less_equal if right_closed else pc.less
-            for edge in edges:
-                indices = pc.subtract(indices, pc.cast(below(values, edge), index_type))
-        else:
-            found = pc.search_sorted(  # type: ignore[attr-defined]
-                edges, values, side="left" if right_closed else "right"
-            )
-            indices = pc.add(pc.cast(found, index_type), lit(offset, index_type))
-        if labels is False:
-            return self._with_native(indices, preserve_broadcast=True)
-        dictionary = pa.array(labels, pa.string())
-        result = chunked_array(
-            [
-                pa.DictionaryArray.from_arrays(chunk, dictionary)
-                for chunk in chunked_array(indices).chunks
-            ],
-            pa.dictionary(index_type, pa.string()),
-        )
-        return self._with_native(result, preserve_broadcast=True)
 
     def any_value(
         self, *, ignore_nulls: bool, _return_py_scalar: bool = True

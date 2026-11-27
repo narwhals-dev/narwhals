@@ -1,3 +1,8 @@
+# Numeric binning cases adapted from Polars 2.1.0 under the MIT terms in LICENSE.md.
+# Copyright (c) 2025 Ritchie Vink
+# Copyright (c) 2024 (Some portions) NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# https://github.com/pola-rs/polars/blob/7f902bd3ffd27ff82d14278a09a295ff2f7aed92/py-polars/tests/unit/operations/test_bin_intervals.py
+# https://github.com/pola-rs/polars/blob/7f902bd3ffd27ff82d14278a09a295ff2f7aed92/py-polars/tests/unit/operations/test_binning.py
 from __future__ import annotations
 
 from typing import Any
@@ -27,46 +32,84 @@ def test_bin_intervals_expr(
     ):
         reason = "`bin_intervals` is not implemented for Dask and the SQL backends"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
-    df = nw.from_native(constructor({"a": [-inf, -1.0, 0.0, 0.5, 2.0, 3.0, inf]}))
+    df = nw.from_native(constructor({"a": [-inf, 0.0, 1.0, 2.0, 2.5, 3.0, 4.0, inf]}))
     a = nw.col("a")
+    breaks = [1, 2, 3]
+    labels = ["low", "mid-low", "mid-high", "high"]
     result = df.select(
-        a.bin_intervals([0, 2], labels=["low", "mid", "high"]),
-        index=a.bin_intervals([0, 2], labels=False, right_closed=True),
+        a.bin_intervals(breaks, labels=labels),
+        left=a.bin_intervals(breaks, labels=False),
+        right=a.bin_intervals(breaks, labels=False, right_closed=True),
     )
+    schema = result.collect_schema()
+    assert schema["a"] == (
+        nw.Categorical if df.implementation.is_pyarrow() else nw.Enum(labels)
+    )
+    assert schema["left"] == schema["right"] == nw.UInt32
+    if isinstance(result, nw.LazyFrame):
+        assert result.collect().schema == schema
     assert_equal_data(
         result,
         {
-            "a": ["low", "low", "mid", "mid", "high", "high", "high"],
-            "index": [0, 0, 0, 1, 1, 2, 2],
+            "a": [
+                "low",
+                "low",
+                "mid-low",
+                "mid-high",
+                "mid-high",
+                "high",
+                "high",
+                "high",
+            ],
+            "left": [0, 0, 1, 2, 2, 3, 3, 3],
+            "right": [0, 0, 0, 1, 2, 2, 3, 3],
         },
     )
-    assert result.collect_schema()["index"] == nw.UInt32
 
 
 def test_bin_intervals_series(constructor_eager: ConstructorEager) -> None:
-    series = nw.from_native(constructor_eager({"a": [1, 2, 2]}), eager_only=True)["a"]
-    result = series.bin_intervals(
-        [1, 2.5], labels=["low", "mid", "high"], right_closed=True
-    )
-    assert_equal_data({"a": result}, {"a": ["low", "mid", "mid"]})
+    series = nw.from_native(constructor_eager({"a": [-2, -1, 0, 1, 2]}), eager_only=True)[
+        "a"
+    ]
+    labels = ["a", "b", "c"]
+    result = series.bin_intervals([-1, 1], labels=labels)
+    assert_equal_data({"a": result}, {"a": ["a", "b", "b", "c", "c"]})
     if series.implementation.is_pyarrow():
         assert result.dtype == nw.Categorical
     else:
-        assert result.dtype == nw.Enum(["low", "mid", "high"])
+        assert result.dtype == nw.Enum(labels)
 
+    mixed = series.bin_intervals([1, 2.5], labels=labels, right_closed=True)
+    assert_equal_data({"a": mixed}, {"a": ["a", "a", "a", "a", "b"]})
     indices = series.bin_intervals([], labels=False)
-    assert_equal_data({"a": indices}, {"a": [0, 0, 0]})
+    assert_equal_data({"a": indices}, {"a": [0] * 5})
     assert indices.dtype == nw.UInt32
+    assert indices.name == series.name
+    assert_equal_data({"a": series.bin_intervals([], labels=["all"])}, {"a": ["all"] * 5})
     assert series.head(0).bin_intervals([], labels=["all"]).len() == 0
-
-    unsigned = series.cast(nw.UInt64)
-    assert_equal_data(
-        {"a": unsigned.bin_intervals([-1, 1.5], labels=False)}, {"a": [1, 2, 2]}
-    )
 
     if series.implementation.is_pandas_like() or series.implementation.is_pyarrow():
         with pytest.raises(InvalidOperationError):
             series.cast(nw.String).bin_intervals([1], labels=False)
+
+
+@pytest.mark.parametrize(
+    ("dtype", "breaks", "expected"),
+    [
+        pytest.param(nw.Int8, [1.5], [0, 1, 1], id="int8"),
+        pytest.param(nw.UInt64, [-1, 1.5], [1, 2, 2], id="uint64"),
+        pytest.param(nw.Float32, [2.0], [0, 1, 1], id="float32"),
+    ],
+)
+def test_bin_intervals_numeric_breakpoints(
+    constructor_eager: ConstructorEager,
+    dtype: type[nw.dtypes.NumericType],
+    breaks: list[float],
+    expected: list[int],
+) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    result = df.select(nw.col("a").cast(dtype).bin_intervals(breaks, labels=False))
+    assert_equal_data(result, {"a": expected})
 
 
 def test_bin_intervals_large_integers(constructor_eager: ConstructorEager) -> None:
@@ -81,8 +124,16 @@ def test_bin_intervals_large_integers(constructor_eager: ConstructorEager) -> No
             "right": series.bin_intervals(
                 [edge - 1, edge], labels=False, right_closed=True
             ),
+            "float_edge": series.bin_intervals(
+                [float(edge - 1)], labels=False, right_closed=True
+            ),
         },
-        {"left": [1, 2, 2], "mixed": ["mid", "high", "high"], "right": [0, 1, 2]},
+        {
+            "left": [1, 2, 2],
+            "mixed": ["mid", "high", "high"],
+            "right": [0, 1, 2],
+            "float_edge": [0, 1, 1],
+        },
     )
 
 
@@ -133,6 +184,11 @@ def test_bin_intervals_nan_and_null(backend: str) -> None:
         {"a": labels}, {"a": ["hi" if missing == 1 else None, "hi", "lo", "hi"]}
     )
 
+    if backend != "pandas":
+        all_null = series.head(1).bin_intervals([0], labels=False)
+        assert all_null.dtype == nw.UInt32
+        assert all_null.null_count() == all_null.len() == 1
+
 
 @pytest.mark.parametrize(
     ("intervals", "labels", "exception", "match"),
@@ -170,6 +226,17 @@ def test_bin_intervals_not_in_stable(stable: Any) -> None:
     series = stable.from_native(pa.chunked_array([[1.0]]), series_only=True)
     with pytest.raises(NotImplementedError, match="unstable"):
         series.bin_intervals([0], labels=False)
+
+
+def test_bin_intervals_arrow_dictionary() -> None:
+    pa = pytest.importorskip("pyarrow")
+    values = pa.chunked_array([[-1.0, None], [3.0, float("nan")]])
+    series = nw.from_native(values, series_only=True)
+    labels = ["low", "unused", "high"]
+    result = series.bin_intervals([0, 2], labels=labels)
+    assert result.to_list() == ["low", None, "high", "high"]
+    for chunk in result.to_native().chunks:
+        assert chunk.dictionary.to_pylist() == labels
 
 
 def test_bin_intervals_signed_breaks_on_uint64() -> None:

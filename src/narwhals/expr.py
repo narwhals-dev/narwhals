@@ -1707,32 +1707,39 @@ class Expr:
         labels: Sequence[str] | Literal[False],
         right_closed: bool = False,
     ) -> Self:
-        """Bin the values of an integer or floating-point column using explicit breakpoints.
+        """Assign each integer or floating-point value to a bin.
 
         Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 
         Arguments:
-            intervals: Finite numeric breakpoints in strictly increasing order.
+            intervals: Finite breakpoints in strictly increasing order.
                 An empty sequence gives a single bin.
             labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
-                Labelled bins have dtype `Enum` on Polars and pandas-like backends
-                and `Categorical` on PyArrow.
-            right_closed: By default, a value equal to a breakpoint goes in the bin
-                on its right. Set to `True` to put it in the bin on its left.
+                Labels have dtype `Enum` on Polars and pandas-like backends and
+                `Categorical` on PyArrow.
+            right_closed: Whether each bin includes its right edge. By default, bins
+                include their left edge, so a value equal to a breakpoint starts a new bin.
+
+        Raises:
+            DuplicateError: If breakpoints or labels contain duplicates.
+            ComputeError: If breakpoints are out of order or contain NaN or infinity.
+            ShapeError: If the number of labels differs from `len(intervals) + 1`.
 
         Notes:
             Nulls remain null. NaN goes in the last bin. A NumPy-backed pandas float
             column also puts missing values in the last bin because it stores them as NaN.
 
         Examples:
-            >>> import pandas as pd
+            >>> import polars as pl
             >>> import narwhals as nw
-            >>> df = nw.from_native(pd.DataFrame({"x": [0, 1, 2, 3]}))
-            >>> expr = nw.col("x").bin_intervals([1, 2], labels=["low", "mid", "high"])
-            >>> df.select(expr)["x"].to_list()
-            ['low', 'mid', 'high', 'high']
+            >>> df = nw.from_native(pl.LazyFrame({"x": [0, 1, 2, 3]}))
+            >>> bins = nw.col("x").bin_intervals(
+            ...     [1, 2], labels=["low", "mid", "high"], right_closed=True
+            ... )
+            >>> df.select(bins).collect()["x"].to_list()
+            ['low', 'low', 'mid', 'high']
         """
         intervals_, labels_ = prepare_bin_intervals(intervals, labels)
         return self._append_node(

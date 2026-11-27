@@ -1046,33 +1046,37 @@ class Series(Generic[IntoSeriesT]):
         labels: Sequence[str] | Literal[False],
         right_closed: bool = False,
     ) -> Self:
-        """Bin the values of an integer or floating-point column using explicit breakpoints.
+        """Assign each integer or floating-point value to a bin.
 
         Warning:
             This functionality is considered **unstable**. It may be changed at any point
             without it being considered a breaking change.
 
         Arguments:
-            intervals: Finite numeric breakpoints in strictly increasing order.
+            intervals: Finite breakpoints in strictly increasing order.
                 An empty sequence gives a single bin.
             labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
-                Labelled bins have dtype `Enum` on Polars and pandas-like backends
-                and `Categorical` on PyArrow.
-            right_closed: By default, a value equal to a breakpoint goes in the bin
-                on its right. Set to `True` to put it in the bin on its left.
+                Labels have dtype `Enum` on Polars and pandas-like backends and
+                `Categorical` on PyArrow.
+            right_closed: Whether each bin includes its right edge. By default, bins
+                include their left edge, so a value equal to a breakpoint starts a new bin.
+
+        Raises:
+            DuplicateError: If breakpoints or labels contain duplicates.
+            ComputeError: If breakpoints are out of order or contain NaN or infinity.
+            ShapeError: If the number of labels differs from `len(intervals) + 1`.
 
         Notes:
             Nulls remain null. NaN goes in the last bin. A NumPy-backed pandas float
             column also puts missing values in the last bin because it stores them as NaN.
 
         Examples:
-            >>> import polars as pl
+            >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s = nw.from_native(pl.Series("x", [0, 1, 2, 3]), series_only=True)
+            >>> values = pa.chunked_array([[0.0, 1.0, None, float("nan")]])
+            >>> s = nw.from_native(values, series_only=True)
             >>> s.bin_intervals([1, 2], labels=False).to_list()
-            [0, 1, 2, 2]
-            >>> s.bin_intervals([1, 2], labels=False, right_closed=True).to_list()
-            [0, 0, 1, 2]
+            [0, 1, None, 2]
         """
         intervals_, labels_ = prepare_bin_intervals(intervals, labels)
         return self._with_compliant(

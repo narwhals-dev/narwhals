@@ -8,6 +8,7 @@ from polars.selectors import is_selector
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
+    HAS_INT_128,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -249,6 +250,15 @@ class PolarsExpr:
         right_closed: bool,
     ) -> Self:
         native = self.native
+        # An integral float breakpoint can otherwise round an adjacent integer column
+        # value to the breakpoint. Keep floats outside the supported integer range.
+        lower, upper = (-(2**127), 2**127) if HAS_INT_128 else (-(2**63), 2**64)
+        intervals = [
+            int(edge)
+            if isinstance(edge, float) and edge.is_integer() and lower <= edge < upper
+            else edge
+            for edge in intervals
+        ]
         if BACKEND_VERSION < (2,):
             if any(abs(edge) >= 2**53 for edge in intervals):
                 # A shared Float64 breakpoint array can round large integer boundaries.
@@ -256,11 +266,12 @@ class PolarsExpr:
                     native.is_null().cast(pl.UInt32)
                 )
                 for edge in intervals:
-                    boundary = (
-                        pl.lit(edge, dtype=pl.Float64)
-                        if isinstance(edge, float)
-                        else edge
-                    )
+                    boundary: float | pl.Expr = edge
+                    if isinstance(edge, float):
+                        boundary = pl.lit(edge, dtype=pl.Float64)
+                    elif HAS_INT_128 and lower <= edge < upper:
+                        # Keep signed and unsigned 64-bit inputs comparable without rounding.
+                        boundary = pl.lit(edge, dtype=pl.Int128)
                     crossed = native > boundary if right_closed else native >= boundary
                     indices = indices + crossed.cast(pl.UInt32)
             else:
