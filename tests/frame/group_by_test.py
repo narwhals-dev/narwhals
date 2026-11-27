@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -833,3 +835,32 @@ def test_multi_column_expansion(constructor: Constructor) -> None:
         .sort("a", descending=True)
     )
     assert_equal_data(result, expected)
+
+
+def test_group_by_agg_shared_across_threads(constructor_eager: ConstructorEager) -> None:
+    # `agg` used to stash the native groupby on the shared `GroupBy`, so concurrent
+    # calls could aggregate over another call's (differently sorted) grouping.
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion("14"):
+        pytest.skip("https://github.com/apache/arrow/issues/36709")
+    if "modin" in str(constructor_eager):
+        pytest.skip("Modin itself emits a spurious `axis` FutureWarning under threads")
+    data = {"g": [1, 1, 2, 2], "i": [2, 1, 2, 1], "v": [10.0, 20.0, 30.0, 40.0]}
+    grouped = nw.from_native(constructor_eager(data), eager_only=True).group_by("g")
+
+    def worker(n: int) -> None:
+        for _ in range(50):
+            if n % 2:
+                result = grouped.agg(nw.col("v").sum()).sort("g")
+                assert_equal_data(result, {"g": [1, 2], "v": [30.0, 70.0]})
+            else:
+                result = grouped.agg(nw.col("v").first(order_by="i")).sort("g")
+                assert_equal_data(result, {"g": [1, 2], "v": [20.0, 40.0]})
+
+    interval = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)
+    try:
+        with ThreadPoolExecutor(8) as pool:
+            for future in [pool.submit(worker, n) for n in range(8)]:
+                future.result()
+    finally:
+        sys.setswitchinterval(interval)

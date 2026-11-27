@@ -7,7 +7,14 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 from duckdb import Expression
 
-from narwhals._utils import Implementation, Version, extend_bool, isinstance_or_issubclass
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    generate_temporary_column_name,
+    isinstance_or_issubclass,
+    requires,
+)
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -354,6 +361,49 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 def join_column_names(*names: str) -> str:
     return ", ".join(str(col(name)) for name in names)
+
+
+def temporary_view_name(rel: duckdb.DuckDBPyRelation) -> str:
+    """Unique name for `rel.query`'s `virtual_table_name`.
+
+    `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
+    `rel`'s own connection (see [relational api]). We only use it when `duckdb.sql(statement)`
+    fails: that runs on the global default connection, which cannot see relations from
+    other connections (see [using connections in parallel python programs]), but leaves
+    no view behind.
+
+    The name must be unique per call: views persist and the lazy result re-binds by
+    name on execution, so a reused name shadows earlier views and corrupts their plans.
+    `rel.query` must also run in the frame whose locals the SQL references, as
+    [replacement scans] only see the caller's frame.
+
+    We cannot clean the view up: the returned relation is lazy and re-binds the name
+    every time it executes, so dropping the view before the caller is done with the
+    frame turns any later execution into a `CatalogException`. Where the view lands
+    depends on the DuckDB version:
+
+    * duckdb-python >= 1.5.4 ([#471]) puts it in the `temp` catalog, so it is scoped to
+      the cursor and released when that cursor is closed.
+    * Older versions put it in the connection's current database. That is harmless in
+      memory, but a file-backed database would keep it on disk after reopening, and a
+      read-only one rejects it (#3567), so we raise for both instead.
+
+    [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
+    [using connections in parallel python programs]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
+    [replacement scans]: https://duckdb.org/docs/current/clients/c/replacement_scans
+    [#471]: https://github.com/duckdb/duckdb-python/pull/471
+    """
+    if BACKEND_VERSION < (1, 5, 4):
+        on_disk = "(select path is not null or readonly from duckdb_databases() where database_name = current_database())"
+        # `count(*)` forces one row out of the empty `limit(0)`, which avoids a scan.
+        if rel.limit(0).aggregate(f"{on_disk}, count(*)").fetchall()[0][0]:
+            msg = (
+                "`join_asof` and `unpivot` on a file-backed or read-only database require "
+                f"'duckdb>=1.5.4', found version {requires._unparse_version(BACKEND_VERSION)!r}: "
+                "older versions would write a view into the database itself."
+            )
+            raise NotImplementedError(msg)
+    return generate_temporary_column_name(8, [], prefix="_narwhals_")
 
 
 def generate_order_by_sql(

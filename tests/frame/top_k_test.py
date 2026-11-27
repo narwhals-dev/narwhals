@@ -98,3 +98,16 @@ def test_top_k_categorical(constructor: Constructor) -> None:
     assert_equal_data(result, {"c": ["dog", "cat"], "n": [1, 2]})
     result = df.top_k(2, by="c", reverse=True).sort("n")
     assert_equal_data(result, {"c": ["cat", "bird"], "n": [2, 3]})
+
+
+def test_top_k_duckdb_own_connection() -> None:
+    pytest.importorskip("duckdb")
+    if DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip()
+    import duckdb
+
+    con = duckdb.connect()
+    lf = nw.from_native(
+        con.sql("select * from (values (1, 'x'), (3, 'y'), (2, 'z')) v(a, b)")
+    )
+    assert_equal_data(lf.top_k(2, by="a").sort("a"), {"a": [2, 3], "b": ["z", "y"]})
