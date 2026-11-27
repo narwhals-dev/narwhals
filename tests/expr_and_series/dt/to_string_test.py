@@ -144,3 +144,13 @@ def test_dt_to_string_iso_local_date_expr(
     df = constructor({"a": [data]})
     result = nw.from_native(df).select(b=nw.col("a").dt.to_string("%Y-%m-%d"))
     assert_equal_data(result, {"b": [expected]})
+
+
+@pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+def test_dt_to_string_iso_week_sunday(constructor: Constructor) -> None:
+    # Sunday is day 7 of the ISO week
+    sunday = {"a": [datetime(2024, 1, 7)]}
+    result = nw.from_native(constructor(sunday)).select(
+        nw.col("a").dt.to_string("%G-W%V-%u")
+    )
+    assert_equal_data(result, {"a": ["2024-W01-7"]})
