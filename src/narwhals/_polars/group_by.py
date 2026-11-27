@@ -29,13 +29,16 @@ class PolarsGroupBy:
         /,
         *,
         drop_null_keys: bool,
+        maintain_order: bool = False,
     ) -> None:
         self._keys = list(keys)
         self._compliant_frame = df.drop_nulls(keys) if drop_null_keys else df
         self._grouped = (
-            self.compliant.native.group_by(keys)
+            self.compliant.native.group_by(keys, maintain_order=maintain_order)
             if is_sequence_of(keys, str)
-            else self.compliant.native.group_by(arg.native for arg in keys)
+            else self.compliant.native.group_by(
+                (arg.native for arg in keys), maintain_order=maintain_order
+            )
         )
 
     def agg(self, *aggs: PolarsExpr) -> PolarsDataFrame:
