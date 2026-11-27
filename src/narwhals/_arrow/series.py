@@ -167,6 +167,44 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _with_binary_right(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
+    def _with_bitwise(
+        self,
+        integer_op: Callable[..., ArrayOrScalar],
+        boolean_op: Callable[..., ArrayOrScalar],
+        other: Any,
+    ) -> Self:
+        if pa.types.is_uint64(self.native.type) and type(other) is int and other >= 0:
+            other = lit(other, type=self.native.type)
+
+        def func(left: ArrayOrScalar, right: ArrayOrScalar) -> ArrayOrScalar:
+            if pa.types.is_null(left.type) and pa.types.is_boolean(right.type):
+                left = left.cast(right.type)
+            elif pa.types.is_null(right.type) and pa.types.is_boolean(left.type):
+                right = right.cast(left.type)
+            op = (
+                integer_op
+                if pa.types.is_integer(left.type) or pa.types.is_integer(right.type)
+                else boolean_op
+            )
+            # Avoid Arrow promoting UInt64 values to Int64 for a signed scalar mask.
+            if (
+                pa.types.is_uint64(left.type)
+                and isinstance(right, pa.Scalar)
+                and pa.types.is_signed_integer(right.type)
+                and (not right.is_valid or right.as_py() >= 0)
+            ):
+                right = right.cast(left.type)
+            elif (
+                pa.types.is_uint64(right.type)
+                and isinstance(left, pa.Scalar)
+                and pa.types.is_signed_integer(left.type)
+                and (not left.is_valid or left.as_py() >= 0)
+            ):
+                left = left.cast(right.type)
+            return op(left, right)
+
+        return self._with_binary(func, other)
+
     @classmethod
     def from_iterable(
         cls,
@@ -279,22 +317,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_binary(pc.less, other)
 
     def __and__(self, other: Any) -> Self:
-        return self._with_binary(pc.and_kleene, other)
+        return self._with_bitwise(pc.bit_wise_and, pc.and_kleene, other)
 
     def __rand__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.and_kleene, other)
+        return self._with_bitwise(pc.bit_wise_and, pc.and_kleene, other)
 
     def __or__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.or_kleene, other)
+        return self._with_bitwise(pc.bit_wise_or, pc.or_kleene, other)
 
     def __ror__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.or_kleene, other)
+        return self._with_bitwise(pc.bit_wise_or, pc.or_kleene, other)
 
     def __xor__(self, other: Any) -> Self:
-        return self._with_binary(pc.xor, other)
+        return self._with_bitwise(pc.bit_wise_xor, pc.xor, other)
 
     def __rxor__(self, other: Any) -> Self:
-        return self._with_binary_right(pc.xor, other)
+        return self._with_bitwise(pc.bit_wise_xor, pc.xor, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)
