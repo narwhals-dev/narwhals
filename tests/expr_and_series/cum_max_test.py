@@ -248,3 +248,62 @@ def test_cum_max_non_positive_floats(
     assert result.schema == df.select(casted).schema
     expected = expected_reverse_cum_max if reverse else expected_cum_max
     assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("values", "expected_cum_max", "expected_reverse_cum_max"),
+    [
+        ([float("nan"), 1.0, 2.0], [float("nan"), 1.0, 2.0], [2.0, 2.0, 2.0]),
+        ([None, float("nan"), 1.0], [None, float("nan"), 1.0], [None, 1.0, 1.0]),
+        ([1.0, float("nan"), 2.0], [1.0, 1.0, 2.0], [2.0, 2.0, 2.0]),
+        (
+            [float("-inf"), float("nan"), 1.0],
+            [float("-inf"), float("-inf"), 1.0],
+            [1.0, 1.0, 1.0],
+        ),
+        (
+            [float("nan"), float("-inf"), -2.0],
+            [float("nan"), float("-inf"), -2.0],
+            [-2.0, -2.0, -2.0],
+        ),
+        (
+            [float("nan"), float("nan")],
+            [float("nan"), float("nan")],
+            [float("nan"), float("nan")],
+        ),
+        ([], [], []),
+    ],
+)
+@pytest.mark.parametrize("reverse", [True, False])
+@pytest.mark.parametrize("dtype", [nw.Float32, nw.Float64])
+def test_cum_max_leading_nan(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    values: list[float | None],
+    expected_cum_max: list[float | None],
+    expected_reverse_cum_max: list[float | None],
+    dtype: type[nw.Float32 | nw.Float64],
+    *,
+    reverse: bool,
+) -> None:
+    if any(name in str(constructor_eager) for name in ("pandas", "modin")):
+        pytest.skip(reason="pandas treats NaN as missing")
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.31"):
+        ordered = [v for v in (values[::-1] if reverse else values) if v is not None]
+        if ordered and not math.isfinite(ordered[0]):
+            request.applymarker(
+                pytest.mark.xfail(reason="fixed upstream in Polars 1.31", strict=True)
+            )
+
+    df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
+    casted = nw.col("a").cast(dtype)
+    expr_result = df.select(casted.cum_max(reverse=reverse))
+    series_result = df.select(casted)["a"].cum_max(reverse=reverse)
+
+    expected = expected_reverse_cum_max if reverse else expected_cum_max
+    expected_nulls = [v is None for v in expected]
+    assert expr_result.schema == df.select(casted).schema
+    assert_equal_data(expr_result, {"a": expected})
+    assert_equal_data({"a": series_result}, {"a": expected})
+    assert expr_result["a"].is_null().to_list() == expected_nulls
+    assert series_result.is_null().to_list() == expected_nulls

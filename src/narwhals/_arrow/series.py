@@ -972,18 +972,24 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, func: Callable[..., ChunkedArrayAny], inf: float, *, reverse: bool
     ) -> Self:
         native = self.native
+        is_floating = pa.types.is_floating(native.type)
         # PyArrow<26 seeds float accumulators with finite values instead of `±inf`:
         # https://github.com/apache/arrow/issues/51194
         start = (
             pa.scalar(inf, native.type)
-            if BACKEND_VERSION < (26,) and pa.types.is_floating(native.type)
+            if BACKEND_VERSION < (26,) and is_floating
             else None
         )
-        if reverse:
-            return self._with_native(
-                func(native[::-1], start=start, skip_nulls=True)[::-1]
+        ordered = native[::-1] if reverse else native
+        result = func(ordered, start=start, skip_nulls=True)
+        if is_floating:
+            # PyArrow ignores NaN when seeding cumulative min/max, leaking the start value.
+            non_nan = pc.and_not_kleene(pc.is_valid(ordered), pc.is_nan(ordered))
+            no_value_yet = pc.equal(
+                pc.cumulative_max(pc.cast(non_nan, pa.uint8())), lit(0)
             )
-        return self._with_native(func(native, start=start, skip_nulls=True))
+            result = pc.if_else(no_value_yet, ordered, result)
+        return self._with_native(result[::-1] if reverse else result)
 
     def cum_min(self, *, reverse: bool) -> Self:
         return self._cum_min_max(pc.cumulative_min, float("inf"), reverse=reverse)
