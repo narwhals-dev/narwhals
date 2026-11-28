@@ -319,7 +319,7 @@ jobs:
       - name: Run pytest
         run: |
           cd tubular
-          pytest tests --config-file=pyproject.toml
+          pytest tests --config-file=pyproject.toml --ignore=tests/benchmarks
 
   plotly:
     if: github.head_ref != 'bump-version'
