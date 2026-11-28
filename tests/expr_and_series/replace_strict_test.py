@@ -257,3 +257,54 @@ def test_mapping_key_not_in_series(constructor_eager: ConstructorEager) -> None:
 
     result = df["a"].replace_strict({1: "one", 2: "two", 3: "three"})
     assert_equal_data({"a": result}, {"a": ["one", "two"]})
+
+
+@pytest.mark.parametrize(
+    ("data", "mapping", "expected"),
+    [
+        ({"a": [1]}, {1: 10, 2: 1000}, {"a": [10]}),
+        ({"a": [2]}, {1: 1000, 2: 10}, {"a": [10]}),
+        ({"a": [3]}, {1: 1000, 2: 2000}, {"a": [-1]}),
+    ],
+)
+def test_replace_strict_unused_mapping_value_out_of_range(
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[int]],
+    mapping: dict[int, int],
+    expected: dict[str, list[int]],
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4225
+    if "polars" in str(constructor_eager) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    df = nw.from_native(constructor_eager(data))
+    result = df.select(
+        nw.col("a").replace_strict(mapping, default=-1, return_dtype=nw.Int8)
+    )
+    assert_equal_data(result, expected)
+
+
+def test_replace_strict_pandas_nullable_float_inference() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    ser = nw.from_native(pd.Series([1, 3], dtype="Int64"), series_only=True)
+    result = ser.replace_strict({1: 10, 2: 10.5}, default=0.5)
+    assert_equal_data({"a": result}, {"a": [10.0, 0.5]})
+    assert result.dtype == nw.Float64
+
+
+def test_replace_strict_pandas_object_null_boolean() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    ser = nw.from_native(pd.Series([None], dtype=object), series_only=True)
+    result_no_default = ser.replace_strict({1: True}, return_dtype=nw.Boolean)
+    assert_equal_data({"a": result_no_default}, {"a": [None]})
+    assert result_no_default.dtype == nw.Boolean
+
+    result_with_default = ser.replace_strict(
+        {1: True}, default=False, return_dtype=nw.Boolean
+    )
+    assert_equal_data({"a": result_with_default}, {"a": [False]})
+    assert result_with_default.dtype == nw.Boolean
