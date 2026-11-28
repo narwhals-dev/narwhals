@@ -291,6 +291,12 @@ def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
     }
 
 
+def skip_if_no_tz_support(constructor: Constructor, /) -> None:
+    """Skip pyarrow-backed constructors on Windows without a tz database."""
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip(reason="pyarrow needs a tz database on Windows")
+
+
 def maybe_collect(df: Frame) -> Frame:
     """Collect to DataFrame if it is a LazyFrame.
 

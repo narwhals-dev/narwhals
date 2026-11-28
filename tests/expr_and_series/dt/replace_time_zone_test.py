@@ -5,15 +5,13 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 import pytest
-from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
-    PANDAS_VERSION,
     Constructor,
     assert_equal_data,
-    is_windows,
     pyspark_session,
+    skip_if_no_tz_support,
 )
 
 if TYPE_CHECKING:
@@ -23,13 +21,7 @@ if TYPE_CHECKING:
 def test_replace_time_zone(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if (
-        ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
-    ):
-        pytest.skip()
-
+    skip_if_no_tz_support(constructor)
     if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -50,12 +42,7 @@ def test_replace_time_zone(
 
 
 def test_replace_time_zone_none(constructor: Constructor) -> None:
-    if (
-        ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
-        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2"))
-    ):
-        pytest.skip()
+    skip_if_no_tz_support(constructor)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -76,17 +63,7 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
 def test_replace_time_zone_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if (
-        ("pyarrow" in str(constructor_eager) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor_eager)
-            and PANDAS_VERSION < PkgVersion("2")
-        )
-        or (
-            "modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2")
-        )
-    ):
-        pytest.skip()
+    skip_if_no_tz_support(constructor_eager)
     if any(x in str(constructor_eager) for x in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     data = {
@@ -107,17 +84,7 @@ def test_replace_time_zone_series(
 
 
 def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> None:
-    if (
-        ("pyarrow" in str(constructor_eager) and is_windows())
-        or (
-            "pandas_pyarrow" in str(constructor_eager)
-            and PANDAS_VERSION < PkgVersion("2")
-        )
-        or (
-            "modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2")
-        )
-    ):
-        pytest.skip()
+    skip_if_no_tz_support(constructor_eager)
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
