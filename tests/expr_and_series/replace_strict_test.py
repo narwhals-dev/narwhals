@@ -257,3 +257,20 @@ def test_mapping_key_not_in_series(constructor_eager: ConstructorEager) -> None:
 
     result = df["a"].replace_strict({1: "one", 2: "two", 3: "three"})
     assert_equal_data({"a": result}, {"a": ["one", "two"]})
+
+
+def test_replace_strict_mixed_mapping_and_default_with_return_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4224
+    xfail_if_pyspark_connect(constructor, request)
+
+    if "polars" in str(constructor) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    df = nw.from_native(constructor({"a": [1, 2]}))
+    result = df.select(
+        nw.col("a").replace_strict({1: 10}, default="other", return_dtype=nw.String)
+    )
+    assert result.collect_schema() == {"a": nw.String()}
+    assert_equal_data(result, {"a": ["10", "other"]})

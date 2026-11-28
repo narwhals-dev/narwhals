@@ -388,16 +388,24 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
             default_col = df._evaluate_single_output_expr(default)
+            native_dtype = (
+                narwhals_to_native_dtype(return_dtype, self._version)
+                if return_dtype
+                else None
+            )
+            if native_dtype:
+                default_col = default_col.cast(native_dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
-            results = [
-                ns._when(expr.isin(keys), mapping_expr[expr], default_col)
+            return [
+                ns._when(
+                    expr.isin(keys),
+                    mapping_expr[expr].cast(native_dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
+                    if native_dtype
+                    else mapping_expr[expr],
+                    default_col,
+                )
                 for expr in self(df)
             ]
-
-            if return_dtype:
-                native_dtype = narwhals_to_native_dtype(return_dtype, self._version)
-                return [res.cast(native_dtype) for res in results]  # pyright: ignore[reportArgumentType, reportCallIssue]
-            return results
 
         return self.__class__(
             func,

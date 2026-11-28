@@ -321,22 +321,29 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             default_col = df._evaluate_single_output_expr(default)
+            native_dtype = (
+                narwhals_to_native_dtype(
+                    return_dtype, self._version, DeferredTimeZone(df.native)
+                )
+                if return_dtype
+                else None
+            )
+            if native_dtype:
+                default_col = default_col.cast(native_dtype)
 
-            results = [
+            return [
                 when(
                     F("contains", old_, expr),
                     # From [map_extract docs](https://duckdb.org/docs/stable/sql/functions/map#map_extractmap-key)
                     #   "Return the value for a given key as a list, or NULL if the key is not contained in the map."
-                    F("list_extract", F("map_extract", mapping_expr, expr), lit(1)),
+                    F("list_extract", F("map_extract", mapping_expr, expr), lit(1)).cast(
+                        native_dtype
+                    )
+                    if native_dtype
+                    else F("list_extract", F("map_extract", mapping_expr, expr), lit(1)),
                 ).otherwise(default_col)
                 for expr in self(df)
             ]
-
-            if return_dtype:
-                tz = DeferredTimeZone(df.native)
-                native_dtype = narwhals_to_native_dtype(return_dtype, self._version, tz)
-                return [res.cast(native_dtype) for res in results]
-            return results
 
         return self.__class__(
             func,
