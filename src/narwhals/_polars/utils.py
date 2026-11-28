@@ -98,7 +98,16 @@ def cumulative_extremum(
         # The finite initial accumulator is genuine only after an input equals it.
         seen_input = expr.eq(result).cast(pl.UInt8).cum_max(reverse=reverse)
         is_infinite = expr.cast(pl.Float64, strict=False).is_infinite()
-        result = pl.when(seen_input.eq(0) & is_infinite).then(expr).otherwise(result)
+        # Carry the leading infinity through NaNs until the native accumulator updates.
+        infinities = pl.when(is_infinite).then(expr)
+        last_infinity = (
+            infinities.backward_fill() if reverse else infinities.forward_fill()
+        )
+        result = (
+            pl.when(seen_input.eq(0) & last_infinity.is_not_null())
+            .then(last_infinity)
+            .otherwise(result)
+        )
     return result
 
 

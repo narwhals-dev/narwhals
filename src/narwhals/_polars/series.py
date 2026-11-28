@@ -244,12 +244,12 @@ class PolarsSeries:
         self, method: Literal["cum_max", "cum_min"], *, reverse: bool
     ) -> Self:
         series = self.native
+        expr = pl.all()
         if BACKEND_VERSION < (1, 31) and series.dtype.is_float():
-            expr = cumulative_extremum(pl.col(series.name), method, reverse=reverse)
-            result = series.to_frame().select(expr).to_series()
+            expr = cumulative_extremum(expr, method, reverse=reverse)
         else:
-            result = getattr(series, method)(reverse=reverse)
-        return self._with_native(result)
+            expr = getattr(expr, method)(reverse=reverse)
+        return self._with_native(series.to_frame().select(expr).to_series())
 
     def cum_max(self, *, reverse: bool) -> Self:
         return self._cumulative_extremum("cum_max", reverse=reverse)

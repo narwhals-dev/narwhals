@@ -20,8 +20,19 @@ def test_polars_cumulative_infinity(
 
     infinity = sign * float("inf")
     bound = sign * limit
-    values = [None, infinity, None, infinity, bound, infinity, float(sign)]
-    expected = [None, infinity, None, infinity, bound, bound, float(sign)]
+    nan = float("nan")
+    values = [None, infinity, nan, None, infinity, bound, nan, infinity, float(sign)]
+    expected = [
+        None,
+        infinity,
+        infinity,
+        None,
+        infinity,
+        bound,
+        bound,
+        bound,
+        float(sign),
+    ]
     if reverse:
         values.reverse()
         expected.reverse()
@@ -42,3 +53,16 @@ def test_polars_cumulative_infinity(
     result_frame = nw.from_native(native).select(expr)
     assert result_frame["a"].to_list() == expected * 2
     assert result_frame["a"].dtype == series.dtype
+
+
+@pytest.mark.skipif(get_polars() is None, reason="requires Polars")
+@pytest.mark.parametrize(("method", "sign"), [("cum_min", 1), ("cum_max", -1)])
+def test_polars_cumulative_extremum_regex_series_name(method: str, sign: int) -> None:
+    import polars as pl
+
+    values = [sign * float("inf"), float(sign)]
+    series = nw.from_native(pl.Series("^a$", values), series_only=True)
+    result = getattr(series, method)()
+
+    assert result.to_list() == values
+    assert result.to_native().name == "^a$"
