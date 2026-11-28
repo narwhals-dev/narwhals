@@ -645,8 +645,11 @@ class PolarsSeries:
         returns bins that range from -inf to +inf and has bin_count + 1 bins.
           for compat: convert `bin_count=` call to `bins=`
         """
-        lower = cast("float", self.native.min())
-        upper = cast("float", self.native.max())
+        # Replace NaN with null first: for an all-NaN series, min()/max() are
+        # NaN, which would give NaN bins (see https://github.com/narwhals-dev/narwhals/issues/4208).
+        series = self.native.fill_nan(None)
+        lower = cast("float", series.min())
+        upper = cast("float", series.max())
 
         if lower is None and upper is None:
             # all values are null: same [0, 1] range as polars>=1.15
@@ -668,8 +671,13 @@ class PolarsSeries:
 
         # Polars inconsistently handles NaN values when computing histograms
         #   against predefined bins: https://github.com/pola-rs/polars/issues/21082
-        if BACKEND_VERSION < (1, 15) or bins is not None:
-            series = series.fill_nan(None)
+        #   and when computing the bin range from bin_count:
+        #   https://github.com/pola-rs/polars/issues/31081
+        # For an all-NaN series, native Polars computes the range from min()
+        # and max(), which are NaN, so the breakpoints come back NaN. Replacing
+        # NaN with null first makes it behave like an all-null series (and like
+        # the pandas/PyArrow backends): the [0, 1] range.
+        series = series.fill_nan(None)
 
         df = series.hist(
             bins,
