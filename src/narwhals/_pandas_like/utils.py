@@ -69,10 +69,10 @@ PD_DATETIME_RGX = r"""^
         (?:,                                      # Begin non-capturing group for optional timezone
             \s*                                   # Optional whitespace after comma
             (?P<time_zone>                        # Start named group for timezone
-                [a-zA-Z\/]+                       # Match timezone name, e.g., UTC, America/New_York
+                [a-zA-Z0-9_+\/-]+                 # IANA name, e.g. UTC, America/Port-au-Prince, Etc/GMT+5
                 (?:[+-]\d{2}:\d{2})?              # Optional offset in format +HH:MM or -HH:MM
                 |                                 # OR
-                pytz\.FixedOffset\(\d+\)          # Match pytz.FixedOffset with integer offset in parentheses
+                pytz\.FixedOffset\(-?\d+\)        # Match pytz.FixedOffset with integer offset in parentheses
             )                                     # End time_zone group
         )?                                        # End optional timezone group
     \]                                            # Closing bracket for datetime64

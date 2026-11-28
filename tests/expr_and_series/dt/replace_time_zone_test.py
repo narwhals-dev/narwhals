@@ -60,6 +60,27 @@ def test_replace_time_zone_none(constructor: Constructor) -> None:
     assert_equal_data(result_str, expected)
 
 
+@pytest.mark.parametrize(
+    "time_zone",
+    [
+        "America/Argentina/Buenos_Aires",
+        "America/Port-au-Prince",
+        "Etc/GMT+5",
+        "Etc/GMT-3",
+    ],
+)
+def test_replace_time_zone_non_alpha_name_dtype_4220(
+    constructor: Constructor, request: pytest.FixtureRequest, time_zone: str
+) -> None:
+    skip_if_no_tz_support(constructor)
+    if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [datetime(2020, 1, 1)]}))
+    result = df.select(nw.col("a").dt.replace_time_zone(time_zone)).collect_schema()["a"]
+    assert isinstance(result, nw.Datetime)
+    assert result.time_zone == time_zone
+
+
 def test_replace_time_zone_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:

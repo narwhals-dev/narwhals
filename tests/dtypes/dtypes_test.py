@@ -301,6 +301,38 @@ def test_pandas_fixed_offset_1302() -> None:
         pass
 
 
+@pytest.mark.parametrize(
+    ("native_dtype", "expected"),
+    [
+        ("datetime64[ns, Etc/GMT+5]", nw.Datetime("ns", "Etc/GMT+5")),
+        ("datetime64[us, Etc/GMT-14]", nw.Datetime("us", "Etc/GMT-14")),
+        (
+            "datetime64[ms, America/Argentina/Buenos_Aires]",
+            nw.Datetime("ms", "America/Argentina/Buenos_Aires"),
+        ),
+        (
+            "datetime64[s, America/Port-au-Prince]",
+            nw.Datetime("s", "America/Port-au-Prince"),
+        ),
+        ("datetime64[ns, EST5EDT]", nw.Datetime("ns", "EST5EDT")),
+        ("datetime64[ns, UTC-05:30]", nw.Datetime("ns", "UTC-05:30")),
+        (
+            "datetime64[ns, pytz.FixedOffset(-60)]",
+            nw.Datetime("ns", "pytz.FixedOffset(-60)"),
+        ),
+    ],
+)
+def test_pandas_datetime_time_zone_names_4220(
+    native_dtype: str, expected: nw.Datetime
+) -> None:
+    pytest.importorskip("pandas")
+    from narwhals._pandas_like.utils import native_to_narwhals_dtype
+    from narwhals._utils import Implementation, Version
+
+    result = native_to_narwhals_dtype(native_dtype, Version.MAIN, Implementation.PANDAS)
+    assert result == expected
+
+
 def test_unhashable_categorical_dtype_4089() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
