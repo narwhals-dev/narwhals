@@ -231,11 +231,23 @@ class PandasLikeSeriesDateTimeNamespace(
                     np_unit = "M"
                 else:
                     np_unit = "Y"
-                arr = native.values  # noqa: PD011
-                arr_dtype = arr.dtype
+                # NOTE: `.values` holds UTC instants, so truncate the local wall time.
+                pdx = self.compliant.__native_namespace__()
+                dtype = native.dtype
+                time_zone = dtype.tz if isinstance(dtype, pdx.DatetimeTZDtype) else None
+                naive = native.dt.tz_localize(None) if time_zone is not None else native
+                arr = naive.values  # noqa: PD011
                 result_arr = arr.astype(f"datetime64[{multiple}{np_unit}]").astype(
-                    arr_dtype
+                    arr.dtype
                 )
+                result_native = type(native)(
+                    result_arr, index=native.index, name=native.name
+                )
+                if time_zone is not None:
+                    result_native = result_native.dt.tz_localize(
+                        time_zone, nonexistent="shift_forward"
+                    )
+                return self.with_native(result_native)
             result_native = type(native)(
                 result_arr, dtype=native.dtype, index=native.index, name=native.name
             )
