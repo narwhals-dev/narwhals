@@ -339,6 +339,7 @@ class Series(NwSeries[IntoSeriesT]):
 
     # Too unstable to consider including here.
     hist: Any = not_implemented()
+    bin_intervals: Any = not_implemented()
 
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
         msg = (
@@ -351,6 +352,9 @@ class Series(NwSeries[IntoSeriesT]):
 
 class Expr(NwExpr):
     _version = Version.V2
+
+    # Too unstable to consider including here.
+    bin_intervals: Any = not_implemented()
 
     def any_value(self, *, ignore_nulls: bool = False) -> Self:
         msg = (

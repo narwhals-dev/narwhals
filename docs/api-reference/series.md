@@ -17,6 +17,7 @@
         - arg_max
         - arg_min
         - arg_true
+        - bin_intervals
         - cast
         - ceil
         - clip

@@ -580,6 +580,17 @@ class EagerExpr(
 
     # Other
 
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> Self:
+        return self._reuse_series(
+            "bin_intervals", intervals=intervals, labels=labels, right_closed=right_closed
+        )
+
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         return self._reuse_series(
             "clip", lower_bound=lower_bound, upper_bound=upper_bound

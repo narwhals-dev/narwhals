@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from bisect import bisect_left
 from collections.abc import (
     Callable,
     Collection,
@@ -17,13 +18,17 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from io import IOBase
-from operator import attrgetter
+from itertools import pairwise
+from math import ceil, floor, inf, isfinite, nextafter
+from numbers import Integral
+from operator import attrgetter, gt, lt
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
     Generic,
     Literal,
+    NamedTuple,
     Protocol,
     TypeVar,
     cast,
@@ -47,6 +52,7 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import (
     ColumnNotFoundError,
+    ComputeError,
     DuplicateError,
     InvalidOperationError,
     PluginError,
@@ -123,6 +129,7 @@ if TYPE_CHECKING:
         CompliantSeries,
         DTypes,
         FileSource,
+        IntoDType,
         IntoSeriesT,
         MultiIndexSelector,
         NestedLiteral,
@@ -1438,6 +1445,41 @@ def deprecate_native_namespace(
     return decorate
 
 
+def _validate_bin_intervals(
+    intervals: Sequence[float], labels: Sequence[str] | Literal[False]
+) -> tuple[list[float], list[str] | Literal[False]]:
+    if not isinstance(intervals, Sequence) or isinstance(intervals, (str, bytes)):
+        msg = "intervals must be a sequence of numeric breakpoints"
+        raise TypeError(msg)
+    # Rounding NumPy integers with math.ceil or math.floor can lose precision.
+    breaks: list[float] = [
+        int(value) if isinstance(value, Integral) else value for value in intervals
+    ]
+    if not all(isinstance(value, int) or isfinite(value) for value in breaks):
+        msg = "intervals must not contain NaN or infinity"
+        raise ComputeError(msg)
+    if any(left >= right for left, right in pairwise(breaks)):
+        msg = "intervals must be strictly increasing"
+        raise ComputeError(msg)
+    if labels is False:
+        return breaks, False
+    if (
+        not isinstance(labels, Sequence)
+        or isinstance(labels, str)
+        or not all(isinstance(label, str) for label in labels)
+    ):
+        msg = "labels must be a sequence of strings or False"
+        raise TypeError(msg)
+    n_bins = len(breaks) + 1
+    if len(labels) != n_bins:
+        msg = f"expected {n_bins} labels (len(intervals) + 1), got {len(labels)}"
+        raise ShapeError(msg)
+    if len(set(labels)) != len(labels):
+        msg = "labels are not unique"
+        raise DuplicateError(msg)
+    return breaks, list(labels)
+
+
 def _validate_rolling_arguments(
     window_size: int, min_samples: int | None
 ) -> tuple[int, int]:
@@ -2148,6 +2190,52 @@ def floor_mod(expr: _SupportsFloorModT, other: _SupportsFloorModT) -> _SupportsF
     divisor) with the double-modulus identity `((a % b) + b) % b`.
     """
     return ((expr % other) + other) % other
+
+
+class BinSearchEdges(NamedTuple):
+    """Breakpoints prepared for a sorted search.
+
+    Attributes:
+        edges: Breakpoints representable in the comparison dtype.
+        offset: Number of breakpoints below the dtype's range, added to each bin index.
+        dtype: Dtype used to compare the values and breakpoints.
+    """
+
+    edges: Sequence[float]
+    offset: int
+    dtype: IntoDType
+
+
+def bin_search_edges(
+    dtype: DType, version: Version, intervals: Sequence[float], *, right_closed: bool
+) -> BinSearchEdges:
+    """Round each breakpoint up for left-closed bins and down for right-closed bins."""
+    dtypes = version.dtypes
+    if dtype.is_float():
+        direction = -inf if right_closed else inf
+        needs_adjustment = gt if right_closed else lt
+        float_bounds = []
+        for edge in intervals:
+            try:
+                rounded = float(edge)
+            except OverflowError:
+                rounded = inf if edge > 0 else -inf
+            # A wide integer can round to a Float64 on the wrong side of the edge.
+            if needs_adjustment(rounded, edge):
+                rounded = nextafter(rounded, direction)
+            float_bounds.append(rounded)
+        return BinSearchEdges(float_bounds, 0, dtypes.Float64)
+    if not dtype.is_integer():
+        msg = f"`bin_intervals` operation not supported for dtype `{dtype}`"
+        raise InvalidOperationError(msg)
+    round_edge = floor if right_closed else ceil
+    bounds = [round_edge(edge) for edge in intervals]
+    unsigned = dtype.is_unsigned_integer()
+    comparison_dtype = dtypes.UInt64 if unsigned else dtypes.Int64
+    lower = 0 if unsigned else -(2**63)
+    start = bisect_left(bounds, lower)
+    stop = bisect_left(bounds, lower + 2**64)
+    return BinSearchEdges(bounds[start:stop], start, comparison_dtype)
 
 
 def inherit_doc(

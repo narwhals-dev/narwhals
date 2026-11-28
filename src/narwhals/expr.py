@@ -9,6 +9,7 @@ from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
     NO_DEFAULT,
     Version,
+    _validate_bin_intervals,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
@@ -26,7 +27,7 @@ from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from typing import Concatenate, NoReturn, TypeVar
+    from typing import Concatenate, Literal, NoReturn, TypeVar
 
     from typing_extensions import ParamSpec, Self
 
@@ -1696,6 +1697,61 @@ class Expr:
             )
         return self._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "clip", exprs=(lower_bound, upper_bound))
+        )
+
+    @unstable
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool = False,
+    ) -> Self:
+        """Assign each integer or floating-point value to a bin.
+
+        Warning:
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            intervals: Strictly increasing, finite breakpoints. Pass `[]` for a single bin.
+            labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
+            right_closed: Use right-closed bins `(a, b]` instead of left-closed `[a, b)`.
+
+        Notes:
+            - Labelled output is `Categorical` on PyArrow and `Enum` elsewhere.
+            - Nulls stay null and NaN goes in the last bin. NumPy-backed pandas treats
+              NaN as null, so `labels=False` returns `Float64` when a value is missing.
+            - The Polars backend requires Polars 0.20.8 or newer. It compares breakpoints
+              as `Float64`, so binning can lose precision beyond `2**53` in magnitude.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [0, 1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     bin=nw.col("a").bin_intervals([1, 2], labels=["lo", "mid", "hi"])
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |       a  bin     |
+            |    0  0   lo     |
+            |    1  1  mid     |
+            |    2  2   hi     |
+            |    3  3   hi     |
+            └──────────────────┘
+        """
+        intervals, labels = _validate_bin_intervals(intervals, labels)
+        return self._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE,
+                "bin_intervals",
+                intervals=intervals,
+                labels=labels,
+                right_closed=right_closed,
+            )
         )
 
     def first(self, order_by: str | Iterable[str] | None = None) -> Self:

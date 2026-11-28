@@ -11,6 +11,7 @@ from narwhals._utils import (
     Version,
     _Implementation,
     _resolve_sample_size,
+    _validate_bin_intervals,
     _validate_rolling_arguments,
     eager_namespace,
     ensure_type,
@@ -1034,6 +1035,53 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.clip(
                 lower_bound=self._extract_native(lower_bound),
                 upper_bound=self._extract_native(upper_bound),
+            )
+        )
+
+    @unstable
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool = False,
+    ) -> Self:
+        """Assign each integer or floating-point value to a bin.
+
+        Warning:
+            This functionality is considered **unstable**. It may be changed at any point
+            without it being considered a breaking change.
+
+        Arguments:
+            intervals: Strictly increasing, finite breakpoints. Pass `[]` for a single bin.
+            labels: One unique string per bin, or `False` for zero-based `UInt32` indices.
+            right_closed: Use right-closed bins `(a, b]` instead of left-closed `[a, b)`.
+
+        Notes:
+            - Labelled output is `Categorical` on PyArrow and `Enum` elsewhere.
+            - Nulls stay null and NaN goes in the last bin. NumPy-backed pandas treats
+              NaN as null, so `labels=False` returns `Float64` when a value is missing.
+            - The Polars backend requires Polars 0.20.8 or newer. It compares breakpoints
+              as `Float64`, so binning can lose precision beyond `2**53` in magnitude.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pd.Series([0, 1, 2, 3])
+            >>> nw.from_native(s_native, series_only=True).bin_intervals(
+            ...     [1, 2], labels=False
+            ... ).to_native()
+            0    0
+            1    1
+            2    2
+            3    2
+            dtype: uint32
+        """
+        intervals, labels = _validate_bin_intervals(intervals, labels)
+        return self._with_compliant(
+            self._compliant_series.bin_intervals(
+                intervals, labels=labels, right_closed=right_closed
             )
         )
 

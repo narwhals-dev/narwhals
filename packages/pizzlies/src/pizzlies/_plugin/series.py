@@ -1382,6 +1382,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
         return DictSeriesCatNamespace(self)
 
+    bin_intervals = not_implemented()
     map: Any = not_implemented()
 
 

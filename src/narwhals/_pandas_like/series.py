@@ -34,6 +34,7 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     _into_arrow_chunked_array,
+    bin_search_edges,
     is_list_of,
 )
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
@@ -1208,6 +1209,38 @@ class PandasLikeSeries(EagerSeries[Any]):
                 method=pd_method, na_option="keep", ascending=not descending, pct=False
             )
         )
+
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> Self:
+        ns = self.__native_namespace__()
+        native = self.native
+        impl, version = self._implementation, self._version
+        search = bin_search_edges(
+            self.dtype, version, intervals, right_closed=right_closed
+        )
+        native_dtype = narwhals_to_native_dtype(search.dtype, None, impl, version)
+        null_mask = native.isna()
+        values = native.where(~null_mask, 0).astype(native_dtype)
+        edges = ns.Series(search.edges, dtype=native_dtype)
+        indices = edges.searchsorted(values, side="left" if right_closed else "right")
+        if search.offset:
+            indices += search.offset
+        dtypes = version.dtypes
+        out_dtype = dtypes.UInt32() if labels is False else dtypes.Enum(labels)
+        result_dtype = narwhals_to_native_dtype(
+            out_dtype, get_dtype_backend(native.dtype, impl), impl, version
+        )
+        if labels is not False:
+            indices = ns.CategoricalIndex(labels, dtype=result_dtype).take(indices)
+        result = ns.Series(
+            indices, dtype=result_dtype, index=native.index, name=self.name
+        )
+        return self._with_native(result.where(~null_mask), preserve_broadcast=True)
 
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool

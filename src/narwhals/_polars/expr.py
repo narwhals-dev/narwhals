@@ -24,6 +24,7 @@ from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from typing import Literal
 
     from typing_extensions import Self
 
@@ -238,6 +239,33 @@ class PolarsExpr:
         )
         kwargs = {} if pl_version < (0, 20, 31) else {"returns_scalar": returns_scalar}
         native = self.native.map_batches(function, return_dtype_pl, **kwargs)
+        return self._with_native(native)
+
+    @requires.backend_version((0, 20, 8))
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> Self:
+        if BACKEND_VERSION < (2,):
+            bin_labels = (
+                [str(i) for i in range(len(intervals) + 1)] if labels is False else labels
+            )
+            # Polars cut maps NaN to null. Positive infinity belongs to the last bin.
+            native = (
+                self.native.fill_nan(float("inf"))
+                .cut(intervals, labels=bin_labels, left_closed=not right_closed)
+                .cast(pl.Enum(bin_labels))
+            )
+            if labels is False:
+                native = native.to_physical().cast(pl.UInt32)
+        else:
+            breaks = pl.Series(intervals, dtype=pl.Float64)
+            native = self.native.bin_intervals(
+                breaks, labels=labels, right_closed=right_closed
+            )
         return self._with_native(native)
 
     @requires.backend_version((1,))

@@ -9,6 +9,7 @@
         - all
         - any
         - any_value
+        - bin_intervals
         - cast
         - ceil
         - clip

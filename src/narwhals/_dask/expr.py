@@ -745,6 +745,7 @@ class DaskExpr(
             use="lf.filter(nw.col('b') > 0).select('a')",
         )
     )
+    bin_intervals = not_implemented()
     first = not_implemented()
     rank = not_implemented()
     last = not_implemented()

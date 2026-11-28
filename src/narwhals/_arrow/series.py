@@ -14,6 +14,7 @@ from narwhals._arrow.series_struct import ArrowSeriesStructNamespace
 from narwhals._arrow.utils import (
     BACKEND_VERSION,
     arange,
+    bin_interval_indices,
     cast_for_truediv,
     chunked_array,
     extract_native,
@@ -33,6 +34,7 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
+    bin_search_edges,
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
@@ -1129,6 +1131,33 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         result = pc.if_else(null_mask, lit(None, rank.type), rank)
         return self._with_native(result)
+
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> Self:
+        search = bin_search_edges(
+            self.dtype, self._version, intervals, right_closed=right_closed
+        )
+        values = self.native.cast(narwhals_to_native_dtype(search.dtype, self._version))
+        edges = pa.array(search.edges, type=values.type)
+        result = bin_interval_indices(
+            values, edges, offset=search.offset, right_closed=right_closed
+        )
+        if labels is not False:
+            dictionary = pa.array(labels, pa.string())
+            index_type = pa.int64()
+            result = chunked_array(
+                [
+                    pa.DictionaryArray.from_arrays(chunk.cast(index_type), dictionary)
+                    for chunk in chunked_array(result).chunks
+                ],
+                pa.dictionary(index_type, dictionary.type),
+            )
+        return self._with_native(result, preserve_broadcast=True)
 
     def hist_from_bins(
         self, bins: list[float], *, include_breakpoint: bool

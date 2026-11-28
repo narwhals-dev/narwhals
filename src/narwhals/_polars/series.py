@@ -342,6 +342,20 @@ class PolarsSeries:
             self.native.clip(upper_bound=extract_native(upper_bound))
         )
 
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        expr = ns.col(name).bin_intervals(
+            intervals, labels=labels, right_closed=right_closed
+        )
+        return self.to_frame().select(expr).get_column(name)
+
     @requires.backend_version((1,))
     def replace_strict(
         self,

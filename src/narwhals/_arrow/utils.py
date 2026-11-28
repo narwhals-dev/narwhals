@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
+        ArrayOrChunkedArray,
         ArrayOrScalar,
         ArrayOrScalarT1,
         ArrayOrScalarT2,
@@ -717,6 +718,29 @@ def sort_indices(
     # it must be specified per sort key instead.
     keyed = [(name, order, null_placement) for name, order in sorting]
     return pc.sort_indices(table, sort_keys=keyed)  # type: ignore[arg-type]
+
+
+def bin_interval_indices(
+    values: ChunkedArrayAny, edges: ArrayAny, /, *, offset: int, right_closed: bool
+) -> ArrayOrChunkedArray:
+    """Return zero-based UInt32 bin indices, preserving nulls and placing NaN last."""
+    index_type = pa.uint32()
+    side: Literal["left", "right"] = "left" if right_closed else "right"
+    indices: ArrayOrChunkedArray
+    if BACKEND_VERSION < (26,):  # pragma: no cover
+        # `pc.search_sorted` requires pyarrow 26.
+        import numpy as np  # ignore-banned-import
+
+        search_values = values.fill_null(lit(0, values.type)).to_numpy()
+        bin_indices = np.searchsorted(edges.to_numpy(), search_values, side=side)
+        indices = pc.if_else(
+            values.is_null(),
+            lit(None, index_type),
+            pa.array(np.asarray(bin_indices, dtype=np.uint32)),
+        )
+    else:
+        indices = pc.search_sorted(edges, values, side=side).cast(index_type)  # type: ignore[attr-defined]
+    return pc.add(indices, lit(offset, index_type)) if offset else indices
 
 
 def list_sort(

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Literal
 
     from typing_extensions import Self
 
@@ -62,6 +63,13 @@ class CompliantColumn(Protocol):
 
     def abs(self) -> Self: ...
     def alias(self, name: str) -> Self: ...
+    def bin_intervals(
+        self,
+        intervals: Sequence[float],
+        *,
+        labels: Sequence[str] | Literal[False],
+        right_closed: bool,
+    ) -> Self: ...
     def cast(self, dtype: IntoDType) -> Self: ...
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self: ...
     def clip_lower(self, lower_bound: Self) -> Self: ...
