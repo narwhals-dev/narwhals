@@ -7,6 +7,7 @@ tests/expr_and_series/arithmetic_test.py::test_floordiv_unsigned_dtype[dict-UInt
 tests/expr_and_series/arithmetic_test.py::test_floordiv_unsigned_dtype[dict-UInt64]
 tests/expr_and_series/bin_intervals_test.py::test_bin_intervals_breaks_outside_float64[dict]
 tests/expr_and_series/bin_intervals_test.py::test_bin_intervals_expr[dict]
+tests/expr_and_series/bin_intervals_test.py::test_bin_intervals_group_by[dict]
 tests/expr_and_series/bin_intervals_test.py::test_bin_intervals_large_integers[dict-adjacent-left]
 tests/expr_and_series/bin_intervals_test.py::test_bin_intervals_large_integers[dict-adjacent-right]
 tests/expr_and_series/bin_intervals_test.py::test_bin_intervals_large_integers[dict-float-edge]

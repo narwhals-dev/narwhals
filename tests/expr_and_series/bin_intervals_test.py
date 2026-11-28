@@ -92,6 +92,22 @@ def test_bin_intervals_series(
     assert_equal_series(series.head(0).bin_intervals([], labels=["only"]), [], "a")
 
 
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_bin_intervals_group_by(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    xfail_polars(constructor_eager, request)
+    if "pyarrow_table" in str(constructor_eager):
+        request.applymarker(
+            pytest.mark.xfail(reason="non-elementary agg", raises=ValueError)
+        )
+    df = nw.from_native(
+        constructor_eager({"g": [1, 1, 2], "a": [-1.0, 0.5, 2.0]}), eager_only=True
+    )
+    result = df.group_by("g").agg(nw.col("a").bin_intervals([0, 1], labels=False).max())
+    assert_equal_data(result.sort("g"), {"g": [1, 2], "a": [1, 2]})
+
+
 @pytest.mark.parametrize(
     ("dtype", "breaks", "expected"),
     [
