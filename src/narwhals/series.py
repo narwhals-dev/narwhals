@@ -1061,6 +1061,8 @@ class Series(Generic[IntoSeriesT]):
             - Labelled output is `Categorical` on PyArrow and `Enum` elsewhere.
             - Nulls stay null and NaN goes in the last bin. NumPy-backed pandas treats
               NaN as null, so `labels=False` returns `Float64` when a value is missing.
+            - The Polars backend requires Polars 0.20.8 or newer. It compares breakpoints
+              as `Float64`, so binning can lose precision beyond `2**53` in magnitude.
 
         Examples:
             >>> import pandas as pd

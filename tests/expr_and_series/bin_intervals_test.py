@@ -22,6 +22,7 @@ from narwhals.exceptions import (
 )
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -30,11 +31,31 @@ from tests.utils import (
 
 inf = float("inf")
 wide = 2**53 + 1
+requires_polars_0208 = pytest.mark.xfail(
+    POLARS_VERSION < PkgVersion("0.20.8"),
+    reason="bin_intervals requires Polars 0.20.8",
+    raises=NotImplementedError,
+)
+polars_precision = pytest.mark.xfail(
+    POLARS_VERSION >= PkgVersion("0.20.8"),
+    reason="Polars compares breakpoints as Float64",
+    raises=(AssertionError, DuplicateError, OverflowError),
+)
+
+
+def xfail_polars(
+    constructor: Constructor, request: pytest.FixtureRequest, *, precision: bool = False
+) -> None:
+    if "polars" in str(constructor):
+        request.applymarker(requires_polars_0208)
+        if precision:
+            request.applymarker(polars_precision)
 
 
 def test_bin_intervals_expr(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    xfail_polars(constructor, request)
     if any(
         x in str(constructor) for x in ("dask", "duckdb", "ibis", "pyspark", "sqlframe")
     ):
@@ -55,7 +76,10 @@ def test_bin_intervals_expr(
     )
 
 
-def test_bin_intervals_series(constructor_eager: ConstructorEager) -> None:
+def test_bin_intervals_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    xfail_polars(constructor_eager, request)
     data = {"a": [-2, -1, 0, 1, 2]}
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     labels = ["a", "b", "c"]
@@ -79,10 +103,12 @@ def test_bin_intervals_series(constructor_eager: ConstructorEager) -> None:
 )
 def test_bin_intervals_numeric_breakpoints(
     constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
     dtype: type[nw.dtypes.NumericType],
     breaks: list[float],
     expected: list[int],
 ) -> None:
+    xfail_polars(constructor_eager, request)
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     result = df.select(nw.col("a").cast(dtype).bin_intervals(breaks, labels=False))
     assert_equal_data(result, {"a": expected})
@@ -99,19 +125,24 @@ def test_bin_intervals_numeric_breakpoints(
 )
 def test_bin_intervals_large_integers(
     constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
     breaks: list[float],
     *,
     right_closed: bool,
     labels: list[str] | Literal[False],
     expected: list[int] | list[str],
 ) -> None:
+    xfail_polars(constructor_eager, request, precision=True)
     data = {"a": [wide - 1, wide, wide + 1]}
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.bin_intervals(breaks, labels=labels, right_closed=right_closed)
     assert_equal_series(result, expected, "a")
 
 
-def test_bin_intervals_wide_breaks_on_floats(constructor_eager: ConstructorEager) -> None:
+def test_bin_intervals_wide_breaks_on_floats(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    xfail_polars(constructor_eager, request, precision=True)
     data = {"a": [float(wide - 1), float(wide + 1), float(wide + 3)]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     a = nw.col("a")
@@ -124,8 +155,9 @@ def test_bin_intervals_wide_breaks_on_floats(constructor_eager: ConstructorEager
 
 
 def test_bin_intervals_breaks_outside_float64(
-    constructor_eager: ConstructorEager,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
+    xfail_polars(constructor_eager, request, precision=True)
     data = {"i": [0, 1, 2, 3], "f": [-inf, -float_info.max, float_info.max, inf]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     huge = 10**400
@@ -139,7 +171,10 @@ def test_bin_intervals_breaks_outside_float64(
     )
 
 
-def test_bin_intervals_nan_and_null(constructor_eager: ConstructorEager) -> None:
+def test_bin_intervals_nan_and_null(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    xfail_polars(constructor_eager, request)
     data = {"a": [float("nan"), None, -1.0]}
     series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     expected = [None, None, 0] if series.implementation.is_pandas_like() else [1, None, 0]
@@ -233,16 +268,23 @@ def test_bin_intervals_arrow_to_pandas() -> None:
     pd.testing.assert_series_equal(result["a"], pd.Series(expected, name="a"))
 
 
-def test_bin_intervals_signed_breaks_on_uint64() -> None:
+@requires_polars_0208
+@polars_precision
+@pytest.mark.parametrize(
+    ("prefix", "expected"), [([-1], [1, 2, 2]), ([-1, 0.5], [2, 3, 3])]
+)
+def test_bin_intervals_signed_breaks_on_uint64(
+    prefix: list[float], expected: list[int]
+) -> None:
     pl = pytest.importorskip("polars")
     edge = 2**63 + 1
     series = nw.from_native(
         pl.Series("a", [edge - 1, edge, edge + 1], dtype=pl.UInt64), series_only=True
     )
-    assert series.bin_intervals([-1, edge], labels=False).to_list() == [1, 2, 2]
-    assert series.bin_intervals([-1, 0.5, edge], labels=False).to_list() == [2, 3, 3]
+    assert series.bin_intervals([*prefix, edge], labels=False).to_list() == expected
 
 
+@polars_precision
 @pytest.mark.parametrize(
     ("dtype", "lower", "upper", "min_version"),
     [("Int128", -(2**127), 2**127 - 1, "1.18"), ("UInt128", 0, 2**128 - 1, "1.34")],
@@ -260,17 +302,34 @@ def test_bin_intervals_128_bit_limits(
     assert_equal_series(result, [1, 2, 2, 3], "a")
 
 
-def test_bin_intervals_polars_null_dtype() -> None:
+@requires_polars_0208
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        "Float64",
+        pytest.param(
+            "Null",
+            marks=pytest.mark.xfail(
+                POLARS_VERSION < PkgVersion("1.44") or POLARS_VERSION >= PkgVersion("2"),
+                reason="Polars rejects Null-typed input",
+                raises=InvalidOperationError,
+            ),
+        ),
+    ],
+)
+def test_bin_intervals_polars_null_dtype(dtype: str) -> None:
     pl = pytest.importorskip("polars")
-    series = nw.from_native(pl.Series("a", [None, None], dtype=pl.Null), series_only=True)
+    series = nw.from_native(
+        pl.Series("a", [None, None], dtype=getattr(pl, dtype)), series_only=True
+    )
     result = series.bin_intervals([wide], labels=["low", "high"])
     assert result.dtype == nw.Enum(["low", "high"])
     assert_equal_series(result, [None, None], "a")
 
 
-def test_bin_intervals_polars_native_expr(monkeypatch: pytest.MonkeyPatch) -> None:
+@requires_polars_0208
+def test_bin_intervals_polars_native_expr() -> None:
     pl = pytest.importorskip("polars")
-    monkeypatch.delattr(pl.Expr, "map_batches")
     df = nw.from_native(pl.LazyFrame({"a": [None, 0.0, float("nan")], "b": [1, -1, 0]}))
     labels = ["low", "high"]
     result = df.select(
@@ -288,9 +347,17 @@ def test_bin_intervals_polars_native_expr(monkeypatch: pytest.MonkeyPatch) -> No
     )
 
 
-def test_bin_intervals_polars_scalar_expr() -> None:
+@requires_polars_0208
+def test_bin_intervals_polars_scalar_expr(request: pytest.FixtureRequest) -> None:
     pl = pytest.importorskip("polars")
     df = nw.from_native(pl.LazyFrame({"g": [0, 1, 0], "a": [2, 0, 3]}))
     bins = nw.col("a").min().bin_intervals([1], labels=False)
     assert_equal_data(df.select("g", bins), {"g": [0, 1, 0], "a": [0, 0, 0]})
+    request.applymarker(
+        pytest.mark.xfail(
+            POLARS_VERSION < PkgVersion("1.35"),
+            reason="Polars cut rejects an already aggregated column",
+            raises=ComputeError,
+        )
+    )
     assert_equal_data(df.group_by("g").agg(bins).sort("g"), {"g": [0, 1], "a": [1, 0]})

@@ -2231,13 +2231,10 @@ def bin_search_edges(
     round_edge = floor if right_closed else ceil
     bounds = [round_edge(edge) for edge in intervals]
     unsigned = dtype.is_unsigned_integer()
-    if dtype in {dtypes.Int128, dtypes.UInt128}:
-        bits, comparison_dtype = 128, dtype
-    else:
-        bits, comparison_dtype = 64, dtypes.UInt64 if unsigned else dtypes.Int64
-    lower = 0 if unsigned else -(2 ** (bits - 1))
+    comparison_dtype = dtypes.UInt64 if unsigned else dtypes.Int64
+    lower = 0 if unsigned else -(2**63)
     start = bisect_left(bounds, lower)
-    stop = bisect_left(bounds, lower + 2**bits)
+    stop = bisect_left(bounds, lower + 2**64)
     return BinSearchEdges(bounds[start:stop], start, comparison_dtype)
 
 

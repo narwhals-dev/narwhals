@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import polars as pl
 from polars.selectors import is_selector
@@ -19,15 +19,8 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
     native_get_categories,
-    native_to_narwhals_dtype,
 )
-from narwhals._utils import (
-    NO_DEFAULT,
-    Implementation,
-    bin_search_edges,
-    floor_mod,
-    requires,
-)
+from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -50,7 +43,6 @@ class PolarsExpr:
     _implementation: Implementation = Implementation.POLARS
     _version: Version
     _native_expr: pl.Expr
-    _opt_metadata: ExprMetadata | None = None
     _evaluate_output_names: Any
     _alias_output_names: Any
     __call__: Any
@@ -102,7 +94,7 @@ class PolarsExpr:
     @property
     def _metadata(self) -> ExprMetadata:
         assert self._opt_metadata is not None  # noqa: S101
-        return self._opt_metadata
+        return cast("ExprMetadata", self._opt_metadata)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -249,6 +241,7 @@ class PolarsExpr:
         native = self.native.map_batches(function, return_dtype_pl, **kwargs)
         return self._with_native(native)
 
+    @requires.backend_version((0, 20, 8))
     def bin_intervals(
         self,
         intervals: Sequence[float],
@@ -256,67 +249,24 @@ class PolarsExpr:
         labels: Sequence[str] | Literal[False],
         right_closed: bool,
     ) -> Self:
-        side: Literal["left", "right"] = "left" if right_closed else "right"
-        scalar = self._opt_metadata is not None and self._opt_metadata.is_scalar_like
-        if all(abs(edge) < 2**53 for edge in intervals) and (
-            BACKEND_VERSION >= (2,) or not scalar
-        ):
+        if BACKEND_VERSION < (2,):
+            bin_labels = (
+                [str(i) for i in range(len(intervals) + 1)] if labels is False else labels
+            )
+            # Polars cut maps NaN to null. Positive infinity belongs to the last bin.
+            native = (
+                self.native.fill_nan(float("inf"))
+                .cut(intervals, labels=bin_labels, left_closed=not right_closed)
+                .cast(pl.Enum(bin_labels))
+            )
+            if labels is False:
+                native = native.to_physical().cast(pl.UInt32)
+        else:
             breaks = pl.Series(intervals, dtype=pl.Float64)
-            if BACKEND_VERSION < (2,):
-                values = self.native
-                if BACKEND_VERSION < (1,):
-                    is_nan = values.is_in([float("nan")])
-                else:
-                    # Polars 1.23 added is_nan support for Null-typed columns.
-                    numeric = values.fill_null(0) if BACKEND_VERSION < (1, 23) else values
-                    is_nan = numeric.is_nan()
-                indices = (
-                    pl.when(values.is_null())
-                    .then(values.cast(pl.Null, strict=False))
-                    .when(is_nan)
-                    .then(pl.lit(len(intervals), dtype=pl.UInt32))
-                    .otherwise(
-                        pl.lit(breaks).search_sorted(values, side=side).cast(pl.UInt32)
-                    )
-                )
-                if labels is not False:
-                    dtype = pl.Enum(labels)
-                    if BACKEND_VERSION < (1,):
-                        indices = indices.cast(dtype)
-                    else:
-                        indices = indices.replace_strict(
-                            list(range(len(labels))), labels, return_dtype=dtype
-                        )
-                return self._with_native(indices)
-            return self._with_native(
-                self.native.bin_intervals(
-                    breaks, labels=labels, right_closed=right_closed
-                )
+            native = self.native.bin_intervals(
+                breaks, labels=labels, right_closed=right_closed
             )
-
-        categories = None if labels is False else pl.Series(labels, dtype=pl.Enum(labels))
-        result_dtype = pl.UInt32 if categories is None else categories.dtype
-
-        # Batches preserve wide integer boundaries and pre-2 scalar broadcasting.
-        def bin_batch(batch: pl.Series) -> pl.Series:
-            if batch.dtype == pl.Null:
-                return batch.cast(result_dtype)
-            dtype = native_to_narwhals_dtype(batch.dtype, self._version)
-            search = bin_search_edges(
-                dtype, self._version, intervals, right_closed=right_closed
-            )
-            values = batch.cast(narwhals_to_native_dtype(search.dtype, self._version))
-            breaks = pl.Series(search.edges, dtype=values.dtype)
-            indices = breaks.search_sorted(values, side=side).cast(pl.UInt32)
-            indices = (indices + search.offset).set(values.is_null(), None)
-            result = indices if categories is None else categories.gather(indices)
-            return result.rename(batch.name)
-
-        return self._with_native(
-            self.native.map_batches(
-                bin_batch, return_dtype=result_dtype, is_elementwise=True
-            )
-        )
+        return self._with_native(native)
 
     @requires.backend_version((1,))
     def replace_strict(
