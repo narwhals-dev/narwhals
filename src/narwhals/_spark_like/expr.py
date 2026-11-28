@@ -407,20 +407,26 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             default_col = df._evaluate_single_output_expr(default)
-
-            results = [
-                F.when(
-                    F.array_contains(F.map_keys(mapping_expr), expr), mapping_expr[expr]
-                ).otherwise(default_col)
-                for expr in self(df)
-            ]
+            spark_dtype = None
             if return_dtype:
                 session = df.native.sparkSession
                 spark_dtype = narwhals_to_native_dtype(
                     return_dtype, self._version, self._native_dtypes, session
                 )
-                return [result.cast(spark_dtype) for result in results]
-            return results
+
+            def into_return_dtype(value: Column) -> Column:
+                # Cast each branch before building the CASE expression. Casting the
+                # result instead first needs a common type for the replacement values
+                # and `default`, which may not exist (e.g. ints and a string).
+                return value if spark_dtype is None else value.cast(spark_dtype)
+
+            return [
+                F.when(
+                    F.array_contains(F.map_keys(mapping_expr), expr),
+                    into_return_dtype(mapping_expr[expr]),
+                ).otherwise(into_return_dtype(default_col))
+                for expr in self(df)
+            ]
 
         return self.__class__(
             func,
