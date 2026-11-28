@@ -301,12 +301,20 @@ def maybe_collect(df: Frame) -> Frame:
 
 
 def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> TimeUnit:
-    """Replace `time_unit` with one that is supported by the requested backend."""
+    """Replace `time_unit` with one that is supported by the requested backend.
+
+    The backend is read from the test id (`request.node.callspec.id`), which only
+    contains a backend name if the test is parametrized by a `constructor*` fixture.
+    Matching on the id by hand is error-prone (`"pyarrow"` also matches
+    `"pandas[pyarrow]"`), so this function does it once.
+
+    The test does not have to call the constructor, only to request one of
+    `_CONSTRUCTOR_FIXTURE_NAMES` next to `request`.
+    """
     if _CONSTRUCTOR_FIXTURE_NAMES.isdisjoint(request.fixturenames):  # pragma: no cover
         msg = (
-            f"`time_unit_compat` requires the test function to use a `constructor*` fixture.\n"
-            f"Hint:\n\n"
-            f"Try adding one of these as a parameter:\n    {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
+            "`time_unit_compat` reads the backend from the test id, so the test must "
+            f"request one of these fixtures: {sorted(_CONSTRUCTOR_FIXTURE_NAMES)!r}"
         )
         raise NotImplementedError(msg)
     request_id = request.node.callspec.id
