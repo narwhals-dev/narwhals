@@ -268,6 +268,32 @@ def test_hist_no_data(
     assert result["count"].dtype.is_integer()
 
 
+@param_include_breakpoint
+@param_library
+def test_hist_all_nan(library: str, *, include_breakpoint: bool) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4208
+    if library == "pandas":
+        pytest.importorskip("pandas")
+        import pandas as pd
+
+        constructor_eager: Any = pd.DataFrame
+    elif library == "polars":
+        pl = pytest.importorskip("polars")
+        constructor_eager = pl.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
+        constructor_eager = pa.table
+    s = nw.from_native(
+        constructor_eager({"values": [float("nan"), float("nan")]})
+    ).select(nw.col("values").cast(nw.Float64))["values"]
+    result = s.hist(bin_count=2, include_breakpoint=include_breakpoint)
+    expected: dict[str, Any] = {"count": [0, 0]}
+    if include_breakpoint:
+        expected = {"breakpoint": [0.5, 1.0], **expected}
+    assert_equal_data(result, expected)
+
+
 @param_library
 def test_hist_small_bins(library: str) -> None:
     if library == "pandas":
