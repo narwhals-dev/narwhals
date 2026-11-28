@@ -13,6 +13,7 @@ from narwhals._utils import (
     ensure_type,
     flatten,
     unstable,
+    validate_quantile,
 )
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -1514,6 +1515,52 @@ class Expr:
             └───────────────────────────────────────────────┘
         """
         return self._append_node(ExprNode(ExprKind.ORDERABLE_WINDOW, "is_last_distinct"))
+
+    @unstable
+    def approx_quantile(self, quantile: float) -> Self:
+        r"""Get an approximate quantile value.
+
+        Warning:
+            This functionality is considered **unstable**, as it is in Polars.
+            It may be changed at any point without it being considered a breaking change.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
+
+        Approximate quantiles trade accuracy for speed and memory use, so results
+        can differ between backends and between runs.
+
+        Arguments:
+            quantile: Quantile between 0.0 and 1.0.
+
+        Note:
+            - pandas-like backends and Polars before 2.0 compute the exact quantile with
+                linear interpolation. Ibis before 9.4 uses its exact quantile.
+            - Outside of `over`, Dask supports a single partition only, as in
+                `Expr.quantile`: its approximate method is very inaccurate across
+                partitions.
+            - The result dtype follows the backend: for integer input, Polars returns
+                integers and pandas returns floats, for example.
+            - Polars counts NaN as a value, whereas pandas and PyArrow ignore it.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame(
+            ...     {"a": list(range(50)), "b": list(range(50, 100))}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a", "b").approx_quantile(0.5))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |        a     b   |
+            |  0  24.5  74.5   |
+            └──────────────────┘
+        """
+        validate_quantile(quantile)
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "approx_quantile", quantile=quantile)
+        )
 
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod

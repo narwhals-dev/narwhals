@@ -3,6 +3,7 @@ tests/dependencies/is_into_dataframe_test.py::test_is_into_dataframe_other
 tests/dependencies/is_into_lazyframe_test.py::test_is_into_lazyframe[dict]
 tests/dependencies/is_into_series_test.py::test_is_into_series[dict]
 tests/dtypes/dtypes_test.py::test_2d_array[dict]
+tests/expr_and_series/approx_quantile_test.py::test_approx_quantile_keeps_datetime[dict]
 tests/expr_and_series/arithmetic_test.py::test_floordiv_unsigned_dtype[dict-UInt32]
 tests/expr_and_series/arithmetic_test.py::test_floordiv_unsigned_dtype[dict-UInt64]
 tests/expr_and_series/cast_test.py::test_cast[dict]

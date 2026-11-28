@@ -1274,6 +1274,16 @@ def test_any_value_series(constructor_eager: ConstructorEager) -> None:
         df["a"].any_value()
 
 
+def test_approx_quantile_warns(constructor_eager: ConstructorEager) -> None:
+    df = nw_v1.from_native(constructor_eager({"a": [1.0, 2.0]}), eager_only=True)
+
+    with pytest.warns(NarwhalsUnstableWarning, match="approx_quantile"):
+        expr = nw_v1.col("a").approx_quantile(0.5)
+    assert isinstance(expr, nw_v1.Expr)
+    with pytest.warns(NarwhalsUnstableWarning, match="approx_quantile"):
+        df["a"].approx_quantile(0.5)
+
+
 def test_schema_from_generator() -> None:
     schema = nw_v1.Schema(
         (name, dtype()) for name, dtype in (("a", nw_v1.Int64), ("b", nw_v1.String))

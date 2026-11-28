@@ -739,6 +739,7 @@ class DaskExpr(
         return DaskExprListNamespace(self)
 
     any_value = not_implemented()
+    approx_quantile = not_implemented()
     filter = not_implemented(
         hint=length_changing_hint(
             instead_of="lf.select(nw.col('a').filter(nw.col('b') > 0))",

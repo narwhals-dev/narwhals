@@ -581,6 +581,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     ) -> float:
         return self._quantile(self._non_null(), quantile, interpolation)
 
+    def approx_quantile(self, quantile: float) -> float:
+        # No approximate algorithm here, so compute the exact quantile, as pandas does.
+        return self.quantile(quantile, "linear")
+
     @staticmethod
     def _quantile(
         values: list[Any], quantile: float, interpolation: RollingInterpolationMethod

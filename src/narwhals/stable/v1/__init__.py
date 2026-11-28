@@ -413,6 +413,14 @@ class Series(NwSeries[IntoSeriesT]):
         issue_warning(msg, NarwhalsUnstableWarning)
         return super().any_value(ignore_nulls=ignore_nulls)
 
+    def approx_quantile(self, quantile: float) -> float:
+        msg = (
+            "`Series.approx_quantile` is being called from the stable API although "
+            "considered an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return super().approx_quantile(quantile)
+
 
 class Expr(NwExpr):
     _version = Version.V1
@@ -514,6 +522,14 @@ class Expr(NwExpr):
         return self._append_node(
             ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
+
+    def approx_quantile(self, quantile: float) -> Self:
+        msg = (
+            "`Expr.approx_quantile` is being called from the stable API although "
+            "considered an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return super().approx_quantile(quantile)
 
 
 class Selector(NwSelector, Expr):

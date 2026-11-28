@@ -44,6 +44,7 @@ WINDOW_FUNCTIONS_TO_PANDAS_EQUIVALENT = {
     "diff": "diff",
     "fill_null": "fillna",
     "quantile": "quantile",
+    "approx_quantile": "quantile",
     "ewm_mean": "mean",
 }
 
@@ -84,12 +85,11 @@ def window_kwargs_to_pandas_equivalent(  # noqa: C901
         assert "strategy" in kwargs  # noqa: S101
         assert "limit" in kwargs  # noqa: S101
         pandas_kwargs = {"strategy": kwargs["strategy"], "limit": kwargs["limit"]}
-    elif function_name == "quantile":
+    elif function_name in {"quantile", "approx_quantile"}:
         assert "quantile" in kwargs  # noqa: S101
-        assert "interpolation" in kwargs  # noqa: S101
         pandas_kwargs = {
             "q": kwargs["quantile"],
-            "interpolation": kwargs["interpolation"],
+            "interpolation": kwargs.get("interpolation", "linear"),
         }
     elif function_name.startswith("ewm_"):
         assert "com" in kwargs  # noqa: S101
