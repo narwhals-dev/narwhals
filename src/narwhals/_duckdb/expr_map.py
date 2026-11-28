@@ -14,6 +14,12 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprMapNamespace(LazyExprNamespace["DuckDBExpr"], MapNamespace["DuckDBExpr"]):
+    def len(self) -> DuckDBExpr:
+        # DuckDB's cardinality also accepts lists and arrays starting in 2.0.
+        return self.compliant._with_elementwise(
+            lambda expr: F("len", F("map_keys", expr)).cast("UINTEGER")
+        )
+
     def get(self, key: NonNestedLiteral) -> DuckDBExpr:
         def func(expr: Expression) -> Expression:
             if self.compliant._backend_version < (1, 2):  # pragma: no cover

@@ -15,6 +15,30 @@ class ExprMapNamespace(Generic[ExprT]):
     def __init__(self, expr: ExprT) -> None:
         self._expr = expr
 
+    def len(self) -> ExprT:
+        """Return the number of entries in each map.
+
+        Empty maps return zero, and null maps return null. Entries with null values
+        count towards the total.
+
+        PySpark, Spark Connect, and SQLFrame with DuckDB support this operation on
+        lazy frames and return `Int32`. DuckDB, Ibis with DuckDB, PyArrow, Polars
+        2.0 or newer, pandas, and Modin return `UInt32`. On pandas and Modin, this
+        requires a PyArrow-backed `Map` column and pandas 2.2 or newer.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> maps = pa.array(
+            ...     [[("x", 1), ("y", 2)], [], None, [("x", None)]],
+            ...     type=pa.map_(pa.string(), pa.int64()),
+            ... )
+            >>> df = nw.from_native(pa.table({"a": maps}))
+            >>> df.select(nw.col("a").map.len()).get_column("a").to_list()
+            [2, 0, None, 1]
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "map.len"))
+
     def get(self, key: NonNestedLiteral) -> ExprT:
         """Return the value for `key` in each map.
 

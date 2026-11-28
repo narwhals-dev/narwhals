@@ -583,6 +583,17 @@ def map_get(array: ChunkedArrayAny, key: NonNestedLiteral) -> ChunkedArrayAny:
     return pc.map_lookup(array, pa.scalar(key, type=map_type.key_type), "last")
 
 
+def map_len(array: ChunkedArrayAny) -> ChunkedArrayAny:
+    lengths_by_chunk = []
+    for chunk in cast("list[pa.ListArray[Any]]", array.chunks):
+        offsets = chunk.offsets
+        lengths = pc.subtract(offsets.slice(1), offsets.slice(0, len(chunk)))
+        # Offsets omit the validity bitmap, even when a null map spans entries.
+        masked_lengths = pc.if_else(chunk.is_valid(), lengths, None)
+        lengths_by_chunk.append(masked_lengths.cast(pa.uint32()))
+    return pa.chunked_array(lengths_by_chunk, type=pa.uint32())
+
+
 _LIST_BLOCK_VALUES = 1 << 21
 _LIST_MIN_BLOCK_VALUES = _LIST_BLOCK_VALUES >> 4
 

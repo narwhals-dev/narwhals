@@ -427,11 +427,19 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 class PolarsMapNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "map"
 
-    def get(self, key: NonNestedLiteral) -> CompliantT:
-        if not HAS_MAP:  # pragma: no cover
+    @staticmethod
+    def _require_map() -> None:
+        if not HAS_MAP:  # pragma: no cover - Map is unavailable before Polars 2.0.
             msg = f"`Map` dtype is only supported for 'polars>=2.0', found version {BACKEND_VERSION}."
             raise NotImplementedError(msg)
+
+    def get(self, key: NonNestedLiteral) -> CompliantT:
+        self._require_map()
         return self.__getattr__("get")(key)
+
+    def len(self) -> CompliantT:
+        self._require_map()
+        return self.__getattr__("len")()
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
