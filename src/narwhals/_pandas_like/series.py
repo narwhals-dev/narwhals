@@ -1217,37 +1217,29 @@ class PandasLikeSeries(EagerSeries[Any]):
         labels: Sequence[str] | Literal[False],
         right_closed: bool,
     ) -> Self:
-        native = self.native
         ns = self.__native_namespace__()
+        native = self.native
+        impl, version = self._implementation, self._version
         search = bin_search_edges(
-            self.dtype, self._version, intervals, right_closed=right_closed
+            self.dtype, version, intervals, right_closed=right_closed
         )
-        native_dtype = narwhals_to_native_dtype(
-            search.dtype, None, self._implementation, self._version
-        )
+        native_dtype = narwhals_to_native_dtype(search.dtype, None, impl, version)
         null_mask = native.isna()
         values = native.where(~null_mask, 0).astype(native_dtype)
         edges = ns.Series(search.edges, dtype=native_dtype)
         indices = edges.searchsorted(values, side="left" if right_closed else "right")
         if search.offset:
             indices += search.offset
-        if labels is False:
-            data = indices
-            result_dtype = narwhals_to_native_dtype(
-                self._version.dtypes.UInt32(),
-                get_dtype_backend(native.dtype, self._implementation),
-                self._implementation,
-                self._version,
-            )
-        else:
-            result_dtype = narwhals_to_native_dtype(
-                self._version.dtypes.Enum(labels),
-                None,
-                self._implementation,
-                self._version,
-            )
-            data = ns.CategoricalIndex(labels, dtype=result_dtype).take(indices)
-        result = ns.Series(data, dtype=result_dtype, index=native.index, name=self.name)
+        dtypes = version.dtypes
+        out_dtype = dtypes.UInt32() if labels is False else dtypes.Enum(labels)
+        result_dtype = narwhals_to_native_dtype(
+            out_dtype, get_dtype_backend(native.dtype, impl), impl, version
+        )
+        if labels is not False:
+            indices = ns.CategoricalIndex(labels, dtype=result_dtype).take(indices)
+        result = ns.Series(
+            indices, dtype=result_dtype, index=native.index, name=self.name
+        )
         return self._with_native(result.where(~null_mask), preserve_broadcast=True)
 
     def hist_from_bins(
