@@ -291,6 +291,17 @@ def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
     }
 
 
+def xfail_if_builtin_dask(
+    frame: nw.DataFrame[Any] | nw.LazyFrame[Any], request: pytest.FixtureRequest, /
+) -> None:
+    if type(frame._compliant_frame).__module__.startswith("narwhals._dask"):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="The built-in Dask backend is frozen; the fix is in narwhals-dask."
+            )
+        )
+
+
 def maybe_collect(df: Frame) -> Frame:
     """Collect to DataFrame if it is a LazyFrame.
 

@@ -20,6 +20,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -601,9 +602,7 @@ def test_agg_selector_matching_only_keys(
     constructor: Constructor, request: pytest.FixtureRequest, *, drop_null_keys: bool
 ) -> None:
     df = nw.from_native(constructor({"a": [1, 1, None], "b": ["x", "y", "z"]}))
-    if type(df._compliant_frame).__module__.startswith("narwhals._dask"):
-        # Built-in Dask is frozen: this is fixed in the `narwhals-dask` plugin only.
-        request.applymarker(pytest.mark.xfail)
+    xfail_if_builtin_dask(df, request)
     keys = [1] if drop_null_keys else [1, None]
     group_by = (
         df.group_by("a", drop_null_keys=True) if drop_null_keys else df.group_by("a")

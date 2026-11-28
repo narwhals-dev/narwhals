@@ -50,6 +50,12 @@ def test_arithmetic_expr(
     assert_equal_data(result, {"a": expected})
 
 
+def test_add_typed_literal_after_over(arrow_constructor: Constructor) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, 2, 3, 4], "g": ["x", "y"] * 2}))
+    result = df.select(nw.col("a").sum().over("g") + nw.lit(2, dtype=nw.Int64))
+    assert_equal_data(result.sort("a"), {"a": [6, 6, 8, 8]})
+
+
 @pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [

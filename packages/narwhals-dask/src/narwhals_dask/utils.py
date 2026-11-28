@@ -4,13 +4,18 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals.dependencies import get_pyarrow
 from narwhals.utils import Version
-from narwhals_dask._vendored import isinstance_or_issubclass, select_columns_by_name
+from narwhals_dask._vendored import (
+    is_dtype_pyarrow,
+    isinstance_or_issubclass,
+    select_columns_by_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     import dask.dataframe as dd
     import dask.dataframe.dask_expr as dx
+    import pandas as pd
 
     from narwhals import Schema
     from narwhals.dtypes import DType
@@ -43,6 +48,27 @@ def align_series_full_broadcast(
         s if isinstance(s, dx.Series) else df._native_frame.assign(_tmp=s)["_tmp"]
         for s in series
     ]  # pyright: ignore[reportReturnType]
+
+
+def align_series_by_index(
+    df: DaskLazyFrame, *, scalar_only: bool, **series: dx.Series
+) -> dx.DataFrame:
+    """Align expression results on their one-row scalar index or the source frame index."""
+    source = next(iter(series.values())).to_frame() if scalar_only else df.native
+    frame = source[[]].assign(**series)
+    if scalar_only or dx.expr.are_co_aligned(
+        source._expr, *(s._expr for s in series.values())
+    ):
+        return frame
+
+    def check_index(part: pd.DataFrame) -> pd.DataFrame:
+        # After shuffling by index, duplicate labels are in the same partition.
+        if part.index.has_duplicates:
+            msg = "Cannot align expressions with duplicate index labels across Dask partitions"
+            raise ValueError(msg)
+        return part
+
+    return frame.map_partitions(check_index, meta=frame._meta)
 
 
 def add_row_index(frame: dd.DataFrame, name: str) -> dd.DataFrame:
@@ -102,9 +128,19 @@ UNSUPPORTED_DTYPES = (
 )
 
 
-def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> Any:
+def is_arrow_backed(dtype: Any) -> bool:
+    return is_dtype_pyarrow(dtype) or getattr(dtype, "storage", None) == "pyarrow"
+
+
+def narwhals_to_native_dtype(
+    dtype: IntoDType, version: Version, *, use_pyarrow: bool = False
+) -> Any:
     dtypes = version.dtypes
     base_type = dtype.base_type()
+    if use_pyarrow and (
+        base_type in NW_TO_DASK_DTYPES or issubclass(base_type, dtypes.String)
+    ):
+        return _schema_class(version)({"": dtype}).to_pandas("pyarrow")[""]
     if dask_type := NW_TO_DASK_DTYPES.get(base_type):
         return dask_type
     if isinstance_or_issubclass(dtype, dtypes.String):

@@ -3,7 +3,8 @@ from __future__ import annotations
 import operator
 from datetime import date, datetime
 from functools import partial, reduce
-from typing import TYPE_CHECKING, Any, cast
+from math import isnan
+from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
 import pandas as pd
@@ -22,7 +23,9 @@ from narwhals_dask.dataframe import DaskLazyFrame
 from narwhals_dask.expr import DaskExpr
 from narwhals_dask.selectors import DaskSelectorNamespace
 from narwhals_dask.utils import (
+    align_series_by_index,
     align_series_full_broadcast,
+    is_arrow_backed,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     validate_comparand,
@@ -94,20 +97,30 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
             raise NotImplementedError(msg)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
+            data: list[Any] = [value]
+            native_dtype = None
+            use_pyarrow = False
             if dtype is not None:
-                native_dtype = narwhals_to_native_dtype(dtype, self._version)
-                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
+                use_pyarrow = any(map(is_arrow_backed, df.native.dtypes))
+                native_dtype = narwhals_to_native_dtype(
+                    dtype, self._version, use_pyarrow=use_pyarrow
+                )
+                if use_pyarrow and isinstance(value, float) and isnan(value):
+                    import pyarrow as pa
+
+                    # pandas otherwise converts a floating NaN to an Arrow null.
+                    data = [pa.scalar(value)]
             elif isinstance(value, date) and not isinstance(
                 value, datetime
             ):  # pragma: no cover
                 # Dask auto-infers this as object type, which causes issues down the line.
                 # This shows up in TPC-H q8.
                 native_dtype = "date32[pyarrow]"
-                native_pd_series = pd.Series([value], dtype=native_dtype, name="literal")
-            else:
-                native_pd_series = pd.Series([value], name="literal")
-            npartitions = df._native_frame.npartitions
-            dask_series = dd.from_pandas(native_pd_series, npartitions=npartitions)
+            native_pd_series = pd.Series(data, dtype=native_dtype, name="literal")
+            dask_series = dd.from_pandas(native_pd_series, npartitions=1)
+            if use_pyarrow:
+                # Match the unknown divisions of one-row reductions in select.
+                return [dask_series.clear_divisions()]
             return [dask_series[0].to_series()]
 
         return self._expr(
@@ -206,13 +219,18 @@ class DaskNamespace(CompliantNamespace[DaskLazyFrame, DaskExpr]):
 
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
-            aligned = align_series_full_broadcast(df, *expr_results)
-            series = (s.fillna(0) for s in aligned)
-            non_na = (1 - s.isna() for s in aligned)
-            num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
-            den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
-            return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
+            series = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
+            )
+            if not series:
+                msg = "mean_horizontal requires at least one input column"
+                raise ValueError(msg)
+            columns = align_series_by_index(
+                df,
+                scalar_only=all(expr._metadata.is_scalar_like for expr in exprs),
+                **{str(i): s for i, s in enumerate(series)},
+            )
+            return [columns.mean(axis=1)]
 
         return self._expr(
             call=func,

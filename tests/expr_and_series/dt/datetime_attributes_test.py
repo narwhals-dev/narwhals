@@ -4,9 +4,16 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    xfail_if_builtin_dask,
+)
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
@@ -97,6 +104,26 @@ def test_ordinal_day_preserves_null(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data_with_null))
     result = df.select(nw.col("a").dt.ordinal_day())
     assert_equal_data(result, {"a": [60, None]})
+
+
+def test_arrow_fractional_second_fields(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    pa = pytest.importorskip("pyarrow")
+    values = pa.array([123_456_789, 456_000, None], type=pa.timestamp("ns"))
+    df = nw.from_native(arrow_constructor({"a": list(values)}))
+    if PANDAS_VERSION < PkgVersion("3"):
+        xfail_if_builtin_dask(df, request)
+    dt = nw.col("a").dt
+    result = df.select(ms=dt.millisecond(), us=dt.microsecond(), ns=dt.nanosecond())
+    assert_equal_data(
+        result,
+        {
+            "ms": [123, 0, None],
+            "us": [123456, 456, None],
+            "ns": [123456789, 456000, None],
+        },
+    )
 
 
 def test_datetime_chained_attributes(

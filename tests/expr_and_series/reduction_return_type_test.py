@@ -7,7 +7,7 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
+from tests.utils import POLARS_VERSION, assert_equal_data, xfail_if_builtin_dask
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
@@ -60,6 +60,22 @@ def test_string_reduction_keeps_dtype_when_all_null(
     df = nw.from_native(constructor({"a": ["x", "y"]}))
     all_null = df.with_columns(a=nw.when(nw.col("a") == "zzz").then(nw.col("a")))
     assert all_null.select(nw.col("a").max()).collect_schema() == {"a": nw.String()}
+
+
+@pytest.mark.parametrize(("keep", "expected"), [("wet", "wet"), ("missing", None)])
+def test_arrow_string_max(
+    arrow_constructor: Constructor,
+    keep: str,
+    expected: str | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    df = nw.from_native(arrow_constructor({"a": ["wet", "dry"], "i": [1, 2]}))
+    xfail_if_builtin_dask(df, request)
+    result = df.select(
+        nw.when(nw.col("a") == keep).then(nw.col("a")).max(), nw.col("i").max()
+    )
+    assert result.collect_schema() == {"a": nw.String(), "i": nw.Int64()}
+    assert_equal_data(result, {"a": [expected], "i": [2]})
 
 
 @pytest.mark.parametrize(

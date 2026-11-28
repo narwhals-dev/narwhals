@@ -33,6 +33,12 @@ def test_clip_expr_expressified(constructor: Constructor) -> None:
     assert_equal_data(result, expected_dict)
 
 
+def test_clip_typed_literal_bounds(arrow_constructor: Constructor) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, 3, 6, None]}))
+    result = df.select(nw.col("a").clip(nw.lit(2, nw.Int64), nw.lit(4, nw.Int64)))
+    assert_equal_data(result, {"a": [2, 3, 4, None]})
+
+
 @pytest.mark.parametrize(
     ("lower", "upper", "expected"),
     [

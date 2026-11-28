@@ -34,7 +34,9 @@ class DaskExprStringNamespace(ExprNamespace["DaskExpr"], StringNamespace["DaskEx
                 pattern, value.compute(), regex=not literal, n=n
             )
 
-        return self.compliant._with_callable(_replace, expression_args={"value": value})
+        return self.compliant._with_callable(
+            _replace, expression_args={"value": value}, scalar_args=True
+        )
 
     def replace_all(self, value: DaskExpr, pattern: str, *, literal: bool) -> DaskExpr:
         return self.replace(value, pattern, literal=literal, n=-1)
@@ -58,7 +60,7 @@ class DaskExprStringNamespace(ExprNamespace["DaskExpr"], StringNamespace["DaskEx
             return expr.str.startswith(prefix.compute())  # pyright: ignore[reportAttributeAccessIssue]
 
         return self.compliant._with_callable(
-            _starts_with, expression_args={"prefix": prefix}
+            _starts_with, expression_args={"prefix": prefix}, scalar_args=True
         )
 
     def ends_with(self, suffix: DaskExpr) -> DaskExpr:
@@ -71,7 +73,7 @@ class DaskExprStringNamespace(ExprNamespace["DaskExpr"], StringNamespace["DaskEx
             return expr.str.endswith(suffix.compute())  # pyright: ignore[reportAttributeAccessIssue]
 
         return self.compliant._with_callable(
-            _ends_with, expression_args={"suffix": suffix}
+            _ends_with, expression_args={"suffix": suffix}, scalar_args=True
         )
 
     def contains(self, pattern: DaskExpr, *, literal: bool) -> DaskExpr:
@@ -86,7 +88,7 @@ class DaskExprStringNamespace(ExprNamespace["DaskExpr"], StringNamespace["DaskEx
             )
 
         return self.compliant._with_callable(
-            _contains, expression_args={"pattern": pattern}
+            _contains, expression_args={"pattern": pattern}, scalar_args=True
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
@@ -117,6 +119,8 @@ class DaskExprStringNamespace(ExprNamespace["DaskExpr"], StringNamespace["DaskEx
         return self.compliant._with_callable(lambda expr: expr.str.title())
 
     def zfill(self, width: int) -> DaskExpr:
+        if width == 0:
+            return self.compliant
         return self.compliant._with_callable(lambda expr: expr.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> DaskExpr:

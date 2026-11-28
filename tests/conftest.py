@@ -210,6 +210,15 @@ def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no 
     return cast("NativeDask", dd.from_pandas(frame, npartitions=npartitions))
 
 
+def dask_pyarrow_constructor(obj: Data) -> NativeDask:
+    dd = pytest.importorskip("dask.dataframe")
+    pa = pytest.importorskip("pyarrow")
+    import pandas as pd
+
+    frame = pa.table(obj).to_pandas(types_mapper=pd.ArrowDtype)
+    return cast("NativeDask", dd.from_pandas(frame, npartitions=2))
+
+
 def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
     return _dask_constructor(obj, npartitions=1)
 
@@ -223,6 +232,11 @@ def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:
     import pyarrow as pa
 
     return pa.table(obj)
+
+
+@pytest.fixture(params=[pyarrow_table_constructor, dask_pyarrow_constructor])
+def arrow_constructor(request: pytest.FixtureRequest) -> Constructor:
+    return cast("Constructor", request.param)
 
 
 def pyspark_lazy_constructor() -> Callable[[Data], NativePySpark]:  # pragma: no cover

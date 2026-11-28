@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -16,6 +16,7 @@ from tests.utils import (
     PYARROW_VERSION,
     Constructor,
     assert_equal_data,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -36,6 +37,53 @@ def test_lit(
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "lit": expected_lit}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("broadcast", [False, True], ids=["scalar", "broadcast"])
+def test_arrow_typed_literals(
+    arrow_constructor: Constructor, request: pytest.FixtureRequest, *, broadcast: bool
+) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, 2, 3]}))
+    xfail_if_builtin_dask(df, request)
+    stamp = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    delta = timedelta(seconds=3)
+    exprs = {
+        "b": nw.lit(None, nw.Boolean),
+        "i": nw.lit(None, nw.Int16),
+        "f": nw.lit(float("nan"), nw.Float32),
+        "t": nw.lit(stamp, nw.Datetime("us", "UTC")),
+        "d": nw.lit(delta, nw.Duration("ms")),
+    }
+    result = df.with_columns(**exprs).drop("a") if broadcast else df.select(**exprs)
+    assert result.collect_schema() == {
+        "b": nw.Boolean,
+        "i": nw.Int16,
+        "f": nw.Float32,
+        "t": nw.Datetime("us", "UTC"),
+        "d": nw.Duration("ms"),
+    }
+    size = 3 if broadcast else 1
+    assert_equal_data(
+        result.select(
+            "b", "i", "t", "d", null=nw.col("f").is_null(), nan=nw.col("f").is_nan()
+        ),
+        {
+            "b": [None] * size,
+            "i": [None] * size,
+            "t": [stamp] * size,
+            "d": [delta] * size,
+            "null": [False] * size,
+            "nan": [True] * size,
+        },
+    )
+
+
+def test_arrow_typed_literal_with_reduction(arrow_constructor: Constructor) -> None:
+    df = nw.from_native(arrow_constructor({"a": [1, 2, 3]}))
+    total = nw.col("a").sum()
+    literal = nw.lit(2, nw.Int64)
+    result = df.select(total=total, literal=literal, combined=total + literal)
+    assert_equal_data(result, {"total": [6], "literal": [2], "combined": [8]})
 
 
 def test_lit_error(constructor: Constructor) -> None:

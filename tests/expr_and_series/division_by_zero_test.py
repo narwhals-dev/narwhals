@@ -6,12 +6,14 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from tests.conftest import dask_pyarrow_constructor
 from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    xfail_if_builtin_dask,
 )
 
 if TYPE_CHECKING:
@@ -189,6 +191,28 @@ def test_floordiv_by_mixed_divisor(
         assert all(
             native_result[name].dtype == input_dtype for name in expected if name != "i"
         )
+
+
+@pytest.mark.parametrize(
+    ("divisor", "expected", "reverse"),
+    [
+        ([0, 2, None], [None, 4, None], [None, 3, None]),
+        ([None] * 3, [None] * 3, [None] * 3),
+    ],
+    ids=["mixed", "null-typed"],
+)
+def test_floordiv_dask_arrow_divisor(
+    divisor: list[int | None],
+    expected: list[int | None],
+    reverse: list[int | None],
+    request: pytest.FixtureRequest,
+) -> None:
+    df = nw.from_native(dask_pyarrow_constructor({"a": [5, 8, 3], "b": divisor}))
+    if 0 in divisor:
+        xfail_if_builtin_dask(df, request)
+
+    result = df.select(forward=nw.col("a") // nw.col("b"), reverse=7 // nw.col("b"))
+    assert_equal_data(result, {"forward": expected, "reverse": reverse})
 
 
 def test_floordiv_by_null_scalar(constructor: Constructor) -> None:

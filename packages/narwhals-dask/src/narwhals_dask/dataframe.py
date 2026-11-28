@@ -19,6 +19,7 @@ from narwhals_dask._vendored import (
 from narwhals_dask.utils import (
     add_row_index,
     evaluate_exprs,
+    is_arrow_backed,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
@@ -102,8 +103,10 @@ class DaskLazyFrame(
         for _col, ser in self.native.items():  # noqa: PERF102
             yield ser
 
-    def _evaluate_single_output_expr(self, obj: DaskExpr) -> dx.Series:
-        results = obj._call(self)
+    def _evaluate_single_output_expr(
+        self, obj: DaskExpr, *, as_scalar: bool = False, index: dx.Index | None = None
+    ) -> dx.Series:
+        results = obj._call(self) if as_scalar else obj(self, index=index)
         if len(results) != 1:  # pragma: no cover
             msg = "multi-output expressions not allowed in this context"
             raise MultiOutputExpressionError(msg)
@@ -215,7 +218,11 @@ class DaskLazyFrame(
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
         native_dtypes = {
-            name: narwhals_to_native_dtype(dtype, self._version)
+            name: narwhals_to_native_dtype(
+                dtype,
+                self._version,
+                use_pyarrow=is_arrow_backed(self.native.dtypes[name]),
+            )
             for name, dtype in dtypes.items()
         }
         return self._with_native(self.native.astype(native_dtypes))
