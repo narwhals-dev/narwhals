@@ -184,7 +184,13 @@ class DictSeriesDateTimeNamespace(
                     year=1970 + floored // 12, month=floored % 12 + 1, day=1
                 )
                 if isinstance(start, datetime):
-                    return start.replace(hour=0, minute=0, second=0, microsecond=0)
+                    # NOTE: The input's `fold` says nothing about the period start, so reset it.
+                    start = start.replace(
+                        hour=0, minute=0, second=0, microsecond=0, fold=0
+                    )
+                    if start.tzinfo is not None:
+                        # A local midnight in a DST gap moves to the next valid wall time.
+                        return start.astimezone(timezone.utc).astimezone(start.tzinfo)
                 return start
 
             return self._unary(fn)

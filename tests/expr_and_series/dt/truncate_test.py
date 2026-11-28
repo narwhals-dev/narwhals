@@ -7,7 +7,13 @@ import pytest
 from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    skip_if_no_tz_support,
+)
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49012), datetime(2020, 1, 2, 2, 4, 14, 715123)]
@@ -173,6 +179,76 @@ def test_truncate_series(constructor_eager: ConstructorEager) -> None:
         "a": [datetime(2021, 3, 1, 12, 0, 0, 0), datetime(2020, 1, 2, 2, 0, 0, 0)]
     }
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("every", "expected"),
+    [
+        ("1mo", [datetime(2024, 7, 1), None, datetime(2024, 1, 1)]),
+        ("2mo", [datetime(2024, 7, 1), None, datetime(2024, 1, 1)]),
+        ("1q", [datetime(2024, 7, 1), None, datetime(2024, 1, 1)]),
+        ("1y", [datetime(2024, 1, 1), None, datetime(2024, 1, 1)]),
+    ],
+)
+def test_truncate_tz_aware_local_clock_4220(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    every: str,
+    expected: list[datetime | None],
+) -> None:
+    skip_if_no_tz_support(constructor_eager)
+    if "cudf" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    time_zone = "Europe/Oslo"
+    data = {"a": [datetime(2024, 7, 1), None, datetime(2024, 1, 1, 0, 30)]}
+    df = nw.from_native(constructor_eager(data)).with_columns(
+        nw.col("a").dt.replace_time_zone(time_zone)
+    )
+    result = df.select(nw.col("a").dt.truncate(every))
+    result_dtype = result.collect_schema()["a"]
+    assert isinstance(result_dtype, nw.Datetime)
+    assert result_dtype.time_zone == time_zone
+    tz = ZoneInfo(time_zone)
+    assert_equal_data(
+        result, {"a": [None if d is None else d.replace(tzinfo=tz) for d in expected]}
+    )
+
+
+@pytest.mark.parametrize(
+    ("time_zone", "value", "expected"),
+    [
+        # 2023-10-01 00:00 does not exist locally, clocks jump to 01:00.
+        ("America/Asuncion", datetime(2023, 10, 15, 12), datetime(2023, 10, 1, 1)),
+        # 2020-11-01 00:00 happens twice locally, clocks fall back from 01:00.
+        ("America/Havana", datetime(2020, 11, 15, 12), datetime(2020, 11, 1)),
+    ],
+)
+def test_truncate_tz_aware_dst_midnight_4220(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    time_zone: str,
+    value: datetime,
+    expected: datetime,
+) -> None:
+    skip_if_no_tz_support(constructor_eager)
+    id_ = str(constructor_eager)
+    if "cudf" in id_:
+        request.applymarker(pytest.mark.xfail(reason="Not implemented"))
+    elif "pyarrow" in id_ or (
+        time_zone == "America/Havana" and any(x in id_ for x in ("pandas", "modin"))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="raises on DST midnight"))
+    elif (
+        "polars" in id_
+        and time_zone == "America/Asuncion"
+        and POLARS_VERSION < PkgVersion("1.39")
+    ):
+        request.applymarker(pytest.mark.xfail(reason="raises on nonexistent time"))
+    df = nw.from_native(constructor_eager({"a": [value]})).with_columns(
+        nw.col("a").dt.replace_time_zone(time_zone)
+    )
+    result = df.select(nw.col("a").dt.truncate("1mo"))
+    assert_equal_data(result, {"a": [expected.replace(tzinfo=ZoneInfo(time_zone))]})
 
 
 def test_truncate_invalid_interval(constructor: Constructor) -> None:
