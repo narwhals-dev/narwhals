@@ -151,6 +151,19 @@ def test_dt_truncate_ambiguous_keeps_fold() -> None:
     ]
 
 
+def test_dt_truncate_month_start_in_dst_gap_ignores_input_fold() -> None:
+    pytest.importorskip("zoneinfo")
+    from zoneinfo import ZoneInfo
+
+    # 2023-10-01 00:00 does not exist in Asuncion, clocks jump to 01:00 (-03:00).
+    tz = ZoneInfo("America/Asuncion")
+    values = [datetime(2023, 10, 15, 12, tzinfo=tz, fold=fold) for fold in (0, 1)]
+    s = pz.new_series("a", values, pz.Datetime("us", "America/Asuncion"))
+    result = _values(s.dt.truncate("1mo"))
+    expected = datetime(2023, 10, 1, 4, tzinfo=timezone.utc)
+    assert [value.astimezone(timezone.utc) for value in result] == [expected, expected]
+
+
 def test_list_unique_unhashable() -> None:
     s = pz.new_series("a", [[[1], [1], [2]], None], pz.List(pz.List(pz.Int64())))
     assert _values(s.list.unique(maintain_order=True)) == [[[1], [2]], None]
