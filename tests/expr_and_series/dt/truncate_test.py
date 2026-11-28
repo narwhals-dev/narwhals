@@ -234,18 +234,16 @@ def test_truncate_tz_aware_dst_midnight_4220(
     id_ = str(constructor_eager)
     if "cudf" in id_:
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    elif "polars" not in id_ and (time_zone == "America/Havana" or "pyarrow" in id_):
-        request.applymarker(
-            pytest.mark.xfail(reason="ambiguous or nonexistent local time raises")
-        )
+    elif "pyarrow" in id_ or (
+        time_zone == "America/Havana" and any(x in id_ for x in ("pandas", "modin"))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="raises on DST midnight"))
     elif (
         "polars" in id_
         and time_zone == "America/Asuncion"
-        and POLARS_VERSION < PkgVersion("2")
+        and POLARS_VERSION < PkgVersion("1.39")
     ):
-        request.applymarker(
-            pytest.mark.xfail(reason="Polars<2 raises on nonexistent local time")
-        )
+        request.applymarker(pytest.mark.xfail(reason="raises on nonexistent time"))
     df = nw.from_native(constructor_eager({"a": [value]})).with_columns(
         nw.col("a").dt.replace_time_zone(time_zone)
     )
