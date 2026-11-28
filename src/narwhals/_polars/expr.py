@@ -15,6 +15,7 @@ from narwhals._polars.utils import (
     PolarsMapNamespace,
     PolarsStringNamespace,
     PolarsStructNamespace,
+    cumulative_extremum,
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
@@ -117,6 +118,16 @@ class PolarsExpr:
     def clip_upper(self, upper_bound: PolarsExpr) -> Self:
         upper_native = extract_native(upper_bound)
         return self._with_native(self.native.clip(None, upper_native))
+
+    def cum_max(self, *, reverse: bool) -> Self:
+        return self._with_native(
+            cumulative_extremum(self.native, "cum_max", reverse=reverse)
+        )
+
+    def cum_min(self, *, reverse: bool) -> Self:
+        return self._with_native(
+            cumulative_extremum(self.native, "cum_min", reverse=reverse)
+        )
 
     def ewm_mean(
         self,
@@ -401,8 +412,6 @@ class PolarsExpr:
     ceil: Method[Self]
     count: Method[Self]
     cos: Method[Self]
-    cum_max: Method[Self]
-    cum_min: Method[Self]
     cum_prod: Method[Self]
     cum_sum: Method[Self]
     diff: Method[Self]

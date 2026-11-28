@@ -27,6 +27,7 @@ from narwhals.exceptions import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
+    from typing import Literal
 
     from typing_extensions import TypeIs
 
@@ -87,6 +88,27 @@ BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 
 https://github.com/pola-rs/polars/pull/24594
 """
+
+
+def cumulative_extremum(
+    expr: pl.Expr, method: Literal["cum_max", "cum_min"], *, reverse: bool
+) -> pl.Expr:
+    result = getattr(expr, method)(reverse=reverse)
+    if BACKEND_VERSION < (1, 31):
+        # The finite initial accumulator is genuine only after an input equals it.
+        seen_input = expr.eq(result).cast(pl.UInt8).cum_max(reverse=reverse)
+        is_infinite = expr.cast(pl.Float64, strict=False).is_infinite()
+        # Carry the leading infinity through NaNs until the native accumulator updates.
+        infinities = pl.when(is_infinite).then(expr)
+        last_infinity = (
+            infinities.backward_fill() if reverse else infinities.forward_fill()
+        )
+        result = (
+            pl.when(seen_input.eq(0) & last_infinity.is_not_null())
+            .then(last_infinity)
+            .otherwise(result)
+        )
+    return result
 
 
 @overload
