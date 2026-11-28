@@ -268,6 +268,30 @@ def test_hist_no_data(
     assert result["count"].dtype.is_integer()
 
 
+@pytest.mark.parametrize(
+    "kwargs", [{"bin_count": 0}, {"bins": [1]}, {"bins": []}], ids=str
+)
+@param_include_breakpoint
+@pytest.mark.parametrize("library", ["pandas", "pyarrow"])
+def test_hist_no_bins_schema(
+    library: str, kwargs: dict[str, Any], *, include_breakpoint: bool
+) -> None:
+    if library == "pandas":
+        pytest.importorskip("pandas")
+        import pandas as pd
+
+        constructor_eager: Any = pd.DataFrame
+    else:
+        pa = pytest.importorskip("pyarrow")
+        pytest.importorskip("numpy")
+        constructor_eager = pa.table
+    s = nw.from_native(constructor_eager({"values": [1.0, 6.0]}))["values"]
+    result = s.hist(include_breakpoint=include_breakpoint, **kwargs)
+    expected = s.hist(bin_count=2, include_breakpoint=include_breakpoint)
+    assert len(result) == 0
+    assert result.schema == expected.schema
+
+
 @param_library
 def test_hist_small_bins(library: str) -> None:
     if library == "pandas":
