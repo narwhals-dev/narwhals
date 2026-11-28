@@ -817,14 +817,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         if was_matched.any():
             first = int(idxs[was_matched][0])
-            used_new = [
-                val if used else new[first]
-                for val, used in zip(
-                    new,
-                    namespace.Index(range(len(new))).isin(idxs[was_matched]),
-                    strict=False,
-                )
-            ]
+            used_new = new
+            if return_dtype is not None:
+                used_new = [
+                    val if used else new[first]
+                    for val, used in zip(
+                        new,
+                        namespace.Index(range(len(new))).isin(idxs[was_matched]),
+                        strict=False,
+                    )
+                ]
             native_result = namespace.Series(used_new, dtype=dtype, name=self.name)
             if return_dtype is None and dtype_backend is not None:
                 native_result = native_result.convert_dtypes(dtype_backend=dtype_backend)
@@ -836,6 +838,15 @@ class PandasLikeSeries(EagerSeries[Any]):
             native_result.index = native.index
             native_result = native_result.where(was_matched, fill_value)
         else:
+            if (
+                dtype == "bool"
+                and not self._implementation.is_cudf()
+                and (
+                    fill_value is None
+                    or (self._is_native(fill_value) and fill_value.isna().any())
+                )
+            ):
+                dtype = "boolean"
             native_result = namespace.Series(
                 fill_value, index=native.index, dtype=dtype, name=self.name
             )
